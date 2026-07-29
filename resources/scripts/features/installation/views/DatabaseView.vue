@@ -114,6 +114,7 @@ const isSaving = ref<boolean>(false)
 
 const databaseDrivers = ref<DatabaseDriverOption[]>([
   { label: 'MySQL', value: 'mysql' },
+  { label: 'MariaDB', value: 'mariadb' },
   { label: 'PostgreSQL', value: 'pgsql' },
   { label: 'SQLite', value: 'sqlite' },
 ])
