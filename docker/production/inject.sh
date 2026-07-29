@@ -48,8 +48,13 @@ elif [ "$DB_PASSWORD_FILE" != '' ]; then
   value=$(<$DB_PASSWORD_FILE)
    replace_or_insert "DB_PASSWORD" "$value"
 fi
-if [ "$TIMEZONE" != '' ]; then
-   replace_or_insert "TIMEZONE" "$TIMEZONE"
+# Laravel reads APP_TIMEZONE. This previously wrote a bare TIMEZONE key, which
+# nothing consumed, so setting the variable silently did nothing. Accept both
+# names so existing compose files keep working.
+if [ "$APP_TIMEZONE" != '' ]; then
+   replace_or_insert "APP_TIMEZONE" "$APP_TIMEZONE"
+elif [ "$TIMEZONE" != '' ]; then
+   replace_or_insert "APP_TIMEZONE" "$TIMEZONE"
 fi
 if [ "$CACHE_STORE" != '' ]; then
    replace_or_insert "CACHE_STORE" "$CACHE_STORE"
