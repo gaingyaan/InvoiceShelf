@@ -136,14 +136,25 @@ function removePayment(): void {
 function copyPdfUrl(): void {
   const payment = props.row as Payment
   const pdfUrl = `${window.location.origin}/payments/pdf/${payment.unique_hash}`
-  navigator.clipboard.writeText(pdfUrl).catch(() => {
-    const textarea = document.createElement('textarea')
-    textarea.value = pdfUrl
-    document.body.appendChild(textarea)
-    textarea.select()
-    document.execCommand('copy')
-    document.body.removeChild(textarea)
-  })
+
+  // navigator.clipboard is [SecureContext]-gated, so on a plain-HTTP origin it is
+  // undefined and `.writeText` throws on property access — before any promise
+  // exists for .catch() to handle. Test up front, as the invoice and estimate
+  // dropdowns already do.
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(pdfUrl)
+    return
+  }
+
+  const textarea = document.createElement('textarea')
+  textarea.value = pdfUrl
+  textarea.style.position = 'fixed'
+  textarea.style.opacity = '0'
+  document.body.appendChild(textarea)
+  textarea.focus()
+  textarea.select()
+  document.execCommand('copy')
+  document.body.removeChild(textarea)
 }
 
 function sendPayment(): void {
