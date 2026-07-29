@@ -40,6 +40,16 @@ jobs:
           extensions: bcmath, curl, dom, gd, imagick, json, libxml, mbstring, pcntl, pdo, pdo_mysql, zip
           tools: composer
 
+      - name: Read the release notes from CHANGELOG.md
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          if ! php .github/scripts/changelog-section.php "$TAG" > /tmp/notes.md; then
+            echo "::error::No CHANGELOG.md section for $TAG — add one before tagging."
+            exit 1
+          fi
+          echo "Using the CHANGELOG.md section for $TAG"
+
       - name: Install pnpm
         uses: pnpm/action-setup@v6
 
@@ -56,16 +66,6 @@ jobs:
       # ordering deciding what users received.
       - name: Build the release package
         run: make clean dist
-
-      - name: Read the release notes from CHANGELOG.md
-        env:
-          TAG: ${{ github.ref_name }}
-        run: |
-          if ! php .github/scripts/changelog-section.php "$TAG" > /tmp/notes.md; then
-            echo "::error::No CHANGELOG.md section for $TAG — add one before tagging."
-            exit 1
-          fi
-          echo "Using the CHANGELOG.md section for $TAG"
 
       # Created as a draft with the package already attached, then published as a
       # separate step. `release: published` therefore fires only once the tests
