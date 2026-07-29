@@ -297,7 +297,11 @@ jobs:
 
   manual_docker_build:
     name: 🛠️ Manual Docker Build
-    if: github.event_name == 'workflow_dispatch'
+    # A dispatch carrying register_tag is asking to register a release, not to
+    # build an image. Without this guard it would also run, and `tag` defaults to
+    # "latest" — so re-registering a release would rebuild from this branch and
+    # overwrite the published :latest image.
+    if: github.event_name == 'workflow_dispatch' && inputs.register_tag == ''
     needs:
       - tests
     runs-on: ubuntu-latest
