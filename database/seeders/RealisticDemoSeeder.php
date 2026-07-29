@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Facades\Hashids;
 use App\Models\Address;
 use App\Models\AiConversation;
 use App\Models\CompanySetting;
@@ -452,6 +453,10 @@ class RealisticDemoSeeder extends Seeder
 
         // Touch timestamps to match the invoice_date so tool queries like
         // `latest('invoice_date')` match `latest('created_at')` plausibly.
+        // The PDF routes bind on unique_hash. Creating through the model rather
+        // than InvoiceService skips the one place that normally assigns it, so
+        // set it here or every seeded document 404s on preview and download.
+        $invoice->unique_hash = Hashids::connection(Invoice::class)->encode($invoice->id);
         $invoice->created_at = $invoiceDate;
         $invoice->updated_at = $invoiceDate;
         $invoice->save();
@@ -515,6 +520,8 @@ class RealisticDemoSeeder extends Seeder
             'notes' => null,
         ]);
 
+        // See seedInvoice(): the PDF routes bind on unique_hash.
+        $payment->unique_hash = Hashids::connection(Payment::class)->encode($payment->id);
         $payment->created_at = $paymentDate;
         $payment->updated_at = $paymentDate;
         $payment->save();
@@ -585,6 +592,8 @@ class RealisticDemoSeeder extends Seeder
             'notes' => null,
         ]);
 
+        // See seedInvoice(): the PDF routes bind on unique_hash.
+        $estimate->unique_hash = Hashids::connection(Estimate::class)->encode($estimate->id);
         $estimate->created_at = $estimateDate;
         $estimate->updated_at = $estimateDate;
         $estimate->save();
