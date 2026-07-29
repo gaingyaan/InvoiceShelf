@@ -46,88 +46,7 @@ jobs:
     if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
     needs:
       - php_syntax_errors
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        php-version:
-          - 8.4
-    env:
-      extensions: bcmath, curl, dom, gd, imagick, json, libxml, mbstring, pcntl, pdo, pdo_mysql, zip
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Setup PHP Action
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: ${{ matrix.php-version }}
-          extensions: ${{ env.extensions }}
-          coverage: none
-          tools: pecl, composer
-
-      - name: Install Composer dependencies
-        uses: ramsey/composer-install@4.0.0
-
-      - name: Apply tests ${{ matrix.php-version }} (parallel)
-        run: php artisan test --parallel --exclude-group=modules
-
-      - name: Apply module tests ${{ matrix.php-version }} (serial)
-        run: php artisan test --group=modules
-
-  release_artifact_build:
-    name: 🏗️ Build / Upload - Release File
-    if: github.event_name == 'release'
-    needs:
-      - tests
-    runs-on: ubuntu-latest
-    env:
-      extensions: bcmath, curl, dom, gd, imagick, json, libxml, mbstring, pcntl, pdo, pdo_mysql, zip
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: 8.4
-          extensions: ${{ env.extensions }}
-          coverage: none
-
-      - name: Install Composer dependencies
-        uses: ramsey/composer-install@4.0.0
-        with:
-          composer-options: --no-dev
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v6
-
-      - name: Use Node.js 24
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          cache: pnpm
-
-      - name: Install
-        run: pnpm install --frozen-lockfile
-
-      - name: Compile Front-end
-        run: pnpm build
-
-      - name: Build Dist
-        run: |
-          make clean dist
-
-      - name: Upload package
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ github.token }}
-          file: InvoiceShelf.zip
-          asset_name: InvoiceShelf.zip
-          tag: ${{ github.ref }}
-          overwrite: true
-
+    uses: ./.github/workflows/tests.yaml
 
   # Registration lives in its own job, and fetches the published asset rather than
   # reusing the build job's working directory. That decoupling is deliberate: the
@@ -139,14 +58,13 @@ jobs:
   # injection from the release body.
   register_release:
     name: 📡 Register release on the updater
-    # always() is required because release_artifact_build is skipped on a manual
-    # dispatch, and a job needing a skipped job is skipped too.
+    # release.yaml attaches the package before publishing, so by the time this
+    # runs the asset is already there and no build dependency is needed. That also
+    # retires the always() dance this condition previously required to survive a
+    # skipped build job on a manual dispatch.
     if: >-
-      always() &&
-      ((github.event_name == 'release' && needs.release_artifact_build.result == 'success') ||
-       (github.event_name == 'workflow_dispatch' && inputs.register_tag != ''))
-    needs:
-      - release_artifact_build
+      github.event_name == 'release' ||
+      (github.event_name == 'workflow_dispatch' && inputs.register_tag != '')
     runs-on: ubuntu-latest
 
     steps:

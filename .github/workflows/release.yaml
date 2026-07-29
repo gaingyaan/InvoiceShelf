@@ -1,100 +1,97 @@
 name: Release
 
+# Tagging is the trigger. Both spellings are accepted because every tag to date
+# is bare (3.0.0-alpha.1, 2.4.2) while this workflow previously listened only for
+# "v*" — so it had never once fired, and tagging by the established convention
+# produced silence.
 on:
-    push:
-        tags:
-            - "v*"
+  push:
+    tags:
+      - '[0-9]*'
+      - 'v[0-9]*'
 
 permissions:
-    contents: write
+  contents: write
+
+# Which major owns GitHub's "Latest release" pointer. Same value and same meaning
+# as in docker.yaml, which gates the moving :latest image tags on it — bump both
+# on this branch, and docker.yaml on 2.x, when 3.0.0 GA is tagged.
+env:
+  LATEST_MAJOR: "2"
 
 jobs:
-    release:
-        name: Build & Release
-        runs-on: ubuntu-latest
+  tests:
+    uses: ./.github/workflows/tests.yaml
+
+  release:
+    name: Build & Release
+    needs:
+      - tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.4
+          extensions: bcmath, curl, dom, gd, imagick, json, libxml, mbstring, pcntl, pdo, pdo_mysql, zip
+          tools: composer
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Use Node.js 24
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      # `make dist` owns the artifact: it installs composer/pnpm dependencies,
+      # builds the frontend, assembles the package and generates the manifest.
+      # This workflow used to hand-copy the same file list a second time, with
+      # docker.yaml then overwriting the result — two copies of one list, and job
+      # ordering deciding what users received.
+      - name: Build the release package
+        run: make clean dist
+
+      - name: Read the release notes from CHANGELOG.md
         env:
-            extensions: bcmath, curl, dom, gd, imagick, json, libxml, mbstring, pcntl, pdo, pdo_mysql, zip
+          TAG: ${{ github.ref_name }}
+        run: |
+          if ! php .github/scripts/changelog-section.php "$TAG" > /tmp/notes.md; then
+            echo "::error::No CHANGELOG.md section for $TAG — add one before tagging."
+            exit 1
+          fi
+          echo "Using the CHANGELOG.md section for $TAG"
 
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v6
-              with:
-                  fetch-depth: 0
+      # Created as a draft with the package already attached, then published as a
+      # separate step. `release: published` therefore fires only once the tests
+      # have passed and the asset is in place, so downstream registration can
+      # never race the upload — and a failed run leaves no release at all rather
+      # than a published one nobody can download.
+      - name: Create the draft release
+        uses: softprops/action-gh-release@v3
+        with:
+          files: InvoiceShelf.zip
+          body_path: /tmp/notes.md
+          draft: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
 
-            - name: Setup PHP
-              uses: shivammathur/setup-php@v2
-              with:
-                  php-version: 8.4
-                  extensions: ${{ env.extensions }}
-                  tools: composer
-
-            - name: Install Composer dependencies
-              run: composer install --no-dev --optimize-autoloader --no-interaction
-
-            - name: Install pnpm
-              uses: pnpm/action-setup@v6
-
-            - name: Use Node.js 24
-              uses: actions/setup-node@v6
-              with:
-                  node-version: 24
-                  cache: pnpm
-
-            - name: Install npm dependencies
-              run: pnpm install --frozen-lockfile
-
-            - name: Build frontend
-              run: pnpm build
-
-            - name: Prepare release directory
-              run: |
-                  mkdir -p /tmp/InvoiceShelf/public
-
-                  cp -r app                    /tmp/InvoiceShelf/
-                  cp -r bootstrap              /tmp/InvoiceShelf/
-                  cp -r config                 /tmp/InvoiceShelf/
-                  cp -r database               /tmp/InvoiceShelf/
-                  cp -r public/build           /tmp/InvoiceShelf/public/
-                  cp -r public/favicons        /tmp/InvoiceShelf/public/
-                  cp    public/.htaccess       /tmp/InvoiceShelf/public/
-                  cp    public/index.php       /tmp/InvoiceShelf/public/
-                  cp    public/robots.txt      /tmp/InvoiceShelf/public/
-                  cp    public/web.config      /tmp/InvoiceShelf/public/
-                  cp -r resources              /tmp/InvoiceShelf/
-                  cp -r lang                   /tmp/InvoiceShelf/
-                  cp -r routes                 /tmp/InvoiceShelf/
-                  cp -r storage                /tmp/InvoiceShelf/
-                  cp -r vendor                 /tmp/InvoiceShelf/ 2>/dev/null || true
-                  cp -r scripts                /tmp/InvoiceShelf/
-                  cp    version.md             /tmp/InvoiceShelf/
-                  cp    .env.example           /tmp/InvoiceShelf/
-                  cp    artisan                /tmp/InvoiceShelf/
-                  cp    composer.json          /tmp/InvoiceShelf/
-                  cp    composer.lock          /tmp/InvoiceShelf/
-                  cp    LICENSE                /tmp/InvoiceShelf/
-                  cp    readme.md              /tmp/InvoiceShelf/
-                  cp    SECURITY.md            /tmp/InvoiceShelf/
-                  cp    server.php             /tmp/InvoiceShelf/
-
-                  # Clean up runtime artifacts
-                  find /tmp/InvoiceShelf -wholename '*/[Tt]ests/*' -delete
-                  find /tmp/InvoiceShelf -wholename '*/[Tt]est/*' -delete
-                  rm -rf /tmp/InvoiceShelf/storage/framework/cache/data/* 2>/dev/null || true
-                  rm -f  /tmp/InvoiceShelf/storage/framework/sessions/* 2>/dev/null || true
-                  rm -f  /tmp/InvoiceShelf/storage/framework/views/* 2>/dev/null || true
-                  rm -f  /tmp/InvoiceShelf/storage/logs/* 2>/dev/null || true
-                  touch  /tmp/InvoiceShelf/storage/logs/laravel.log
-
-            - name: Generate manifest
-              run: php scripts/generate-manifest.php /tmp/InvoiceShelf
-
-            - name: Create zip
-              working-directory: /tmp
-              run: zip -r InvoiceShelf.zip InvoiceShelf/
-
-            - name: Create GitHub Release
-              uses: softprops/action-gh-release@v3
-              with:
-                  files: /tmp/InvoiceShelf.zip
-                  generate_release_notes: true
-                  make_latest: true
+      - name: Publish it
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          # GitHub's "Latest release" pointer, gated exactly as docker.yaml gates
+          # its moving image tags — so a 3.0.0 alpha cannot displace 2.4.x as the
+          # release users are shown first while 2.x is still the stable line.
+          IS_LATEST: ${{ !contains(github.ref_name, '-') && startsWith(github.ref_name, format('{0}.', env.LATEST_MAJOR)) }}
+        run: |
+          if [ "$IS_LATEST" = "true" ]; then
+            gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false --latest
+          else
+            gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false --latest=false
+          fi
+          echo "Published $TAG (latest=$IS_LATEST)"
