@@ -72,26 +72,44 @@ jobs:
       # have passed and the asset is in place, so downstream registration can
       # never race the upload — and a failed run leaves no release at all rather
       # than a published one nobody can download.
+      # The draft is where this workflow stops. Publishing is left to a person,
+      # because a release published by the workflow would never reach docker.yaml:
+      # GitHub does not start workflow runs from events created with GITHUB_TOKEN,
+      # so `release: published` fires as github-actions[bot] and triggers nothing.
+      # 2.4.3-beta.2 was published that way and got no registration and no images.
+      # A human pressing Publish fires the event under their own identity, and the
+      # existing downstream runs untouched.
+      #
+      # prerelease and make_latest are set here rather than at publish time, so the
+      # release is already correct when that button is pressed — GitHub's publish
+      # dialog otherwise defaults "Set as the latest release" to checked, which
+      # would let a 3.0.0 alpha displace 2.4.x.
       - name: Create the draft release
+        id: draft
         uses: softprops/action-gh-release@v3
         with:
           files: InvoiceShelf.zip
           body_path: /tmp/notes.md
           draft: true
           prerelease: ${{ contains(github.ref_name, '-') }}
+          make_latest: ${{ !contains(github.ref_name, '-') && startsWith(github.ref_name, format('{0}.', env.LATEST_MAJOR)) }}
 
-      - name: Publish it
+      # A draft nobody knows about is no use, so the run ends by saying what was
+      # built and what to do with it.
+      - name: Say what to do next
         env:
-          GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
-          # GitHub's "Latest release" pointer, gated exactly as docker.yaml gates
-          # its moving image tags — so a 3.0.0 alpha cannot displace 2.4.x as the
-          # release users are shown first while 2.x is still the stable line.
+          URL: ${{ steps.draft.outputs.url }}
+          PRERELEASE: ${{ contains(github.ref_name, '-') }}
           IS_LATEST: ${{ !contains(github.ref_name, '-') && startsWith(github.ref_name, format('{0}.', env.LATEST_MAJOR)) }}
         run: |
-          if [ "$IS_LATEST" = "true" ]; then
-            gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false --latest
-          else
-            gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false --latest=false
-          fi
-          echo "Published $TAG (latest=$IS_LATEST)"
+          {
+            echo "### $TAG is drafted and ready to publish"
+            echo
+            echo "- Draft: $URL"
+            echo "- Pre-release: \`$PRERELEASE\` — a pre-release goes to the insider channel only"
+            echo "- Mark as latest: \`$IS_LATEST\`"
+            echo
+            echo "**Publishing it** builds the Docker images and registers it on the updater."
+            echo "Nothing reaches installs until you do."
+          } >> "$GITHUB_STEP_SUMMARY"

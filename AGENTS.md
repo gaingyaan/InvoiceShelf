@@ -153,6 +153,42 @@ InvoiceShelf follows TDD development style:
 - Run `vendor/bin/pint --dirty --format agent` after modifying PHP files
 - After editing `lang/en.json` or any file under `resources/scripts/`, rebuild via `pnpm build` — the bundled chunks (including locale chunks) are content-hashed by Vite, so the browser will pick them up on hard refresh
 
+## Releasing
+
+Releases are cut by pushing a tag. Nothing is typed into GitHub by hand.
+
+```bash
+# 1. Add a "## <version> — <date>" section to CHANGELOG.md and bump version.md,
+#    in a PR like any other change — the notes are reviewed with the code.
+# 2. Once merged, tag the merge commit:
+git tag 3.0.0-alpha.2 && git push origin 3.0.0-alpha.2
+```
+
+`release.yaml` then runs the tests, reads the `CHANGELOG.md` section for that tag,
+builds the package with `make clean dist`, and creates a **draft** release with the
+zip attached. It stops there and prints the draft URL in the run summary.
+
+**You publish the draft yourself.** That is deliberate, not an omission: GitHub does
+not start workflow runs from events created with `GITHUB_TOKEN`, so a release
+published by the workflow reaches nothing downstream. Pressing Publish fires
+`release: published` under your own identity, which triggers `docker.yaml` to
+register the release on the updater and build the Docker images. **Until you
+publish, no install is offered anything.**
+
+Notes on the mechanics:
+
+- **A tag with no `CHANGELOG.md` section fails the run** before anything is built,
+  so a release can never go out with empty notes.
+- **`prerelease` and "mark as latest" are set on the draft**, derived from the tag: a
+  `-` suffix (`3.0.0-alpha.2`) means pre-release, which routes it to the **insider**
+  channel so ordinary installs are not offered it. "Latest" is gated on
+  `LATEST_MAJOR` in the workflows — bump it there when 3.x becomes the stable line.
+- **If registration fails**, re-run it without cutting a new release: run the
+  `Docker Build and Push` workflow manually with `register_tag` set to the version.
+  That path is idempotent and does not rebuild the Docker images.
+- `.github/scripts/changelog-section.php <version>` prints what the updater will be
+  sent, so you can check the notes locally before tagging.
+
 ## CI Pipeline
 
 GitHub Actions (`check.yaml`): runs Pint style check, then runs Pest tests in parallel (`php artisan test --parallel`) on PHP 8.4 with Xdebug disabled (`coverage: none`). The test job does **not** build the frontend — the suite is API/JSON only and never renders the Vite blade, so no Node/Vite step is needed (release/docker workflows still build assets in their own jobs).
