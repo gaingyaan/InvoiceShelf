@@ -28,6 +28,10 @@ export default {
     Mysql,
     Pgsql,
     Sqlite,
+    // Resolved by <component :is="database_connection">. MariaDB takes the same
+    // fields as MySQL, so it reuses that form rather than duplicating it —
+    // without an entry here the step renders blank. See InvoiceShelf/docker#79.
+    Mariadb: Mysql,
   },
 
   emits: ['next'],

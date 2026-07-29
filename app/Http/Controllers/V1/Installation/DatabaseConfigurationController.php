@@ -77,6 +77,28 @@ class DatabaseConfigurationController extends Controller
 
                 break;
 
+            case 'mariadb':
+                $databaseData = [
+                    'database_connection' => 'mariadb',
+                    'database_host' => '127.0.0.1',
+                    'database_port' => 3306,
+                ];
+
+                break;
+
+            default:
+                // Never return an empty config: the wizard picks its form from
+                // database_connection, so an unrecognised driver used to render
+                // a blank step with no way forward. Echo it back with the
+                // server defaults instead.
+                $databaseData = [
+                    'database_connection' => $connection,
+                    'database_host' => '127.0.0.1',
+                    'database_port' => 3306,
+                ];
+
+                break;
+
         }
 
         return response()->json([

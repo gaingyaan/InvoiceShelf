@@ -133,7 +133,7 @@ const props = defineProps({
 
 const emit = defineEmits(['submit-data', 'on-change-driver'])
 
-const connections = reactive(['sqlite', 'mysql', 'pgsql'])
+const connections = reactive(['sqlite', 'mysql', 'mariadb', 'pgsql'])
 const { t } = useI18n()
 const utils = inject('utils')
 
