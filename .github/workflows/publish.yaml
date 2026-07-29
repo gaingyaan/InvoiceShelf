@@ -187,8 +187,13 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
             type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') && startsWith(github.ref_name, format('{0}.', env.LATEST_MAJOR)) }}
-            type=raw,value=beta,enable=${{ contains(github.ref_name, '-beta') }}
-            type=raw,value=next,enable=${{ contains(github.ref_name, '-alpha') || contains(github.ref_name, '-beta') }}
+            # Scoped by line, or a pre-release on one line silently takes the
+            # other's alias: 2.4.3-beta.1 claimed :next from 3.0.0-alpha.1, moving
+            # anyone tracking the next major back onto a 2.x image. :beta is the
+            # stable line's pre-release, :next the newer major's — both gated on
+            # LATEST_MAJOR, exactly as :latest is.
+            type=raw,value=beta,enable=${{ contains(github.ref_name, '-beta') && startsWith(github.ref_name, format('{0}.', env.LATEST_MAJOR)) }}
+            type=raw,value=next,enable=${{ contains(github.ref_name, '-') && !startsWith(github.ref_name, format('{0}.', env.LATEST_MAJOR)) }}
             # DEPRECATED transitional alias: keeps existing :nightly deployments converging
             # onto stable until they migrate. Remove this line at the 3.0.0 GA flip.
             type=raw,value=nightly,enable=${{ !contains(github.ref_name, '-') && startsWith(github.ref_name, format('{0}.', env.LATEST_MAJOR)) }}
