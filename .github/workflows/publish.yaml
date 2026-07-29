@@ -1,18 +1,13 @@
-name: Docker Build and Push
+name: Publish Release
 
 on:
   release:
     types: [published]
   workflow_dispatch:
     inputs:
-      tag:
-        description: 'Docker tag'
-        required: true
-        default: 'latest'
       register_tag:
-        description: 'Release tag to (re-)register on the updater, e.g. 2.4.2. Leave blank to skip.'
-        required: false
-        default: ''
+        description: 'Release tag to (re-)register on the updater, e.g. 2.4.2.'
+        required: true
 
 # Single source of truth for which major owns the moving stable tags
 # (:latest, :{major}, :{major}.{minor}) and the temporary :nightly alias.
@@ -22,32 +17,6 @@ env:
   LATEST_MAJOR: "2"
 
 jobs:
-  php_syntax_errors:
-    name: 1️⃣ PHP Code Style errors
-    if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Set up PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: 8.4
-
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Install dependencies
-        uses: ramsey/composer-install@4.0.0
-
-      - name: Check source code for syntax errors
-        run: ./vendor/bin/pint --test
-
-  tests:
-    name: 2️⃣ PHP Tests
-    if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
-    needs:
-      - php_syntax_errors
-    uses: ./.github/workflows/tests.yaml
-
   # Registration lives in its own job, and fetches the published asset rather than
   # reusing the build job's working directory. That decoupling is deliberate: the
   # previous in-line step read `changelog.txt` relative to the checkout while writing
@@ -62,9 +31,7 @@ jobs:
     # runs the asset is already there and no build dependency is needed. That also
     # retires the always() dance this condition previously required to survive a
     # skipped build job on a manual dispatch.
-    if: >-
-      github.event_name == 'release' ||
-      (github.event_name == 'workflow_dispatch' && inputs.register_tag != '')
+    if: github.event_name == 'release' || inputs.register_tag != ''
     runs-on: ubuntu-latest
 
     steps:
@@ -122,8 +89,6 @@ jobs:
           MIN_PHP=$(php -r '$c=require "config/installer.php"; echo $c["core"]["minPhpVersion"] ?? "";')
           EXTS=$(php -r '$c=require "config/installer.php"; echo implode(", ", $c["requirements"]["php"] ?? []);')
 
-          # Read the notes and pre-release flag from the release itself, so this behaves
-          # identically whether triggered by a publish or re-run later by hand.
           # CHANGELOG.md is the source: it is written and reviewed alongside the
           # change itself, so what installs are offered cannot drift from what was
           # merged. A release with no section fails here rather than registering an
@@ -178,10 +143,24 @@ jobs:
   release_docker_build:
     name: 🐳 Release Docker Build
     if: github.event_name == 'release'
-    needs:
-      - tests
     runs-on: ubuntu-latest
     steps:
+      # Releases are cut by pushing a tag: release.yaml runs the tests, builds the
+      # package and attaches it to a draft. A release without that package was made
+      # by hand and has been through none of it, so it does not get images. The
+      # updater is already protected — registration downloads this same asset and
+      # fails without it.
+      - name: Refuse a release that did not come from the pipeline
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' \
+               | grep -qx 'InvoiceShelf.zip'; then
+            echo "::error::$TAG has no InvoiceShelf.zip. Releases are cut by pushing a tag, not created by hand — see the Releasing section in AGENTS.md."
+            exit 1
+          fi
+
       - name: Checkout code
         uses: actions/checkout@v6
 
@@ -223,42 +202,6 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          secrets: |
-            composer_auth={"github-oauth":{"github.com":"${{ secrets.GITHUB_TOKEN }}"}}
-
-  manual_docker_build:
-    name: 🛠️ Manual Docker Build
-    # A dispatch carrying register_tag is asking to register a release, not to
-    # build an image. Without this guard it would also run, and `tag` defaults to
-    # "latest" — so re-registering a release would rebuild from this branch and
-    # overwrite the published :latest image.
-    if: github.event_name == 'workflow_dispatch' && inputs.register_tag == ''
-    needs:
-      - tests
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v4
-        with:
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_TOKEN }}
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          file: docker/production/Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: invoiceshelf/invoiceshelf:${{ github.event.inputs.tag }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           secrets: |

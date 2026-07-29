@@ -14,8 +14,8 @@ permissions:
   contents: write
 
 # Which major owns GitHub's "Latest release" pointer. Same value and same meaning
-# as in docker.yaml, which gates the moving :latest image tags on it — bump both
-# on this branch, and docker.yaml on 2.x, when 3.0.0 GA is tagged.
+# as in publish.yaml, which gates the moving :latest image tags on it — bump both
+# on this branch, and publish.yaml on 2.x, when 3.0.0 GA is tagged.
 env:
   LATEST_MAJOR: "2"
 
@@ -62,7 +62,7 @@ jobs:
       # `make dist` owns the artifact: it installs composer/pnpm dependencies,
       # builds the frontend, assembles the package and generates the manifest.
       # This workflow used to hand-copy the same file list a second time, with
-      # docker.yaml then overwriting the result — two copies of one list, and job
+      # publish.yaml then overwriting the result — two copies of one list, and job
       # ordering deciding what users received.
       - name: Build the release package
         run: make clean dist
@@ -73,7 +73,7 @@ jobs:
       # never race the upload — and a failed run leaves no release at all rather
       # than a published one nobody can download.
       # The draft is where this workflow stops. Publishing is left to a person,
-      # because a release published by the workflow would never reach docker.yaml:
+      # because a release published by the workflow would never reach publish.yaml:
       # GitHub does not start workflow runs from events created with GITHUB_TOKEN,
       # so `release: published` fires as github-actions[bot] and triggers nothing.
       # 2.4.3-beta.2 was published that way and got no registration and no images.

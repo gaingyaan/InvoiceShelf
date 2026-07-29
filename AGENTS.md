@@ -171,7 +171,7 @@ zip attached. It stops there and prints the draft URL in the run summary.
 **You publish the draft yourself.** That is deliberate, not an omission: GitHub does
 not start workflow runs from events created with `GITHUB_TOKEN`, so a release
 published by the workflow reaches nothing downstream. Pressing Publish fires
-`release: published` under your own identity, which triggers `docker.yaml` to
+`release: published` under your own identity, which triggers `publish.yaml` to
 register the release on the updater and build the Docker images. **Until you
 publish, no install is offered anything.**
 
@@ -184,7 +184,7 @@ Notes on the mechanics:
   channel so ordinary installs are not offered it. "Latest" is gated on
   `LATEST_MAJOR` in the workflows — bump it there when 3.x becomes the stable line.
 - **If registration fails**, re-run it without cutting a new release: run the
-  `Docker Build and Push` workflow manually with `register_tag` set to the version.
+  `Publish Release` workflow manually with `register_tag` set to the version.
   That path is idempotent and does not rebuild the Docker images.
 - `.github/scripts/changelog-section.php <version>` prints what the updater will be
   sent, so you can check the notes locally before tagging.
