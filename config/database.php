@@ -1,6 +1,16 @@
 <?php
 
 use Illuminate\Support\Str;
+use Pdo\Mysql;
+
+// PHP 8.5 deprecated PDO::MYSQL_ATTR_SSL_CA in favour of Pdo\Mysql::ATTR_SSL_CA,
+// which does not exist before 8.5. This package supports ^8.4, so resolve
+// whichever name the running version provides — both refer to the same
+// attribute. Kept behind the extension check because neither constant is
+// defined at all when pdo_mysql is missing.
+$mysqlSslCaAttribute = extension_loaded('pdo_mysql')
+    ? (PHP_VERSION_ID >= 80500 ? Mysql::ATTR_SSL_CA : PDO::MYSQL_ATTR_SSL_CA)
+    : null;
 
 return [
 
@@ -58,8 +68,8 @@ return [
             'prefix_indexes' => true,
             'strict' => true,
             'engine' => null,
-            'options' => extension_loaded('pdo_mysql') ? array_filter([
-                PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+            'options' => $mysqlSslCaAttribute !== null ? array_filter([
+                $mysqlSslCaAttribute => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],
         ],
 
@@ -78,8 +88,8 @@ return [
             'prefix_indexes' => true,
             'strict' => true,
             'engine' => null,
-            'options' => extension_loaded('pdo_mysql') ? array_filter([
-                PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+            'options' => $mysqlSslCaAttribute !== null ? array_filter([
+                $mysqlSslCaAttribute => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],
         ],
 
