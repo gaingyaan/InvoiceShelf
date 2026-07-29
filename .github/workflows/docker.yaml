@@ -9,6 +9,10 @@ on:
         description: 'Docker tag'
         required: true
         default: 'latest'
+      register_tag:
+        description: 'Release tag to (re-)register on the updater, e.g. 2.4.2. Leave blank to skip.'
+        required: false
+        default: ''
 
 # Single source of truth for which major owns the moving stable tags
 # (:latest, :{major}, :{major}.{minor}) and the temporary :nightly alias.
@@ -124,30 +128,93 @@ jobs:
           tag: ${{ github.ref }}
           overwrite: true
 
-      # Auto-register this release on the website updater backend so deployed installs
-      # are offered it. The zip is already built here (./InvoiceShelf.zip) and the checkout
-      # is present for config/installer.php, so this needs no re-download and can't race the
-      # asset upload. Idempotent per version (the endpoint upserts). Release fields are passed
-      # via env (not inline ${{ }}) to avoid shell injection from the release body.
-      - name: Register release on the website updater
+
+  # Registration lives in its own job, and fetches the published asset rather than
+  # reusing the build job's working directory. That decoupling is deliberate: the
+  # previous in-line step read `changelog.txt` relative to the checkout while writing
+  # it to /tmp, and the mismatch was undetectable until a real release ran. As its own
+  # job it can also be re-run on demand for an existing tag, so a failure here no longer
+  # requires production shell access to repair. Idempotent per version — the endpoint
+  # upserts. Release fields are passed via env (not inline ${{ }}) to avoid shell
+  # injection from the release body.
+  register_release:
+    name: 📡 Register release on the updater
+    # always() is required because release_artifact_build is skipped on a manual
+    # dispatch, and a job needing a skipped job is skipped too.
+    if: >-
+      always() &&
+      ((github.event_name == 'release' && needs.release_artifact_build.result == 'success') ||
+       (github.event_name == 'workflow_dispatch' && inputs.register_tag != ''))
+    needs:
+      - release_artifact_build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Resolve the tag being registered
+        id: resolve
+        env:
+          EVENT: ${{ github.event_name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          INPUT_TAG: ${{ inputs.register_tag }}
+        run: |
+          if [ "$EVENT" = "release" ]; then TAG="$RELEASE_TAG"; else TAG="$INPUT_TAG"; fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      # config/installer.php is read at the tag being registered, not at HEAD, so a
+      # re-registration reports the requirements that release actually shipped with.
+      - name: Checkout code at that tag
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ steps.resolve.outputs.tag }}
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.4
+          coverage: none
+
+      - name: Download the published release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.resolve.outputs.tag }}
+        run: gh release download "$TAG" --repo "$GITHUB_REPOSITORY" -p InvoiceShelf.zip --clobber
+
+      - name: Register on the updater
+        id: register
         env:
           CI_RELEASE_TOKEN: ${{ secrets.WEBSITE_RELEASE_TOKEN }}
-          TAG: ${{ github.event.release.tag_name }}
-          PRERELEASE: ${{ github.event.release.prerelease }}
-          PUBLISHED: ${{ github.event.release.published_at }}
-          BODY: ${{ github.event.release.body }}
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          TAG: ${{ steps.resolve.outputs.tag }}
         run: |
           if [ -z "$CI_RELEASE_TOKEN" ]; then
+            # A release that silently skips registration looks entirely successful while
+            # reaching nobody, so on a real release this is fatal. A manual dispatch
+            # without the secret is legitimate, so warn there instead.
+            if [ "$EVENT" = "release" ]; then
+              echo "::error::WEBSITE_RELEASE_TOKEN is not set — $TAG would never be offered to installs."
+              exit 1
+            fi
             echo "::warning::WEBSITE_RELEASE_TOKEN not set — skipping updater registration for $TAG"
+            echo "registered=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+          echo "registered=true" >> "$GITHUB_OUTPUT"
+
           MIN_PHP=$(php -r '$c=require "config/installer.php"; echo $c["core"]["minPhpVersion"] ?? "";')
           EXTS=$(php -r '$c=require "config/installer.php"; echo implode(", ", $c["requirements"]["php"] ?? []);')
-          printf '%s' "$BODY" > /tmp/changelog.txt
+
+          # Read the notes and pre-release flag from the release itself, so this behaves
+          # identically whether triggered by a publish or re-run later by hand.
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body --jq '.body' > /tmp/changelog.txt
+          PRERELEASE=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isPrerelease --jq '.isPrerelease')
+          PUBLISHED=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json publishedAt --jq '.publishedAt')
+
           case "$TAG" in
             *-*) CHANNEL=insider ;;
             *)   [ "$PRERELEASE" = "true" ] && CHANNEL=insider || CHANNEL=stable ;;
           esac
+
           echo "Registering $TAG (channel=$CHANNEL, min_php=$MIN_PHP) on the updater"
           curl -fsS --retry 3 --retry-delay 5 -X POST https://invoiceshelf.com/api/releases \
             -H "Authorization: Bearer $CI_RELEASE_TOKEN" \
@@ -156,9 +223,24 @@ jobs:
             -F "released_at=$PUBLISHED" \
             -F "min_php_version=$MIN_PHP" \
             -F "extensions=$EXTS" \
-            -F "changelog=<changelog.txt" \
-            -F "description=<changelog.txt" \
+            -F "changelog=</tmp/changelog.txt" \
+            -F "description=</tmp/changelog.txt" \
             -F "release_file=@InvoiceShelf.zip"
+
+      # Posting a 2xx is not proof an install can actually fetch the release. This
+      # endpoint 404s unless the Release row exists AND its zip is retrievable from
+      # storage, so it verifies the whole chain — and would have caught the failure
+      # this job was rewritten for.
+      - name: Verify the release is being served
+        if: steps.register.outputs.registered == 'true'
+        env:
+          TAG: ${{ steps.resolve.outputs.tag }}
+        run: |
+          if ! curl -fsI --retry 3 --retry-delay 5 "https://invoiceshelf.com/releases/download/$TAG" > /dev/null; then
+            echo "::error::$TAG was accepted by the updater but is not being served — installs will not receive it."
+            exit 1
+          fi
+          echo "$TAG is registered and downloadable."
 
   release_docker_build:
     name: 🐳 Release Docker Build
