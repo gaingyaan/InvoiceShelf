@@ -3,6 +3,7 @@
 namespace App\Services\PDFDrivers;
 
 use App\Rules\SafeRemoteUrl;
+use App\Support\GotenbergHostPolicy;
 use Gotenberg\Gotenberg;
 use Gotenberg\Stream;
 use Illuminate\Http\Response;
@@ -47,8 +48,12 @@ class GotenbergPDFDriver
 
         // Defense in depth against SSRF: a host that bypassed request-time
         // validation (env/seed/stale config, or DNS rebinding) must still not
-        // be able to target internal/private addresses.
-        if (! SafeRemoteUrl::isSafe((string) $host)) {
+        // be able to target internal/private addresses. The single exception is
+        // the host the operator declared in GOTENBERG_ALLOWED_PRIVATE_HOST,
+        // which is how a sidecar deployment is supported — see
+        // GotenbergHostPolicy.
+        if (! GotenbergHostPolicy::isExemptFromSafeRemoteUrl((string) $host)
+            && ! SafeRemoteUrl::isSafe((string) $host)) {
             throw new \RuntimeException('Refusing to render PDF: unsafe Gotenberg host.');
         }
 

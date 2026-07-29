@@ -3,7 +3,9 @@
 namespace App\Http\Requests;
 
 use App\Rules\SafeRemoteUrl;
+use App\Support\GotenbergHostPolicy;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class PDFConfigurationRequest extends FormRequest
 {
@@ -30,6 +32,12 @@ class PDFConfigurationRequest extends FormRequest
                 ];
 
             case 'gotenberg':
+                // The operator-declared Gotenberg host skips the public-address
+                // check; anything else is still held to it. See GotenbergHostPolicy.
+                $isDeclaredHost = GotenbergHostPolicy::isExemptFromSafeRemoteUrl(
+                    $this->input('gotenberg_host')
+                );
+
                 return [
                     'pdf_driver' => [
                         'required',
@@ -38,7 +46,7 @@ class PDFConfigurationRequest extends FormRequest
                     'gotenberg_host' => [
                         'required',
                         'url',
-                        new SafeRemoteUrl,
+                        Rule::when(! $isDeclaredHost, [new SafeRemoteUrl]),
                     ],
                     'gotenberg_papersize' => [
                         'required',
