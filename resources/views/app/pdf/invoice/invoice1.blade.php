@@ -10,12 +10,7 @@
     <style type="text/css">
         /* -- Base -- */
         body {
-        }
-
-        html {
             margin: 0px;
-            padding: 0px;
-            margin-top: 50px;
         }
 
         .text-center {
@@ -32,6 +27,7 @@
 
         .header-bottom-divider {
             color: rgba(0, 0, 0, 0.2);
+            position: absolute;
             top: 90px;
             left: 0px;
             width: 100%;
@@ -39,11 +35,12 @@
         }
 
         .header-container {
-            position: absolute;
+            position: relative;
             width: 100%;
             height: 90px;
             left: 0px;
-            top: -50px;
+            top: 0px;
+            margin-bottom: -40px;
         }
 
         .header-logo {
@@ -160,9 +157,23 @@
 
         /* -- Items Table -- */
 
+        /* The items table sets border-collapse: collapse, and padding does not
+           apply to a table in that mode. dompdf applies it anyway, Chromium
+           follows the spec and drops it, which put the two renderers 22.5pt
+           apart on each side. All of the table's spacing lives on this wrapper
+           instead -- a plain block, honoured identically by both. Padding rather
+           than margin so nothing collapses through it either. */
+        .items-table-wrapper {
+            padding-top: 35px;
+            padding-bottom: 10px;
+        }
+
+        .items-table-inset {
+            padding-left: 30px;
+            padding-right: 30px;
+        }
+
         .items-table {
-            margin-top: 35px;
-            padding: 0px 30px 10px 30px;
             page-break-before: avoid;
             page-break-after: auto;
         }
@@ -328,6 +339,20 @@
             padding-left: 0;
         }
 
+        /* The address formats emit <h3>{NAME}</h3> ahead of the <br>-joined
+           lines. Left to the user-agent default its margins differ between
+           dompdf and Chromium -- the construct where the two renderers drift
+           apart vertically -- and the extra top margin also pushes the company
+           column out of line with the Bill to / Ship to columns beside it.
+           Pinning both margins fixes the alignment and removes the divergence. */
+        .company-address h3,
+        .customer-address-container h3,
+        .billing-address h3,
+        .shipping-address h3 {
+            margin-top: 0;
+            margin-bottom: 6px;
+        }
+
     </style>
 
 </head>
@@ -393,7 +418,7 @@
             @endif
         </div>
 
-        <div style="position: relative; clear: both;">
+        <div class="items-table-wrapper" style="position: relative; clear: both;">
             @include('app.pdf.invoice.partials.table')
         </div>
 

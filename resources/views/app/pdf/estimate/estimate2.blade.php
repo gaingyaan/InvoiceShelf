@@ -9,12 +9,7 @@
     <style type="text/css">
         /* -- Base -- */
         body {
-        }
-
-        html {
             margin: 0px;
-            padding: 0px;
-            margin-top: 50px;
         }
 
         table {
@@ -30,15 +25,15 @@
 
         .header-container {
             background: #817AE3;
-            position: absolute;
+            position: relative;
             width: 100%;
             height: 141px;
             left: 0px;
-            top: -60px;
+            top: 0px;
         }
 
         .header-section-left {
-            padding-top: 45px;
+            padding-top: 35px;
             padding-bottom: 45px;
             padding-left: 30px;
             display: inline-block;
@@ -56,7 +51,7 @@
             display: inline-block;
             width: 35%;
             float: right;
-            padding: 20px 30px 20px 0px;
+            padding: 10px 30px 20px 0px;
             text-align: right;
             color: white;
         }
@@ -96,14 +91,12 @@
 
         .content-wrapper {
             display: block;
-            margin-top: 60px;
             padding-bottom: 20px;
         }
 
         .address-container {
             display: block;
-            padding-top: 20px;
-            margin-top: 10px;
+            padding-top: 32px;
         }
 
         /* -- Company Address -- */
@@ -223,8 +216,23 @@
 
         /* -- Items Table -- */
 
+        /* The items table sets border-collapse: collapse, and padding does not
+           apply to a table in that mode. dompdf applies it anyway, Chromium
+           follows the spec and drops it, which put the two renderers 22.5pt
+           apart on each side. All of the table's spacing lives on this wrapper
+           instead -- a plain block, honoured identically by both. Padding rather
+           than margin so nothing collapses through it either. */
+        .items-table-wrapper {
+            padding-top: 30px;
+            padding-bottom: 10px;
+        }
+
+        .items-table-inset {
+            padding-left: 30px;
+            padding-right: 30px;
+        }
+
         .items-table {
-            padding: 30px 30px 10px 30px;
             page-break-before: avoid;
             page-break-after: auto;
         }
@@ -407,6 +415,20 @@
             padding-left: 0;
         }
 
+        /* The address formats emit <h3>{NAME}</h3> ahead of the <br>-joined
+           lines. Left to the user-agent default its margins differ between
+           dompdf and Chromium -- the construct where the two renderers drift
+           apart vertically -- and the extra top margin also pushes the company
+           column out of line with the Bill to / Ship to columns beside it.
+           Pinning both margins fixes the alignment and removes the divergence. */
+        .company-address h3,
+        .customer-address-container h3,
+        .billing-address h3,
+        .shipping-address h3 {
+            margin-top: 0;
+            margin-bottom: 6px;
+        }
+
     </style>
 
 </head>
@@ -459,7 +481,9 @@
             <div style="clear: both;"></div>
         </div>
 
-        @include('app.pdf.estimate.partials.table')
+        <div class="items-table-wrapper">
+            @include('app.pdf.estimate.partials.table')
+        </div>
 
         <div class="notes">
             @if ($notes)

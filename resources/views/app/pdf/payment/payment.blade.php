@@ -10,13 +10,7 @@
     <style type="text/css">
         /* -- Base -- */
         body {
-        }
-
-        html {
             margin: 0px;
-            padding: 0px;
-            margin-top: 50px;
-            margin-bottom: 50px;
         }
 
         table {
@@ -34,7 +28,7 @@
         .header-container {
             /* position: absolute; */
             width: 100%;
-            padding: 0 30px;
+            padding: 50px 30px 0px;
             margin-bottom: 50px;
             /* height: 150px;
             left: 0px;
@@ -274,6 +268,20 @@
             text-align: right;
             color: #5851D8;
             margin-left: 150px;
+        }
+
+        /* The address formats emit <h3>{NAME}</h3> ahead of the <br>-joined
+           lines. Left to the user-agent default its margins differ between
+           dompdf and Chromium -- the construct where the two renderers drift
+           apart vertically -- and the extra top margin also pushes the company
+           column out of line with the Bill to / Ship to columns beside it.
+           Pinning both margins fixes the alignment and removes the divergence. */
+        .company-address h3,
+        .customer-address-container h3,
+        .billing-address h3,
+        .shipping-address h3 {
+            margin-top: 0;
+            margin-bottom: 6px;
         }
 
     </style>
