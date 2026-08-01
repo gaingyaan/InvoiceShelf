@@ -9,6 +9,7 @@ use App\Models\CompanySetting;
 use App\Models\Currency;
 use App\Models\Expense;
 use App\Models\Payment;
+use App\Support\Pdf\PdfTemplateUtils;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -86,10 +87,15 @@ class ProfitLossReportController extends Controller
             'to_date' => $to_date,
             'currency' => $currency,
         ]);
-        $pdf = Pdf::loadView('app.pdf.reports.profit-loss');
+        // Renders a same-named file from storage/app/templates/pdf/reports/
+        // when one exists, so a report can be overridden without a
+        // template picker it has no concept of.
+        $templatePath = PdfTemplateUtils::resolveView('reports', 'profit-loss');
+
+        $pdf = Pdf::loadView($templatePath);
 
         if ($request->has('preview')) {
-            return view('app.pdf.reports.profit-loss');
+            return view($templatePath);
         }
 
         if ($request->has('download')) {

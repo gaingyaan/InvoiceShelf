@@ -63,14 +63,41 @@ test('the new template shows up in the picker', function () {
 /**
  * --type was never checked against the supported list. An unsupported value
  * skipped the interactive prompt and then died on an uncaught
- * FileNotFoundException looking for e.g. payment1.blade.php.
+ * FileNotFoundException looking for a file that does not exist.
  */
 test('an unsupported type is refused with a message rather than a stack trace', function () {
-    $exit = Artisan::call('make:template', ['name' => 'receipt', '--type' => 'payment']);
+    $exit = Artisan::call('make:template', ['name' => 'thing', '--type' => 'purchase-order']);
 
     expect($exit)->toBe(Command::INVALID)
         ->and(Artisan::output())->toContain('Unsupported template type');
 });
+
+/**
+ * Payments and reports have no picker: a custom template replaces one specific
+ * document, so its name is not free.
+ */
+test('an override must be named after the document it replaces', function () {
+    $exit = Artisan::call('make:template', ['name' => 'my-receipt', '--type' => 'payment']);
+
+    expect($exit)->toBe(Command::INVALID)
+        ->and(Artisan::output())->toContain('is not a payment document');
+});
+
+test('it clones a payment receipt for overriding', function () {
+    $exit = Artisan::call('make:template', ['name' => 'payment', '--type' => 'payment']);
+
+    expect($exit)->toBe(Command::SUCCESS)
+        ->and(File::exists(customTemplatePath('payment', 'payment.blade.php')))->toBeTrue()
+        // No picker, so no preview is written.
+        ->and(File::exists(customTemplatePath('payment', 'payment.png')))->toBeFalse();
+});
+
+test('it clones each report for overriding', function (string $report) {
+    $exit = Artisan::call('make:template', ['name' => $report, '--type' => 'reports']);
+
+    expect($exit)->toBe(Command::SUCCESS)
+        ->and(File::exists(customTemplatePath('reports', "{$report}.blade.php")))->toBeTrue();
+})->with(['expenses', 'profit-loss', 'sales-customers', 'sales-items', 'tax-summary']);
 
 test('a name that would escape the templates directory is refused', function (string $name) {
     $exit = Artisan::call('make:template', ['name' => $name, '--type' => 'invoice']);

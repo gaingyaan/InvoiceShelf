@@ -11,6 +11,7 @@ use App\Models\ExchangeRateLog;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Services\Mail\CompanyMailConfigService;
+use App\Support\Pdf\PdfTemplateUtils;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -181,11 +182,13 @@ class PaymentService
             'logo' => $logo ?? null,
         ]);
 
+        $templatePath = PdfTemplateUtils::resolveView('payment', 'payment');
+
         if (request()->has('preview')) {
-            return view('app.pdf.payment.payment');
+            return view($templatePath);
         }
 
-        return Pdf::loadView('app.pdf.payment.payment');
+        return Pdf::loadView($templatePath);
     }
 
     public function generateFromTransaction($transaction): Payment

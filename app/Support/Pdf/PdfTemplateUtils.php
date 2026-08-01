@@ -4,6 +4,7 @@ namespace App\Support\Pdf;
 
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\Str;
 
 class PdfTemplateUtils
@@ -104,6 +105,28 @@ class PdfTemplateUtils
         }
 
         return array_values($formatted);
+    }
+
+    /**
+     * The view to render for a document, preferring a custom override.
+     *
+     * Invoices and estimates let you pick between several designs, so their
+     * template is chosen per document. Payment receipts and reports have no
+     * chooser and no design to pick, so overriding one means dropping a
+     * same-named file into storage/app/templates/pdf/{type}/ and having it win.
+     * That keeps the whole feature to "the file exists, so use it" and needs no
+     * setting, column or picker.
+     */
+    public static function resolveView(string $templateType, string $templateName): string
+    {
+        $custom = sprintf('pdf_templates::%s.%s', $templateType, $templateName);
+
+        // View::exists rather than a disk check: the namespace is what actually
+        // renders, so asking it directly means the two cannot disagree about
+        // where custom templates live.
+        return View::exists($custom)
+            ? $custom
+            : sprintf('app.pdf.%s.%s', $templateType, $templateName);
     }
 
     /**
