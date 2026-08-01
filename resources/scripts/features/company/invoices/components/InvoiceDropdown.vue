@@ -65,7 +65,12 @@
     <!-- Record Payment -->
     <router-link :to="`/admin/payments/${row.id}/create`">
       <BaseDropdownItem
-        v-if="row.status === 'SENT' && !isDetailView && canCreatePayment"
+        v-if="
+          row.status === 'SENT' &&
+          row.due_amount > 0 &&
+          !isDetailView &&
+          canCreatePayment
+        "
       >
         <BaseIcon
           name="CreditCardIcon"
@@ -102,6 +107,15 @@
       {{ $t('invoices.convert_to_estimate') }}
     </BaseDropdownItem>
 
+    <!-- Create Credit Note (Stornorechnung) -->
+    <BaseDropdownItem v-if="canCreateCreditNote" @click="createCreditNote">
+      <BaseIcon
+        name="ReceiptRefundIcon"
+        class="w-5 h-5 mr-3 text-subtle group-hover:text-muted"
+      />
+      {{ $t('invoices.create_credit_note') }}
+    </BaseDropdownItem>
+
     <!-- Delete Invoice -->
     <BaseDropdownItem v-if="canDelete" @click="removeInvoice">
       <BaseIcon
@@ -121,6 +135,10 @@ import { useInvoiceStore } from '../store'
 import { useDialogStore } from '../../../../stores/dialog.store'
 import { useModalStore } from '../../../../stores/modal.store'
 import { useNotificationStore } from '../../../../stores/notification.store'
+import {
+  handleApiError,
+  getErrorTranslationKey,
+} from '../../../../utils/error-handling'
 import type { Invoice } from '../../../../types/domain/invoice'
 
 interface TableRef {
@@ -177,6 +195,31 @@ const canSendInvoice = computed<boolean>(() => {
   )
 })
 
+// A credit note can only be created from a real invoice (never from another
+// credit note), only while something is left to credit, never from a draft
+// (nothing was issued yet), and only by users allowed to create invoices.
+const canCreateCreditNote = computed<boolean>(() => {
+  return (
+    props.canCreate &&
+    props.row.type !== 'CREDIT_NOTE' &&
+    props.row.credited_status !== 'FULL' &&
+    props.row.status !== 'DRAFT'
+  )
+})
+
+/**
+ * Turn an API failure into a toast, translating the server's message key when
+ * it is one we know about so the user never sees a raw snake_case key.
+ */
+function showApiErrorNotification(err: unknown): void {
+  const normalized = handleApiError(err)
+  const translationKey = getErrorTranslationKey(normalized.message)
+  notificationStore.showNotification({
+    type: 'error',
+    message: translationKey ? t(translationKey) : normalized.message,
+  })
+}
+
 function removeInvoice(): void {
   dialogStore.openDialog({
     title: t('general.are_you_sure'),
@@ -212,8 +255,14 @@ function cloneInvoiceData(): void {
     size: 'lg',
   }).then(async (res: boolean) => {
     if (res) {
-      const response = await invoiceStore.cloneInvoice({ id: props.row.id })
-      router.push(`/admin/invoices/${response.data.data.id}/edit`)
+      // Cloning a credit note is refused by the server (422), so the reason
+      // has to reach the user instead of failing silently.
+      try {
+        const response = await invoiceStore.cloneInvoice({ id: props.row.id })
+        router.push(`/admin/invoices/${response.data.data.id}/edit`)
+      } catch (err: unknown) {
+        showApiErrorNotification(err)
+      }
     }
   })
 }
@@ -229,9 +278,29 @@ function convertToEstimate(): void {
     size: 'lg',
   }).then(async (res: boolean) => {
     if (res) {
-      const response = await invoiceStore.convertToEstimate({ id: props.row.id })
-      router.push(`/admin/estimates/${response.data.data.id}/edit`)
+      // Same as clone(): converting a credit note is refused by the server.
+      try {
+        const response = await invoiceStore.convertToEstimate({ id: props.row.id })
+        router.push(`/admin/estimates/${response.data.data.id}/edit`)
+      } catch (err: unknown) {
+        showApiErrorNotification(err)
+      }
     }
+  })
+}
+
+// Crediting is a form, not a confirmation: which lines and how much of each
+// has to be chosen, so the modal owns the whole flow including its errors.
+function createCreditNote(): void {
+  modalStore.openModal({
+    title: t('invoices.create_credit_note'),
+    componentName: 'CreditNoteModal',
+    id: props.row.id,
+    size: 'lg',
+    refreshData: () => {
+      props.loadData?.()
+      props.table?.refresh()
+    },
   })
 }
 

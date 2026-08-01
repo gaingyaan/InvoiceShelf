@@ -121,12 +121,22 @@ class DashboardController extends Controller
         ];
 
         $total_customer_count = Customer::whereCompany()->count();
+        // "How many invoices did we issue" counts issued documents, so the
+        // reversals are excluded. The sums above deliberately keep them: a
+        // credit note's negated total is exactly what nets sales back out.
         $total_invoice_count = Invoice::whereCompany()
+            ->where('type', Invoice::TYPE_INVOICE)
             ->count();
         $total_estimate_count = Estimate::whereCompany()->count();
         $total_amount_due = Invoice::whereCompany()
             ->sum('base_due_amount');
 
+        // Raw models, not InvoiceResource: every loaded relation is serialized
+        // with the full $appends set, so a column-limited creditNotes load blew
+        // up in the date accessors (no company_id on the children) and a full
+        // load would run the appends per credit note for nothing. The rows do
+        // not need the relation: credited_status is a resource-level field, and
+        // a fully credited invoice has no due amount so it never appears here.
         $recent_due_invoices = Invoice::with('customer')
             ->whereCompany()
             ->where('base_due_amount', '>', 0)

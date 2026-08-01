@@ -48,6 +48,21 @@ const ERROR_TRANSLATION_MAP: Record<string, string> = {
   'Relation invoiceItems exists.': 'items.item_attached_message',
   'Relation taxes exists.': 'settings.tax_types.already_in_use',
   'Relation payments exists.': 'errors.payment_attached',
+  'Credit note exists.': 'errors.credit_note_attached',
+  'a_credit_note_cannot_be_created_from_a_credit_note':
+    'errors.credit_note_cannot_be_created_from_credit_note',
+  'a_draft_invoice_cannot_be_credited': 'errors.draft_invoice_cannot_be_credited',
+  'invoice_already_fully_credited': 'errors.invoice_already_fully_credited',
+  'credit_quantity_exceeds_remaining': 'errors.credit_quantity_exceeds_remaining',
+  'credit_amount_exceeds_invoice_balance': 'errors.credit_amount_exceeds_invoice_balance',
+  'credit_note_must_credit_something': 'errors.credit_note_must_credit_something',
+  'payment_amount_exceeds_invoice_due_amount':
+    'errors.payment_amount_exceeds_invoice_due_amount',
+  'credit_item_not_on_invoice': 'errors.credit_item_not_on_invoice',
+  'credit_quantity_invalid': 'errors.credit_quantity_invalid',
+  'a_credit_note_cannot_be_cloned': 'errors.credit_note_cannot_be_cloned',
+  'a_credit_note_cannot_be_converted_to_an_estimate':
+    'errors.credit_note_cannot_be_converted_to_estimate',
   'The estimate number has already been taken.': 'errors.estimate_number_used',
   'The payment number has already been taken.': 'errors.estimate_number_used',
   'The invoice number has already been taken.': 'errors.invoice_number_used',

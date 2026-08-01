@@ -28,7 +28,11 @@
           :to="`/admin/payments/${$route.params.id}/create`"
         >
           <BaseButton
-            v-if="invoiceData.status === 'SENT' || invoiceData.status === 'VIEWED'"
+            v-if="
+              (invoiceData.status === 'SENT' ||
+                invoiceData.status === 'VIEWED') &&
+              invoiceData.due_amount > 0
+            "
             variant="primary"
           >
             {{ $t('invoices.record_payment') }}
@@ -39,7 +43,7 @@
         <InvoiceDropdown
           class="ml-3"
           :row="invoiceData"
-          :load-data="() => loadInvoices()"
+          :load-data="refreshInvoiceList"
           :can-edit="canEdit"
           :can-view="canView"
           :can-create="canCreate"
@@ -50,6 +54,65 @@
         />
       </template>
     </BasePageHeader>
+
+    <!-- Credit note banner + link to the reversed invoice -->
+    <div
+      v-if="invoiceData.type === 'CREDIT_NOTE'"
+      class="px-4 py-2 mb-4 text-sm rounded bg-red-50 text-red-700 border border-red-200"
+    >
+      <div class="flex items-center gap-2">
+        <span class="px-2 py-0.5 text-xs font-semibold rounded bg-red-100">
+          {{ $t('invoices.credit_note') }}
+        </span>
+        <span v-if="invoiceData.related_invoice">
+          {{ $t('invoices.original_invoice') }}:
+          <router-link
+            :to="`/admin/invoices/${invoiceData.related_invoice.id}/view`"
+            class="font-medium underline"
+          >
+            {{ invoiceData.related_invoice.invoice_number }}
+          </router-link>
+        </span>
+      </div>
+      <p v-if="invoiceData.credit_reason" class="mt-1 text-xs">
+        {{ $t('invoices.credit_note_reason') }}: {{ invoiceData.credit_reason }}
+      </p>
+    </div>
+
+    <!-- Credited banner + links to the reversing credit notes (mirror of the
+         credit-note banner above, shown on the ORIGINAL invoice's side). A
+         partial credit gets a softer headline than a full reversal, since the
+         invoice is still live for the remainder. -->
+    <div
+      v-if="invoiceData.type !== 'CREDIT_NOTE' && isCredited"
+      class="flex flex-wrap items-center gap-2 px-4 py-2 mb-4 text-sm rounded bg-amber-50 text-amber-800 border border-amber-300"
+    >
+      <span class="px-2 py-0.5 text-xs font-semibold rounded bg-amber-100">
+        {{ isFullyCredited ? $t('invoices.cancelled') : $t('invoices.partially_credited') }}
+      </span>
+      <span>
+        {{
+          isFullyCredited
+            ? $t('invoices.cancelled_via_credit_note')
+            : $t('invoices.partially_credited_via_credit_notes')
+        }}:
+        <router-link
+          v-for="creditNote in invoiceData.credit_notes"
+          :key="creditNote.id"
+          :to="`/admin/invoices/${creditNote.id}/view`"
+          class="ml-1 font-medium underline"
+        >
+          {{ creditNote.invoice_number }}
+        </router-link>
+      </span>
+      <span v-if="invoiceData.credited_total" class="font-medium">
+        {{ $t('invoices.credited_amount') }}:
+        <BaseFormatMoney
+          :amount="invoiceData.credited_total"
+          :currency="invoiceData.customer?.currency"
+        />
+      </span>
+    </div>
 
     <!-- Sidebar -->
     <div
@@ -169,6 +232,23 @@
               >
                 <BaseInvoiceStatusLabel :status="invoice.status" />
               </BaseEstimateStatusBadge>
+
+              <!-- An invoice reversed by credit notes is cancelled (in full)
+                   or partly credited: show a distinct badge so it's clear at a
+                   glance in the list, mirroring InvoiceIndexView.vue's
+                   cell-due_amount badges. -->
+              <span
+                v-if="invoice.type !== 'CREDIT_NOTE' && invoice.credited_status === 'FULL'"
+                class="inline-block px-1 py-0.5 ml-1 text-xs font-medium rounded bg-amber-100 text-amber-800 whitespace-nowrap"
+              >
+                {{ $t('invoices.cancelled') }}
+              </span>
+              <span
+                v-else-if="invoice.type !== 'CREDIT_NOTE' && invoice.credited_status === 'PARTIAL'"
+                class="inline-block px-1 py-0.5 ml-1 text-[10px] font-medium rounded bg-amber-100 text-amber-800 whitespace-nowrap"
+              >
+                {{ $t('invoices.partially_credited') }}
+              </span>
             </div>
 
             <div class="flex-1 whitespace-nowrap right">
@@ -202,6 +282,7 @@
     <BasePdfPreview :src="shareableLink" />
 
     <SendInvoiceModal />
+    <CreditNoteModal />
   </BasePage>
 </template>
 
@@ -212,6 +293,7 @@ import { useI18n } from 'vue-i18n'
 import { useInvoiceStore } from '../store'
 import InvoiceDropdown from '../components/InvoiceDropdown.vue'
 import SendInvoiceModal from '../components/SendInvoiceModal.vue'
+import CreditNoteModal from '../components/CreditNoteModal.vue'
 import LoadingIcon from '@/scripts/components/icons/LoadingIcon.vue'
 import { useUserStore } from '../../../../stores/user.store'
 import { useDialogStore } from '../../../../stores/dialog.store'
@@ -304,6 +386,22 @@ const searchData = reactive<SearchData>({
 })
 
 const pageTitle = computed<string>(() => invoiceData.value?.invoice_number ?? '')
+
+// credited_status is only emitted where the creditNotes relation was loaded,
+// so fall back to the relation itself rather than hiding the banner outright.
+const isCredited = computed<boolean>(() => {
+  const status = invoiceData.value?.credited_status
+
+  if (status) {
+    return status !== 'NONE'
+  }
+
+  return !!invoiceData.value?.credit_notes?.length
+})
+
+const isFullyCredited = computed<boolean>(() => {
+  return invoiceData.value?.credited_status !== 'PARTIAL'
+})
 
 const getOrderBy = computed<boolean>(() => {
   return searchData.orderBy === 'asc' || searchData.orderBy === null
@@ -443,6 +541,15 @@ function onSearched(): void {
     invoiceList.value = []
     loadInvoices()
   }, 500)
+}
+
+// Reset-and-refetch the sidebar list from page 1. Used after actions that
+// change which invoices exist or their status (e.g. creating a credit
+// note), since `loadInvoices()` alone only appends (it's built for
+// infinite-scroll pagination) and would duplicate already-loaded rows.
+function refreshInvoiceList(): void {
+  invoiceList.value = []
+  loadInvoices()
 }
 
 function sortData(): void {

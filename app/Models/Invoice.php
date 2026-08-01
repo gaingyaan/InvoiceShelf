@@ -40,6 +40,10 @@ class Invoice extends Model implements HasMedia
 
     public const STATUS_PAID = 'PAID';
 
+    public const TYPE_INVOICE = 'INVOICE';
+
+    public const TYPE_CREDIT_NOTE = 'CREDIT_NOTE';
+
     protected $dates = [
         'created_at',
         'updated_at',
@@ -122,6 +126,28 @@ class Invoice extends Model implements HasMedia
         return $this->belongsTo(User::class, 'creator_id');
     }
 
+    /**
+     * The original invoice this credit note reverses (null for normal invoices).
+     */
+    public function relatedInvoice(): BelongsTo
+    {
+        return $this->belongsTo(Invoice::class, 'related_invoice_id');
+    }
+
+    /**
+     * Credit notes that reverse this invoice.
+     */
+    public function creditNotes(): HasMany
+    {
+        return $this->hasMany(Invoice::class, 'related_invoice_id')
+            ->where('type', self::TYPE_CREDIT_NOTE);
+    }
+
+    public function isCreditNote(): bool
+    {
+        return $this->type === self::TYPE_CREDIT_NOTE;
+    }
+
     public function getInvoicePdfUrlAttribute()
     {
         return url('/invoices/pdf/'.$this->unique_hash);
@@ -138,6 +164,16 @@ class Invoice extends Model implements HasMedia
 
     public function getAllowEditAttribute()
     {
+        // A credited invoice is immutable: its line item ids anchor the lines of
+        // every credit note that reverses it.
+        $hasCreditNotes = $this->relationLoaded('creditNotes')
+            ? $this->creditNotes->isNotEmpty()
+            : $this->creditNotes()->exists();
+
+        if ($hasCreditNotes) {
+            return false;
+        }
+
         $retrospective_edit = CompanySetting::getSetting('retrospective_edits', $this->company_id);
 
         $allowed = true;

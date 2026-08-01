@@ -5,6 +5,7 @@ namespace App\Services\Document;
 use App;
 use App\Facades\Hashids;
 use App\Facades\Pdf;
+use App\Mail\SendCreditNoteMail;
 use App\Mail\SendInvoiceMail;
 use App\Models\Company;
 use App\Models\CompanySetting;
@@ -24,6 +25,7 @@ class InvoiceService
 {
     public function __construct(
         private readonly DocumentItemService $documentItemService,
+        private readonly CreditNoteService $creditNoteService,
     ) {}
 
     public function create(Request $request): Invoice
@@ -40,6 +42,7 @@ class InvoiceService
             ->setModel($invoice)
             ->setCompany($invoice->company_id)
             ->setCustomer($invoice->customer_id)
+            ->setSequenceScope(['type' => Invoice::TYPE_INVOICE])
             ->setNextNumbers();
 
         $invoice->sequence_number = $serial->nextSequenceNumber;
@@ -69,6 +72,7 @@ class InvoiceService
             'items.fields.customField',
             'customer',
             'taxes',
+            'creditNotes',
         ])->find($invoice->id);
     }
 
@@ -81,6 +85,7 @@ class InvoiceService
             ->setModel($invoice)
             ->setCompany($invoice->company_id)
             ->setCustomer($request->customer_id)
+            ->setSequenceScope(['type' => Invoice::TYPE_INVOICE])
             ->setModelObject($invoice->id)
             ->setNextNumbers();
 
@@ -151,11 +156,18 @@ class InvoiceService
             'items.fields.customField',
             'customer',
             'taxes',
+            'creditNotes',
         ])->find($invoice->id);
     }
 
     public function delete(Collection $ids): bool
     {
+        // Invoices that lose a credit note in this batch and survive it. Their
+        // balances are recomputed once, after every deletion has landed, so a
+        // batch deleting several credit notes of the same invoice settles on
+        // the right figure instead of one per deleted document.
+        $creditedInvoiceIds = [];
+
         foreach ($ids as $id) {
             $invoice = Invoice::find($id);
 
@@ -163,7 +175,30 @@ class InvoiceService
                 $invoice->transactions()->delete();
             }
 
+            if ($invoice->isCreditNote() && $invoice->related_invoice_id && ! $ids->contains($invoice->related_invoice_id)) {
+                $creditedInvoiceIds[$invoice->related_invoice_id] = $invoice->related_invoice_id;
+            }
+
             $invoice->delete();
+        }
+
+        // There is no DB-level foreign key on related_invoice_id by convention,
+        // so the cascade lives here: nothing that survives the batch may keep
+        // pointing at a row that just went away.
+        Invoice::whereIn('related_invoice_id', $ids)->update(['related_invoice_id' => null]);
+
+        // Deleting a credit note gives back the amount it had credited off its
+        // original invoice (mirror of the create-side adjustment; same symmetry
+        // PR #536 implemented). The balance is recomputed from the payments and
+        // the credit notes that remain rather than restored from a snapshot, so
+        // it is exact whether the invoice was partly paid, partly credited, or
+        // both.
+        foreach ($creditedInvoiceIds as $creditedInvoiceId) {
+            $original = Invoice::find($creditedInvoiceId);
+
+            if ($original) {
+                $this->creditNoteService->recalculateBalance($original);
+            }
         }
 
         return true;
@@ -204,7 +239,11 @@ class InvoiceService
         if (! empty($data['bcc'])) {
             $mail->bcc($data['bcc']);
         }
-        $mail->send(new SendInvoiceMail($data));
+        // A credit note travels through the same send channel as the invoice it
+        // reverses; only the template (and its EmailLog entry) differs.
+        $mail->send($invoice->isCreditNote()
+            ? new SendCreditNoteMail($data)
+            : new SendInvoiceMail($data));
 
         if ($invoice->status == Invoice::STATUS_DRAFT) {
             $invoice->status = Invoice::STATUS_SENT;
@@ -240,6 +279,11 @@ class InvoiceService
 
         $invoiceTemplate = Invoice::find($invoice->id)->template_name;
 
+        // Cheap either way: relatedInvoice is null for regular invoices and
+        // creditNotes is empty for credit notes. Eager-loaded here so the
+        // invoice templates can reference the paired document.
+        $invoice->loadMissing(['relatedInvoice', 'creditNotes']);
+
         $company = Company::find($invoice->company_id);
         $locale = CompanySetting::getSetting('language', $company->id);
         $customFields = CustomField::where('model_type', 'Item')->get();
@@ -266,7 +310,7 @@ class InvoiceService
         }
 
         return Pdf::loadView($templatePath, PdfMetadata::forDocument(
-            __('pdf_invoice_label'),
+            __($invoice->isCreditNote() ? 'pdf_credit_note_label' : 'pdf_invoice_label'),
             $invoice->invoice_number,
             $company,
         ));
@@ -280,6 +324,7 @@ class InvoiceService
             ->setModel($invoice)
             ->setCompany($invoice->company_id)
             ->setCustomer($invoice->customer_id)
+            ->setSequenceScope(['type' => Invoice::TYPE_INVOICE])
             ->setNextNumbers();
 
         $dueDate = null;

@@ -23,7 +23,19 @@ class SerialNumberController extends Controller
         try {
             switch ($key) {
                 case 'invoice':
+                    // Scoped exactly like every invoice create path, so the
+                    // settings preview can never count credit-note rows.
                     $nextNumber = $serial->setModel($invoice)
+                        ->setSequenceScope(['type' => Invoice::TYPE_INVOICE])
+                        ->setModelObject($request->model_id)
+                        ->getNextNumber();
+
+                    break;
+
+                case 'credit_note':
+                    $nextNumber = $serial->setModel($invoice)
+                        ->setSettingKey('credit_note_number_format')
+                        ->setSequenceScope(['type' => Invoice::TYPE_CREDIT_NOTE])
                         ->setModelObject($request->model_id)
                         ->getNextNumber();
 
