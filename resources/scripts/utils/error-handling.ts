@@ -66,7 +66,7 @@ const ERROR_TRANSLATION_MAP: Record<string, string> = {
   'invoice_must_be_settled_before_completion':
     'errors.invoice_must_be_settled_before_completion',
   'The estimate number has already been taken.': 'errors.estimate_number_used',
-  'The payment number has already been taken.': 'errors.estimate_number_used',
+  'The payment number has already been taken.': 'errors.payment_number_used',
   'The invoice number has already been taken.': 'errors.invoice_number_used',
   'The name has already been taken.': 'errors.name_already_taken',
   'total_invoice_amount_must_be_more_than_paid_amount': 'invoices.invalid_due_amount_message',

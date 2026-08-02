@@ -26,6 +26,7 @@ use App\Models\Tax;
 use App\Models\TaxType;
 use App\Models\Unit;
 use App\Models\User;
+use App\Services\Document\SerialNumberService;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Artisan;
@@ -245,6 +246,12 @@ class RealisticDemoSeeder extends Seeder
         Expense::where('company_id', $this->companyId)->delete();
         ExpenseCategory::where('company_id', $this->companyId)->delete();
 
+        // Taxes and recurring invoices still point at their customer. Remove
+        // them before deleting customers so a second seeder run is idempotent
+        // on databases that enforce foreign keys.
+        Tax::where('company_id', $this->companyId)->delete();
+        RecurringInvoice::where('company_id', $this->companyId)->delete();
+
         // Customers: delete along with their addresses (addresses keyed by customer_id)
         $customerIds = Customer::where('company_id', $this->companyId)->pluck('id');
         Address::whereIn('customer_id', $customerIds)->delete();
@@ -252,10 +259,8 @@ class RealisticDemoSeeder extends Seeder
 
         Item::where('company_id', $this->companyId)->delete();
 
-        // Taxes cascade from their documents, but the reusable definitions and
-        // the standalone rows do not.
-        Tax::where('company_id', $this->companyId)->delete();
-        RecurringInvoice::where('company_id', $this->companyId)->delete();
+        // The reusable definitions and standalone rows do not cascade from
+        // their documents.
         TaxType::where('company_id', $this->companyId)->delete();
         Note::where('company_id', $this->companyId)->delete();
         CustomField::where('company_id', $this->companyId)->delete();
@@ -461,6 +466,7 @@ class RealisticDemoSeeder extends Seeder
             'invoice_number' => $invoiceNumber,
             'reference_number' => null,
             'template_name' => 'invoice1',
+            'type' => Invoice::TYPE_INVOICE,
             'status' => $status,
             'paid_status' => $paidStatus,
             'overdue' => $overdue,
@@ -495,6 +501,15 @@ class RealisticDemoSeeder extends Seeder
         // The PDF routes bind on unique_hash. Creating through the model rather
         // than InvoiceService skips the one place that normally assigns it, so
         // set it here or every seeded document 404s on preview and download.
+        $serial = (new SerialNumberService)
+            ->setModel($invoice)
+            ->setCompany($invoice->company_id)
+            ->setCustomer($invoice->customer_id)
+            ->setSequenceScope(['type' => Invoice::TYPE_INVOICE])
+            ->setNextNumbers();
+
+        $invoice->sequence_number = $serial->nextSequenceNumber;
+        $invoice->customer_sequence_number = $serial->nextCustomerSequenceNumber;
         $invoice->unique_hash = Hashids::connection(Invoice::class)->encode($invoice->id);
         $invoice->created_at = $invoiceDate;
         $invoice->updated_at = $invoiceDate;
@@ -564,6 +579,14 @@ class RealisticDemoSeeder extends Seeder
         ]);
 
         // See seedInvoice(): the PDF routes bind on unique_hash.
+        $serial = (new SerialNumberService)
+            ->setModel($payment)
+            ->setCompany($payment->company_id)
+            ->setCustomer($payment->customer_id)
+            ->setNextNumbers();
+
+        $payment->sequence_number = $serial->nextSequenceNumber;
+        $payment->customer_sequence_number = $serial->nextCustomerSequenceNumber;
         $payment->unique_hash = Hashids::connection(Payment::class)->encode($payment->id);
         $payment->created_at = $paymentDate;
         $payment->updated_at = $paymentDate;
@@ -649,6 +672,14 @@ class RealisticDemoSeeder extends Seeder
         }
 
         // See seedInvoice(): the PDF routes bind on unique_hash.
+        $serial = (new SerialNumberService)
+            ->setModel($estimate)
+            ->setCompany($estimate->company_id)
+            ->setCustomer($estimate->customer_id)
+            ->setNextNumbers();
+
+        $estimate->sequence_number = $serial->nextSequenceNumber;
+        $estimate->customer_sequence_number = $serial->nextCustomerSequenceNumber;
         $estimate->unique_hash = Hashids::connection(Estimate::class)->encode($estimate->id);
         $estimate->created_at = $estimateDate;
         $estimate->updated_at = $estimateDate;

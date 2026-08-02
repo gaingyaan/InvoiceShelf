@@ -115,6 +115,11 @@ import {
 } from '@vuelidate/validators'
 import useVuelidate from '@vuelidate/core'
 import { useEstimateStore } from '../store'
+import { useNotificationStore } from '@/scripts/stores/notification.store'
+import {
+  handleApiError,
+  getErrorTranslationKey,
+} from '@/scripts/utils/error-handling'
 import EstimateBasicFields from '../components/EstimateBasicFields.vue'
 import {
   DocumentItemsTable,
@@ -125,6 +130,7 @@ import {
 } from '../../../shared/document-form'
 
 const estimateStore = useEstimateStore()
+const notificationStore = useNotificationStore()
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
@@ -200,32 +206,32 @@ async function submitForm(): Promise<void> {
 
   isSaving.value = true
 
-  const data: Record<string, unknown> = {
-    ...cloneDeep(estimateStore.newEstimate),
-    sub_total: Math.round(estimateStore.getSubTotal),
-    total: Math.round(estimateStore.getTotal),
-    tax: Math.round(estimateStore.getTotalTax),
-  }
-
-  const items = data.items as Array<Record<string, unknown>>
-  if (data.discount_per_item === 'YES') {
-    items.forEach((item, index) => {
-      if (item.discount_type === 'fixed') {
-        items[index].discount = Math.round((item.discount as number) * 100)
-      }
-    })
-  } else {
-    if (data.discount_type === 'fixed') {
-      data.discount = Math.round((data.discount as number) * 100)
-    }
-  }
-
-  const taxes = data.taxes as Array<Record<string, unknown>>
-  if (data.tax_per_item !== 'YES' && taxes.length) {
-    data.tax_type_ids = taxes.map((tax) => tax.tax_type_id)
-  }
-
   try {
+    const data: Record<string, unknown> = {
+      ...cloneDeep(estimateStore.newEstimate),
+      sub_total: Math.round(estimateStore.getSubTotal),
+      total: Math.round(estimateStore.getTotal),
+      tax: Math.round(estimateStore.getTotalTax),
+    }
+
+    const items = data.items as Array<Record<string, unknown>>
+    if (data.discount_per_item === 'YES') {
+      items.forEach((item, index) => {
+        if (item.discount_type === 'fixed') {
+          items[index].discount = Math.round((item.discount as number) * 100)
+        }
+      })
+    } else {
+      if (data.discount_type === 'fixed') {
+        data.discount = Math.round((data.discount as number) * 100)
+      }
+    }
+
+    const taxes = data.taxes as Array<Record<string, unknown>>
+    if (data.tax_per_item !== 'YES' && taxes.length) {
+      data.tax_type_ids = taxes.map((tax) => tax.tax_type_id)
+    }
+
     const action = isEdit.value
       ? estimateStore.updateEstimate
       : estimateStore.addEstimate
@@ -234,10 +240,16 @@ async function submitForm(): Promise<void> {
     if (res.data.data) {
       router.push(`/admin/estimates/${res.data.data.id}/view`)
     }
-  } catch (err) {
-    console.error(err)
-  }
+  } catch (err: unknown) {
+    const normalized = handleApiError(err)
+    const translationKey = getErrorTranslationKey(normalized.message)
 
-  isSaving.value = false
+    notificationStore.showNotification({
+      type: 'error',
+      message: translationKey ? t(translationKey) : normalized.message,
+    })
+  } finally {
+    isSaving.value = false
+  }
 }
 </script>

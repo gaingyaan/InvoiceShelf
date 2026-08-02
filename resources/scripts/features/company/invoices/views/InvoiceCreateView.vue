@@ -121,6 +121,11 @@ import useVuelidate from '@vuelidate/core'
 import { useInvoiceStore } from '../store'
 import { useRecurringInvoiceStore } from '@/scripts/features/company/recurring-invoices/store'
 import { useCompanyStore } from '@/scripts/stores/company.store'
+import { useNotificationStore } from '@/scripts/stores/notification.store'
+import {
+  handleApiError,
+  getErrorTranslationKey,
+} from '@/scripts/utils/error-handling'
 import InvoiceBasicFields from '../components/InvoiceBasicFields.vue'
 import {
   DocumentItemsTable,
@@ -133,6 +138,7 @@ import {
 const invoiceStore = useInvoiceStore()
 const recurringInvoiceStore = useRecurringInvoiceStore()
 const companyStore = useCompanyStore()
+const notificationStore = useNotificationStore()
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
@@ -426,10 +432,16 @@ async function submitForm(): Promise<void> {
       const response = await action(data)
       router.push(`/admin/invoices/${response.data.data.id}/view`)
     }
-  } catch (err) {
-    console.error(err)
-  }
+  } catch (err: unknown) {
+    const normalized = handleApiError(err)
+    const translationKey = getErrorTranslationKey(normalized.message)
 
-  isSaving.value = false
+    notificationStore.showNotification({
+      type: 'error',
+      message: translationKey ? t(translationKey) : normalized.message,
+    })
+  } finally {
+    isSaving.value = false
+  }
 }
 </script>
