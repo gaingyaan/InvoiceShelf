@@ -104,15 +104,15 @@ class CreateTemplateCommand extends Command
 
         $source = Storage::disk('views')->get("/app/pdf/{$templateType}/{$sourceName}.blade.php");
 
-        // Point this template at its own copy of the shared partial before the
-        // blanket namespace rewrite below catches it. Previously every custom
-        // template of a type included the same partials/table.blade.php, which
-        // was written once and then reused, so editing the table for one custom
-        // template silently changed it for all of them.
-        $source = Str::replace(
-            sprintf('app.pdf.%s.partials.table', $templateType),
-            sprintf('pdf_templates::%s.partials.%s.table', $templateType, $templateName),
+        // Point this template at its own copies of the partials its type ships
+        // before the blanket namespace rewrite below catches them. Previously
+        // every custom template of a type included the same
+        // partials/table.blade.php, which was written once and then reused, so
+        // editing the table for one custom template silently changed it for all
+        // of them.
+        $source = PdfTemplateUtils::rewriteViewReferences(
             $source,
+            PdfTemplateUtils::partialViewMap($templateType, $templateName),
         );
 
         $source = Str::replace(
@@ -137,15 +137,11 @@ class CreateTemplateCommand extends Command
             );
         }
 
-        $partial = "/app/pdf/{$templateType}/partials/table.blade.php";
-
-        if (Storage::disk('views')->exists($partial)) {
-            PdfTemplateUtils::toCustomTemplateFile(
-                Storage::disk('views')->get($partial),
-                $templateType,
-                sprintf('partials/%s/table.blade.php', $templateName),
-            );
-        }
+        // Every partial of the type, not just the table: reports extend a shared
+        // layout which in turn includes a shared stylesheet, and a clone that
+        // was rewritten to the custom namespace without them pointed at views
+        // that did not exist and failed to render.
+        PdfTemplateUtils::copyTemplatePartials($templateType, $templateName);
 
         // Repeating page header/footer, if the source template has one. Named
         // with the {template}_header / {template}_footer suffix the Gotenberg

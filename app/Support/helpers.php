@@ -123,7 +123,17 @@ function getCustomFieldValueKey(string $type)
 }
 
 /**
- * @return formated_money
+ * Format an amount given in cents as currency markup for PDF templates.
+ *
+ * The magnitude is formatted first and a single minus sign is prefixed to the
+ * whole assembled string, so a negative amount reads "-$24,738.00" rather than
+ * "$-24,738.00" and the symbol stays glued to the digits in both symbol
+ * positions. The symbol is wrapped in a DejaVu Sans span so it renders even
+ * when the active font has no glyph for it.
+ *
+ * @param  int|float|string|null  $money  Amount in cents.
+ * @param  Currency|null  $currency  Defaults to the company currency setting.
+ * @return string
  */
 function format_money_pdf($money, $currency = null)
 {
@@ -134,20 +144,24 @@ function format_money_pdf($money, $currency = null)
     }
 
     $format_money = number_format(
-        $money,
+        abs($money),
         $currency->precision,
         $currency->decimal_separator,
         $currency->thousand_separator
     );
 
-    $currency_with_symbol = '';
-    if ($currency->swap_currency_symbol) {
-        $currency_with_symbol = $format_money.'<span style="font-family: DejaVu Sans;">'.$currency->symbol.'</span>';
-    } else {
-        $currency_with_symbol = '<span style="font-family: DejaVu Sans;">'.$currency->symbol.'</span>'.$format_money;
-    }
+    $symbol = '<span style="font-family: DejaVu Sans;">'.$currency->symbol.'</span>';
 
-    return $currency_with_symbol;
+    $currency_with_symbol = $currency->swap_currency_symbol
+        ? $format_money.$symbol
+        : $symbol.$format_money;
+
+    // The sign is decided on the formatted digits, not on the raw input, so an
+    // amount that rounds away at the currency's precision (a stray cent on a
+    // zero-precision currency) renders as zero instead of "-0".
+    $is_negative = $money < 0 && preg_match('/[1-9]/', $format_money) === 1;
+
+    return $is_negative ? '-'.$currency_with_symbol : $currency_with_symbol;
 }
 
 /**

@@ -5,7 +5,7 @@ namespace App\Facades;
 use Illuminate\Support\Facades\Facade;
 
 /**
- * @method static \App\Support\Pdf\ResponseStream loadView(string $template, array $metadata = [])
+ * @method static \App\Support\Pdf\ResponseStream loadView(string $template, array $metadata = [], ?\App\Support\Pdf\PdfPageSetup $page = null)
  */
 class Pdf extends Facade
 {

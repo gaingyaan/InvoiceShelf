@@ -13,6 +13,11 @@ namespace App\Support\Pdf;
  * nothing: the stock templates carry their own insets, and invoice2/estimate2
  * are built around a header band that only reaches the paper edge at margin 0.
  *
+ * The reports are the exception, which is what forReports() is for. Their
+ * templates never carried an inset of their own and were drawn against dompdf's
+ * built-in 1.2cm, so they need a real page margin put back, from their own
+ * config key rather than the document one.
+ *
  * Dimensions are stored as CSS lengths because that is the only representation
  * both drivers take without loss. Gotenberg has no notion of named sizes, only
  * dimensions; dompdf accepts either a name from its own 66-entry table or a
@@ -51,6 +56,45 @@ final class PdfPageSetup
             marginRight: self::length('pdf.page.margin_right', '0'),
             marginBottom: self::length('pdf.page.margin_bottom', '0'),
             marginLeft: self::length('pdf.page.margin_left', '0'),
+        );
+    }
+
+    /**
+     * The configured page, but with the report margin on all four sides.
+     *
+     * Reports are the one family of templates that carries no inset of its own:
+     * they only set `.sub-container { padding: 0px 20px }` and relied on dompdf's
+     * built-in 1.2cm page margin, which stopped applying once DompdfDriver began
+     * injecting an @page rule from config. The document margins default to zero
+     * and must stay that way (invoice2 and estimate2 bleed a header band to the
+     * paper edge), so the reports get their own margin instead of inheriting
+     * those. Paper size and orientation still come from config: only the margins
+     * are overridden.
+     *
+     * A page margin rather than body padding because reports run to several
+     * pages, and padding only insets the first one.
+     */
+    public static function forReports(): self
+    {
+        return self::fromConfig()->withUniformMargin(self::length('pdf.page.report_margin', '1.2cm'));
+    }
+
+    /**
+     * A copy of this page with the same paper and orientation, and the given
+     * margin on all four sides.
+     */
+    public function withUniformMargin(string $margin): self
+    {
+        $margin = self::assertLength($margin, "Invalid PDF page margin: \"{$margin}\".");
+
+        return new self(
+            width: $this->width,
+            height: $this->height,
+            orientation: $this->orientation,
+            marginTop: $margin,
+            marginRight: $margin,
+            marginBottom: $margin,
+            marginLeft: $margin,
         );
     }
 
@@ -137,9 +181,22 @@ final class PdfPageSetup
 
         $value = trim($value);
 
+        return self::assertLength($value, "Invalid PDF page length for {$key}: \"{$value}\".");
+    }
+
+    /**
+     * A bare 0 needs no unit; anything else is a number and one of the units
+     * both drivers understand. Shared by length() and withUniformMargin() so
+     * there is one definition of what a valid length is, with the caller
+     * supplying the part of the message that says where the bad value came from.
+     */
+    private static function assertLength(string $value, string $context): string
+    {
+        $value = trim($value);
+
         if (! preg_match('/^(0|\d+(\.\d+)?(pt|px|pc|mm|cm|in))$/', $value)) {
             throw new \InvalidArgumentException(
-                "Invalid PDF page length for {$key}: \"{$value}\". Expected 0, or a number and a unit, e.g. \"210mm\"."
+                $context.' Expected 0, or a number and a unit, e.g. "210mm".'
             );
         }
 

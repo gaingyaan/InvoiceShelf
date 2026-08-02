@@ -47,6 +47,21 @@ return [
         'margin_left' => env('PDF_MARGIN_LEFT', '0'),
 
         /*
+         * The page margin used by the report templates only, applied on all four
+         * sides. Reports need their own knob because the document margins above
+         * default to zero for reasons that do not apply to them: invoice2 and
+         * estimate2 bleed a coloured header band to the paper edge, and the stock
+         * document templates carry their own 30px/50px insets. The report
+         * templates carry none at all, they were drawn against dompdf's built-in
+         * 1.2cm default, so at margin zero their content sits flush against the
+         * paper. Reports are also the most likely to run to several pages, and a
+         * page margin is the only inset that repeats on every one of them (body
+         * padding insets the first page only). Keeping it separate means changing
+         * the document margins does not silently reflow the reports.
+         */
+        'report_margin' => env('PDF_REPORT_MARGIN', '1.2cm'),
+
+        /*
          * Repeat "page / total" at the foot of every page. Gotenberg only:
          * Chromium repeats a footer template and substitutes the counts, and
          * dompdf has no equivalent. Off by default so existing documents are

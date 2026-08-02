@@ -12,9 +12,9 @@ use Psr\Http\Message\RequestInterface;
 
 class GotenbergPdfDriver implements PdfDriver
 {
-    public function loadView(string $template, array $metadata = []): ResponseStream
+    public function loadView(string $template, array $metadata = [], ?PdfPageSetup $page = null): ResponseStream
     {
-        return new GotenbergPdfResponse(Gotenberg::send($this->buildRequest($template, $metadata)));
+        return new GotenbergPdfResponse(Gotenberg::send($this->buildRequest($template, $metadata, $page)));
     }
 
     /**
@@ -24,9 +24,9 @@ class GotenbergPdfDriver implements PdfDriver
      * below this line used to be inlined into loadView(), which meant the only
      * way to check that an option was set was to run a Gotenberg service.
      */
-    public function buildRequest(string $template, array $metadata = []): RequestInterface
+    public function buildRequest(string $template, array $metadata = [], ?PdfPageSetup $page = null): RequestInterface
     {
-        $page = PdfPageSetup::fromConfig();
+        $page ??= PdfPageSetup::fromConfig();
         [$width, $height] = $page->gotenbergPaper();
         [$marginTop, $marginBottom, $marginLeft, $marginRight] = $page->gotenbergMargins();
 

@@ -209,4 +209,101 @@ class PdfTemplateUtils
             $contents
         );
     }
+
+    /**
+     * Where a custom template's own copies of its type's partials live, keyed by
+     * the built-in view name each one replaces.
+     *
+     * A per-template copy is what keeps two custom templates of the same type
+     * independent: they used to share one partials/table.blade.php, written once
+     * and then reused, so editing the table for one silently changed it for all
+     * of them.
+     *
+     * @return array<string, string>
+     */
+    public static function partialViewMap(string $templateType, string $templateName): array
+    {
+        $map = [];
+
+        foreach (self::stockPartials($templateType) as $partial) {
+            $view = str_replace('/', '.', $partial);
+
+            $map[sprintf('app.pdf.%s.partials.%s', $templateType, $view)] = sprintf(
+                'pdf_templates::%s.partials.%s.%s',
+                $templateType,
+                $templateName,
+                $view,
+            );
+        }
+
+        return $map;
+    }
+
+    /**
+     * Repoint the view names in some Blade markup.
+     *
+     * Keyed by view name rather than by directive on purpose: a partial is named
+     * by @include, by @extends and by several others, and a clone has to follow
+     * every one of them.
+     *
+     * @param  array<string, string>  $map
+     */
+    public static function rewriteViewReferences(string $markup, array $map): string
+    {
+        return Str::replace(array_keys($map), array_values($map), $markup);
+    }
+
+    /**
+     * Give a custom template its own copy of every partial its type ships.
+     *
+     * References between partials are rewritten in the copies too, so a copied
+     * layout includes the copied stylesheet rather than the built-in one.
+     * Nesting of any depth is covered, because every copy is rewritten with the
+     * same map. Views outside the type's own partials directory, notably the
+     * cross-type app.pdf.partials.*, are deliberately left pointing at the
+     * built-ins: they are shared chrome, not part of the design being cloned.
+     */
+    public static function copyTemplatePartials(string $templateType, string $templateName): void
+    {
+        $map = self::partialViewMap($templateType, $templateName);
+
+        foreach (self::stockPartials($templateType) as $partial) {
+            $contents = Storage::disk('views')->get(
+                sprintf('/app/pdf/%s/partials/%s.blade.php', $templateType, $partial)
+            );
+
+            self::toCustomTemplateFile(
+                self::rewriteViewReferences($contents, $map),
+                $templateType,
+                sprintf('partials/%s/%s.blade.php', $templateName, $partial),
+            );
+        }
+    }
+
+    /**
+     * The partials a template type ships, as paths relative to its partials
+     * directory and without the .blade.php suffix.
+     *
+     * @return array<int, string>
+     */
+    private static function stockPartials(string $templateType): array
+    {
+        $directory = sprintf('app/pdf/%s/partials', $templateType);
+
+        $partials = [];
+
+        foreach (Storage::disk('views')->allFiles($directory) as $file) {
+            if (! Str::endsWith($file, '.blade.php')) {
+                continue;
+            }
+
+            $partials[] = Str::before(Str::after($file, $directory.'/'), '.blade.php');
+        }
+
+        // Longest name first, so a partial whose name is a prefix of another
+        // one cannot rewrite the leading segment of the longer name.
+        usort($partials, fn (string $a, string $b) => strlen($b) <=> strlen($a));
+
+        return $partials;
+    }
 }

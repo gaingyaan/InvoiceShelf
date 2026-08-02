@@ -1,6 +1,10 @@
 <?php
 
+use App\Facades\Pdf;
 use App\Models\User;
+use App\Support\Pdf\PdfPageSetup;
+use App\Support\Pdf\ResponseStream;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Artisan;
 use Laravel\Sanctum\Sanctum;
 
@@ -60,4 +64,38 @@ test('every report can be downloaded as an attachment', function (string $report
     $response->assertOk();
     expect($response->headers->get('content-disposition'))->toContain('attachment');
     expect($response->getContent())->toStartWith('%PDF-');
+})->with('reports');
+
+/**
+ * The report templates carry no inset of their own and were drawn against
+ * dompdf's built-in 1.2cm margin, which stopped applying once the driver began
+ * injecting an @page rule from config (where documents deliberately default to
+ * 0). Every report route therefore has to ask for the report page explicitly,
+ * and a page margin rather than body padding: reports run to several pages, and
+ * only a page margin repeats on each one.
+ */
+test('every report route renders at the report page setup', function (string $report) {
+    config([
+        'pdf.page.margin_top' => '0',
+        'pdf.page.margin_right' => '0',
+        'pdf.page.margin_bottom' => '0',
+        'pdf.page.margin_left' => '0',
+        'pdf.page.report_margin' => '1.2cm',
+    ]);
+
+    $stream = Mockery::mock(ResponseStream::class);
+    $stream->shouldReceive('stream')->andReturn(new Response('%PDF-'));
+
+    Pdf::shouldReceive('loadView')
+        ->once()
+        // Compared on the margins rather than by identity: the setup is built
+        // per render, so no two calls ever share an instance.
+        ->withArgs(function (string $template, array $metadata, ?PdfPageSetup $page) {
+            return $page instanceof PdfPageSetup
+                && $page->marginCss() === PdfPageSetup::forReports()->marginCss()
+                && $page->marginCss() === '1.2cm 1.2cm 1.2cm 1.2cm';
+        })
+        ->andReturn($stream);
+
+    get(reportUrl($report, $this->company->unique_hash))->assertOk();
 })->with('reports');

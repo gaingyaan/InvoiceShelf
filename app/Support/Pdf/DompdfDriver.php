@@ -15,9 +15,9 @@ use Illuminate\Support\Facades\App;
  */
 class DompdfDriver implements PdfDriver
 {
-    public function loadView(string $template, array $metadata = []): ResponseStream
+    public function loadView(string $template, array $metadata = [], ?PdfPageSetup $page = null): ResponseStream
     {
-        $page = PdfPageSetup::fromConfig();
+        $page ??= PdfPageSetup::fromConfig();
 
         $html = $this->withPageMargins(view($template)->render(), $page);
         $html = $this->withDocumentTitle($html, $metadata['Title'] ?? null);
