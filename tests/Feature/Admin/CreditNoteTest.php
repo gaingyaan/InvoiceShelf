@@ -905,18 +905,24 @@ test('no surviving row keeps a dangling related invoice reference', function () 
     expect(Invoice::find($creditNote->id)->related_invoice_id)->toBeNull();
 });
 
-test('completing an uncredited invoice still zeroes its balance', function () {
+test('completing a fully credited invoice is idempotent', function () {
     $invoice = creditableInvoice();
+
+    postJson("api/v1/invoices/{$invoice->id}/credit-note")
+        ->assertStatus(201);
 
     postJson("api/v1/invoices/{$invoice->id}/status", ['status' => Invoice::STATUS_COMPLETED])
         ->assertOk();
 
     $invoice->refresh();
 
-    // The credit-note bookkeeping must not touch the manual status change.
+    // Completion verifies the recorded credit note and does not disturb the
+    // already-settled balance.
     expect((int) $invoice->due_amount)->toBe(0)
+        ->and((int) $invoice->base_due_amount)->toBe(0)
         ->and($invoice->status)->toBe(Invoice::STATUS_COMPLETED)
-        ->and($invoice->paid_status)->toBe(Invoice::STATUS_PAID);
+        ->and($invoice->paid_status)->toBe(Invoice::STATUS_PAID)
+        ->and($invoice->payments)->toHaveCount(0);
 });
 
 test('renders a credit note pdf through the original invoice template family, not a hardcoded layout', function () {

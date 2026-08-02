@@ -63,6 +63,8 @@ const ERROR_TRANSLATION_MAP: Record<string, string> = {
   'a_credit_note_cannot_be_cloned': 'errors.credit_note_cannot_be_cloned',
   'a_credit_note_cannot_be_converted_to_an_estimate':
     'errors.credit_note_cannot_be_converted_to_estimate',
+  'invoice_must_be_settled_before_completion':
+    'errors.invoice_must_be_settled_before_completion',
   'The estimate number has already been taken.': 'errors.estimate_number_used',
   'The payment number has already been taken.': 'errors.estimate_number_used',
   'The invoice number has already been taken.': 'errors.invoice_number_used',

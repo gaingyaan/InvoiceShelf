@@ -1,11 +1,13 @@
 <?php
 
 use App\Http\Controllers\Company\Invoice\InvoicesController;
+use App\Http\Requests\ChangeInvoiceStatusRequest;
 use App\Http\Requests\InvoicesRequest;
 use App\Mail\SendInvoiceMail;
 use App\Models\Company;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
+use App\Models\Payment;
 use App\Models\Tax;
 use App\Models\User;
 use Illuminate\Support\Facades\Artisan;
@@ -28,6 +30,23 @@ beforeEach(function () {
         ['*']
     );
 });
+
+function completionInvoice(int $total = 10000, ?int $dueAmount = null, ?int $baseDueAmount = null): Invoice
+{
+    $dueAmount ??= $total;
+    $baseDueAmount ??= $dueAmount;
+
+    return Invoice::factory()->create([
+        'status' => Invoice::STATUS_SENT,
+        'sent' => true,
+        'paid_status' => Invoice::STATUS_UNPAID,
+        'total' => $total,
+        'due_amount' => $dueAmount,
+        'base_total' => $total,
+        'base_due_amount' => $baseDueAmount,
+        'exchange_rate' => 1,
+    ]);
+}
 
 test('testGetInvoices', function () {
     $response = getJson('api/v1/invoices?page=1&type=OVERDUE&limit=20');
@@ -258,25 +277,113 @@ test('send invoice to customer', function () {
     Mail::assertSent(SendInvoiceMail::class);
 });
 
-test('invoice mark as paid', function () {
-    $invoice = Invoice::factory()->create([
-        'invoice_date' => '1988-07-18',
-        'due_date' => '1988-08-18',
+test('invoice status controller uses the change invoice status request', function () {
+    $this->assertActionUsesFormRequest(
+        InvoicesController::class,
+        'changeStatus',
+        ChangeInvoiceStatusRequest::class
+    );
+});
+
+test('cannot complete an outstanding invoice', function () {
+    $invoice = completionInvoice();
+
+    postJson("api/v1/invoices/{$invoice->id}/status", ['status' => Invoice::STATUS_COMPLETED])
+        ->assertUnprocessable()
+        ->assertJsonPath('errors.status.0', 'invoice_must_be_settled_before_completion');
+
+    $invoice->refresh();
+
+    expect((int) $invoice->due_amount)->toBe(10000)
+        ->and((int) $invoice->base_due_amount)->toBe(10000)
+        ->and($invoice->status)->toBe(Invoice::STATUS_SENT)
+        ->and($invoice->paid_status)->toBe(Invoice::STATUS_UNPAID)
+        ->and($invoice->payments)->toHaveCount(0);
+});
+
+test('cannot complete a partially paid invoice', function () {
+    $invoice = completionInvoice(10000, 5000, 5000);
+    $payment = Payment::factory()->create([
+        'company_id' => $invoice->company_id,
+        'customer_id' => $invoice->customer_id,
+        'invoice_id' => $invoice->id,
+        'amount' => 5000,
     ]);
 
-    $data = [
-        'status' => Invoice::STATUS_COMPLETED,
-    ];
+    $invoice->update(['paid_status' => Invoice::STATUS_PARTIALLY_PAID]);
 
-    $response = postJson('api/v1/invoices/'.$invoice->id.'/status', $data);
+    postJson("api/v1/invoices/{$invoice->id}/status", ['status' => Invoice::STATUS_COMPLETED])
+        ->assertUnprocessable()
+        ->assertJsonPath('errors.status.0', 'invoice_must_be_settled_before_completion');
 
-    $response
-        ->assertOk()
-        ->assertJson([
-            'success' => true,
-        ]);
+    $invoice->refresh();
 
-    $this->assertEquals(Invoice::find($invoice->id)->paid_status, Invoice::STATUS_PAID);
+    expect((int) $invoice->due_amount)->toBe(5000)
+        ->and($invoice->status)->toBe(Invoice::STATUS_SENT)
+        ->and($invoice->paid_status)->toBe(Invoice::STATUS_PARTIALLY_PAID)
+        ->and($invoice->payments->modelKeys())->toBe([$payment->id]);
+});
+
+test('cannot complete an invoice with an inconsistent zero stored due amount', function () {
+    $invoice = completionInvoice(10000, 0, 10000);
+
+    postJson("api/v1/invoices/{$invoice->id}/status", ['status' => Invoice::STATUS_COMPLETED])
+        ->assertUnprocessable()
+        ->assertJsonPath('errors.status.0', 'invoice_must_be_settled_before_completion');
+
+    $invoice->refresh();
+
+    expect((int) $invoice->due_amount)->toBe(0)
+        ->and((int) $invoice->base_due_amount)->toBe(10000)
+        ->and($invoice->status)->toBe(Invoice::STATUS_SENT)
+        ->and($invoice->payments)->toHaveCount(0);
+});
+
+test('completes a fully paid invoice idempotently without removing its payment', function () {
+    $invoice = completionInvoice(10000, 0, 0);
+    $payment = Payment::factory()->create([
+        'company_id' => $invoice->company_id,
+        'customer_id' => $invoice->customer_id,
+        'invoice_id' => $invoice->id,
+        'amount' => 10000,
+    ]);
+
+    postJson("api/v1/invoices/{$invoice->id}/status", ['status' => Invoice::STATUS_COMPLETED])
+        ->assertOk();
+    postJson("api/v1/invoices/{$invoice->id}/status", ['status' => Invoice::STATUS_COMPLETED])
+        ->assertOk();
+
+    $invoice->refresh();
+
+    expect($invoice->status)->toBe(Invoice::STATUS_COMPLETED)
+        ->and($invoice->paid_status)->toBe(Invoice::STATUS_PAID)
+        ->and($invoice->overdue)->toBe(0)
+        ->and($invoice->payments->modelKeys())->toBe([$payment->id]);
+});
+
+test('completes a zero value invoice', function () {
+    $invoice = completionInvoice(0, 0, 0);
+
+    postJson("api/v1/invoices/{$invoice->id}/status", ['status' => Invoice::STATUS_COMPLETED])
+        ->assertOk();
+
+    $invoice->refresh();
+
+    expect($invoice->status)->toBe(Invoice::STATUS_COMPLETED)
+        ->and($invoice->paid_status)->toBe(Invoice::STATUS_PAID)
+        ->and($invoice->overdue)->toBe(0);
+});
+
+test('invoice status requires a supported value', function () {
+    $invoice = completionInvoice();
+
+    postJson("api/v1/invoices/{$invoice->id}/status")
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('status');
+
+    postJson("api/v1/invoices/{$invoice->id}/status", ['status' => 'DRAFT'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('status');
 });
 
 test('invoice mark as sent', function () {

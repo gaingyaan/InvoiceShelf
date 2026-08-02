@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Company\Invoice;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests;
+use App\Http\Requests\ChangeInvoiceStatusRequest;
 use App\Http\Requests\CreateCreditNoteRequest;
 use App\Http\Requests\DeleteInvoiceRequest;
 use App\Http\Requests\SendInvoiceRequest;
@@ -238,7 +239,7 @@ class InvoicesController extends Controller
             ->setStatusCode(201);
     }
 
-    public function changeStatus(Request $request, Invoice $invoice)
+    public function changeStatus(ChangeInvoiceStatusRequest $request, Invoice $invoice)
     {
         $this->authorize('send invoice', $invoice);
 

@@ -477,10 +477,21 @@ class InvoiceService
             $invoice->sent = true;
             $invoice->save();
         } elseif ($status == Invoice::STATUS_COMPLETED) {
-            $invoice->status = Invoice::STATUS_COMPLETED;
-            $invoice->paid_status = Invoice::STATUS_PAID;
-            $invoice->due_amount = 0;
-            $invoice->save();
+            $paid = (int) $invoice->payments()->sum('amount');
+            $credited = $this->creditNoteService->creditedTotal($invoice);
+            $outstanding = max(0, (int) $invoice->total - $paid - $credited);
+
+            if (
+                $outstanding !== 0
+                || (int) $invoice->due_amount !== 0
+                || (int) $invoice->base_due_amount !== 0
+            ) {
+                throw ValidationException::withMessages([
+                    'status' => ['invoice_must_be_settled_before_completion'],
+                ]);
+            }
+
+            $invoice->changeInvoiceStatus((int) $invoice->due_amount);
         }
     }
 }
