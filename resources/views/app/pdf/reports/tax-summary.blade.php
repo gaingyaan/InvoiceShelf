@@ -161,7 +161,7 @@
                 </td>
             </tr>
         </table>
-        <p class="tax-types-title">@lang('pdf_tax_types_label')</p>
+        <p class="tax-types-title">@lang('pdf_output_tax_label')</p>
         <div class="tax-table-container">
             <table class="tax-table">
                 @foreach ($taxTypes as $tax)
@@ -181,25 +181,65 @@
 
             </table>
         </div>
+
+        <table class="tax-total-table">
+            <tr>
+                <td class="tax-total-cell">
+                    <p class="tax-total">
+                        {!! format_money_pdf($totalTaxAmount, $currency) !!}
+                    </p>
+                </td>
+            </tr>
+        </table>
+
+        <p class="tax-types-title">@lang('pdf_input_tax_label')</p>
+        <div class="tax-table-container">
+            <table class="tax-table">
+                @foreach ($expenseTaxTypes as $tax)
+                <tr>
+                    <td>
+                        <p class="tax-title">
+                            {{ $tax->taxType->name }}
+                        </p>
+                    </td>
+                    <td>
+                        <p class="tax-amount">
+                            {!! format_money_pdf($tax->total_tax_amount, $currency) !!}
+                        </p>
+                    </td>
+                </tr>
+                @endforeach
+
+            </table>
+        </div>
+
+        <table class="tax-total-table">
+            <tr>
+                <td class="tax-total-cell">
+                    <p class="tax-total">
+                        {!! format_money_pdf($totalExpenseTaxAmount, $currency) !!}
+                    </p>
+                </td>
+            </tr>
+        </table>
     </div>
 
-    <table class="tax-total-table">
-        <tr>
-            <td class="tax-total-cell">
-                <p class="tax-total">
-                    {!! format_money_pdf($totalTaxAmount, $currency) !!}
-                </p>
-            </td>
-        </tr>
-    </table>
     <table class="report-footer">
         <tr>
             <td>
-                <p class="report-footer-label">@lang('pdf_total_tax_label')</p>
+                <p class="report-footer-label">
+                    @if ($netTaxAmount > 0)
+                        @lang('pdf_tax_payable_label')
+                    @elseif ($netTaxAmount < 0)
+                        @lang('pdf_tax_refundable_label')
+                    @else
+                        @lang('pdf_tax_balance_label')
+                    @endif
+                </p>
             </td>
             <td>
                 <p class="report-footer-value">
-                    {!! format_money_pdf($totalTaxAmount, $currency) !!}
+                    {!! format_money_pdf(abs($netTaxAmount), $currency) !!}
                 </p>
             </td>
         </tr>

@@ -21,6 +21,7 @@ class TaxTypeResource extends JsonResource
             'fixed_amount' => $this->fixed_amount,
             'calculation_type' => $this->calculation_type,
             'type' => $this->type,
+            'transaction_type' => $this->transaction_type,
             'compound_tax' => $this->compound_tax,
             'collective_tax' => $this->collective_tax,
             'description' => $this->description,

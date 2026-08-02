@@ -14,14 +14,23 @@ import { useCompanyStore } from '@/scripts/stores/company.store'
 import { useNotificationStore } from '@/scripts/stores/notification.store'
 import { taxTypeService } from '@/scripts/api/services/tax-type.service'
 import type { CreateTaxTypePayload } from '@/scripts/api/services/tax-type.service'
+import type {
+  TaxType,
+  TaxTypeTransactionType,
+} from '@/scripts/types/domain/tax'
 
 interface TaxTypeForm {
   id: number | null
   name: string
   calculation_type: string
+  transaction_type: TaxTypeTransactionType
   percent: number
   fixed_amount: number
   description: string
+}
+
+interface TaxTypeModalContext {
+  transaction_type?: TaxTypeTransactionType
 }
 
 const modalStore = useModalStore()
@@ -36,6 +45,7 @@ const currentTaxType = ref<TaxTypeForm>({
   id: null,
   name: '',
   calculation_type: 'percentage',
+  transaction_type: 'sales',
   percent: 0,
   fixed_amount: 0,
   description: '',
@@ -56,6 +66,9 @@ const rules = computed(() => ({
     ),
   },
   calculation_type: {
+    required: helpers.withMessage(t('validation.required'), required),
+  },
+  transaction_type: {
     required: helpers.withMessage(t('validation.required'), required),
   },
   percent: {
@@ -95,6 +108,7 @@ async function setInitialData(): Promise<void> {
         id: tax.id,
         name: tax.name,
         calculation_type: tax.calculation_type ?? 'percentage',
+        transaction_type: tax.transaction_type,
         percent: tax.percent,
         fixed_amount: tax.fixed_amount,
         description: tax.description ?? '',
@@ -103,6 +117,10 @@ async function setInitialData(): Promise<void> {
   } else {
     isEdit.value = false
     resetForm()
+    const context = getModalContext(modalStore.data)
+    if (context?.transaction_type) {
+      currentTaxType.value.transaction_type = context.transaction_type
+    }
   }
 }
 
@@ -119,17 +137,21 @@ async function submitTaxTypeData(): Promise<void> {
       percent: currentTaxType.value.percent,
       fixed_amount: currentTaxType.value.fixed_amount,
       calculation_type: currentTaxType.value.calculation_type,
+      transaction_type: currentTaxType.value.transaction_type,
       description: currentTaxType.value.description || null,
     }
 
+    let savedTaxType: TaxType
     if (isEdit.value && currentTaxType.value.id) {
-      await taxTypeService.update(currentTaxType.value.id, payload)
+      const response = await taxTypeService.update(currentTaxType.value.id, payload)
+      savedTaxType = response.data
       notificationStore.showNotification({
         type: 'success',
         message: 'settings.tax_types.updated_message',
       })
     } else {
-      await taxTypeService.create(payload)
+      const response = await taxTypeService.create(payload)
+      savedTaxType = response.data
       notificationStore.showNotification({
         type: 'success',
         message: 'settings.tax_types.created_message',
@@ -138,7 +160,7 @@ async function submitTaxTypeData(): Promise<void> {
 
     isSaving.value = false
     if (modalStore.refreshData) {
-      modalStore.refreshData()
+      modalStore.refreshData(savedTaxType)
     }
     closeTaxTypeModal()
   } catch {
@@ -151,10 +173,28 @@ function resetForm(): void {
     id: null,
     name: '',
     calculation_type: 'percentage',
+    transaction_type: 'sales',
     percent: 0,
     fixed_amount: 0,
     description: '',
   }
+}
+
+function getModalContext(data: unknown): TaxTypeModalContext | null {
+  if (
+    typeof data !== 'object' ||
+    data === null ||
+    !('transaction_type' in data)
+  ) {
+    return null
+  }
+
+  const transactionType = data.transaction_type
+  if (transactionType !== 'sales' && transactionType !== 'purchases') {
+    return null
+  }
+
+  return { transaction_type: transactionType }
 }
 
 function closeTaxTypeModal(): void {
@@ -216,6 +256,31 @@ function closeTaxTypeModal(): void {
               label-prop="label"
               track-by="label"
               :searchable="false"
+            />
+          </BaseInputGroup>
+
+          <BaseInputGroup
+            :label="$t('tax_types.used_for')"
+            :error="
+              v$.transaction_type.$error &&
+              v$.transaction_type.$errors[0].$message
+            "
+            variant="horizontal"
+            required
+          >
+            <BaseSelectInput
+              v-model="currentTaxType.transaction_type"
+              :invalid="v$.transaction_type.$error"
+              :options="[
+                { id: 'sales', label: $t('tax_types.sales') },
+                { id: 'purchases', label: $t('tax_types.purchases') },
+              ]"
+              :allow-empty="false"
+              value-prop="id"
+              label-prop="label"
+              track-by="label"
+              :searchable="false"
+              @update:model-value="v$.transaction_type.$touch()"
             />
           </BaseInputGroup>
 

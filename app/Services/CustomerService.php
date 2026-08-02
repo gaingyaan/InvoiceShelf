@@ -104,7 +104,7 @@ class CustomerService
             }
 
             if ($customer->expenses()->exists()) {
-                $customer->expenses()->delete();
+                $customer->expenses->each->delete();
             }
 
             if ($customer->recurringInvoices()->exists()) {

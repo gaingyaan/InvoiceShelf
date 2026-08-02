@@ -33,6 +33,7 @@ class ExpenseResource extends JsonResource
             'currency_id' => $this->currency_id,
             'base_amount' => $this->base_amount,
             'payment_method_id' => $this->payment_method_id,
+            'taxes' => TaxResource::collection($this->whenLoaded('taxes')),
             'customer' => $this->when($this->customer()->exists(), function () {
                 return new CustomerResource($this->customer);
             }),

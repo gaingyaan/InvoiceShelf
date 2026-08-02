@@ -12,7 +12,10 @@ export function useTaxTypes(): {
 
   async function fetchTaxTypes(): Promise<TaxType[]> {
     try {
-      const response = await taxTypeService.list({ limit: 'all' })
+      const response = await taxTypeService.list({
+        limit: 'all',
+        transaction_type: 'sales',
+      })
       taxTypes.value = response.data
       return taxTypes.value
     } catch (error: unknown) {

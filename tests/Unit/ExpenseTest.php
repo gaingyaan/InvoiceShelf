@@ -1,6 +1,12 @@
 <?php
 
+use App\Models\Company;
 use App\Models\Expense;
+use App\Models\Tax;
+use App\Models\TaxType;
+use App\Models\User;
+use App\Services\Company\CompanyService;
+use App\Services\CustomerService;
 use Illuminate\Support\Facades\Artisan;
 
 beforeEach(function () {
@@ -24,4 +30,46 @@ test('expense belongs to company', function () {
     $expense = Expense::factory()->forCompany()->create();
 
     $this->assertTrue($expense->company()->exists());
+});
+
+test('expense has taxes and deletes them with the expense', function () {
+    $expense = Expense::factory()->create();
+    $taxType = TaxType::factory()->create(['transaction_type' => TaxType::TRANSACTION_TYPE_PURCHASES]);
+    $tax = Tax::factory()->create(['expense_id' => $expense->id, 'tax_type_id' => $taxType->id]);
+
+    expect($expense->taxes)->toHaveCount(1);
+
+    $expense->delete();
+
+    $this->assertDatabaseMissing('taxes', ['id' => $tax->id]);
+});
+
+test('customer deletion removes receipt taxes through expense model events', function () {
+    $expense = Expense::factory()->forCustomer()->create();
+    $taxType = TaxType::factory()->create(['transaction_type' => TaxType::TRANSACTION_TYPE_PURCHASES]);
+    $tax = Tax::factory()->create(['expense_id' => $expense->id, 'tax_type_id' => $taxType->id]);
+
+    app(CustomerService::class)->delete(collect([$expense->customer_id]));
+
+    $this->assertDatabaseMissing('taxes', ['id' => $tax->id]);
+});
+
+test('company deletion removes receipt taxes through expense model events', function () {
+    $user = User::find(1);
+    $company = Company::factory()->create(['owner_id' => $user->id]);
+    $user->companies()->attach($company);
+    $expense = Expense::factory()->create(['company_id' => $company->id]);
+    $taxType = TaxType::factory()->create([
+        'company_id' => $company->id,
+        'transaction_type' => TaxType::TRANSACTION_TYPE_PURCHASES,
+    ]);
+    $tax = Tax::factory()->create([
+        'expense_id' => $expense->id,
+        'company_id' => $company->id,
+        'tax_type_id' => $taxType->id,
+    ]);
+
+    app(CompanyService::class)->delete($company, $user);
+
+    $this->assertDatabaseMissing('taxes', ['id' => $tax->id]);
 });

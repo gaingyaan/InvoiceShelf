@@ -165,7 +165,24 @@ function openTaxTypeModal(): void {
     title: t('settings.tax_types.add_tax'),
     componentName: 'TaxTypeModal',
     size: 'sm',
-    refreshData: (data: TaxType) => emit('select:taxType', data),
+    data: { transaction_type: 'sales' },
+    refreshData: (...args: unknown[]) => {
+      const taxType = args[0]
+      if (isTaxType(taxType)) {
+        emit('select:taxType', taxType)
+      }
+    },
   })
+}
+
+function isTaxType(value: unknown): value is TaxType {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'id' in value &&
+    typeof value.id === 'number' &&
+    'name' in value &&
+    typeof value.name === 'string'
+  )
 }
 </script>

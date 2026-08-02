@@ -23,6 +23,7 @@ class Tax extends Model
             'amount' => 'integer',
             'percent' => 'float',
             'fixed_amount' => 'integer',
+            'compound_tax' => 'boolean',
         ];
     }
 
@@ -56,6 +57,11 @@ class Tax extends Model
         return $this->belongsTo(InvoiceItem::class);
     }
 
+    public function expense(): BelongsTo
+    {
+        return $this->belongsTo(Expense::class);
+    }
+
     public function estimateItem(): BelongsTo
     {
         return $this->belongsTo(EstimateItem::class);
@@ -80,20 +86,21 @@ class Tax extends Model
 
     public function scopeInvoicesBetween(Builder $query, Carbon $start, Carbon $end): void
     {
-        $query->whereHas('invoice', function ($query) use ($start, $end) {
-            $query->where('paid_status', Invoice::STATUS_PAID)
-                ->whereBetween(
-                    'invoice_date',
-                    [$start->format('Y-m-d'), $end->format('Y-m-d')]
-                );
-        })
-            ->orWhereHas('invoiceItem.invoice', function ($query) use ($start, $end) {
+        $query->where(function (Builder $query) use ($start, $end) {
+            $query->whereHas('invoice', function (Builder $query) use ($start, $end) {
+                $query->where('paid_status', Invoice::STATUS_PAID)
+                    ->whereBetween(
+                        'invoice_date',
+                        [$start->format('Y-m-d'), $end->format('Y-m-d')]
+                    );
+            })->orWhereHas('invoiceItem.invoice', function (Builder $query) use ($start, $end) {
                 $query->where('paid_status', Invoice::STATUS_PAID)
                     ->whereBetween(
                         'invoice_date',
                         [$start->format('Y-m-d'), $end->format('Y-m-d')]
                     );
             });
+        });
     }
 
     public function scopeWhereInvoicesFilters(Builder $query, array $filters): void
@@ -105,6 +112,28 @@ class Tax extends Model
             $end = Carbon::createFromFormat('Y-m-d', $filters->get('to_date'));
 
             $query->invoicesBetween($start, $end);
+        }
+    }
+
+    public function scopeExpensesBetween(Builder $query, Carbon $start, Carbon $end): void
+    {
+        $query->whereHas('expense', function (Builder $query) use ($start, $end) {
+            $query->whereBetween(
+                'expense_date',
+                [$start->format('Y-m-d'), $end->format('Y-m-d')]
+            );
+        });
+    }
+
+    public function scopeWhereExpensesFilters(Builder $query, array $filters): void
+    {
+        $filters = collect($filters);
+
+        if ($filters->get('from_date') && $filters->get('to_date')) {
+            $start = Carbon::createFromFormat('Y-m-d', $filters->get('from_date'));
+            $end = Carbon::createFromFormat('Y-m-d', $filters->get('to_date'));
+
+            $query->expensesBetween($start, $end);
         }
     }
 }

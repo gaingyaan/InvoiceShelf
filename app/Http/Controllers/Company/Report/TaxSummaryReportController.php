@@ -40,16 +40,22 @@ class TaxSummaryReportController extends Controller
 
         App::setLocale($locale);
 
-        $taxTypes = Tax::with('taxType', 'invoice', 'invoiceItem')
+        $taxTypes = Tax::with('taxType')
             ->whereCompany($company->id)
             ->whereInvoicesFilters($request->only(['from_date', 'to_date']))
             ->taxAttributes()
             ->get();
 
-        $totalAmount = 0;
-        foreach ($taxTypes as $taxType) {
-            $totalAmount += $taxType->total_tax_amount;
-        }
+        $totalAmount = (int) $taxTypes->sum('total_tax_amount');
+
+        $expenseTaxTypes = Tax::with('taxType')
+            ->whereCompany($company->id)
+            ->whereExpensesFilters($request->only(['from_date', 'to_date']))
+            ->taxAttributes()
+            ->get();
+
+        $totalExpenseTaxAmount = (int) $expenseTaxTypes->sum('total_tax_amount');
+        $netTaxAmount = $totalAmount - $totalExpenseTaxAmount;
 
         $dateFormat = CompanySetting::getSetting('carbon_date_format', $company->id);
         $from_date = Carbon::createFromFormat('Y-m-d', $request->from_date)->translatedFormat($dateFormat);
@@ -75,6 +81,9 @@ class TaxSummaryReportController extends Controller
         view()->share([
             'taxTypes' => $taxTypes,
             'totalTaxAmount' => $totalAmount,
+            'expenseTaxTypes' => $expenseTaxTypes,
+            'totalExpenseTaxAmount' => $totalExpenseTaxAmount,
+            'netTaxAmount' => $netTaxAmount,
             'colorSettings' => $colorSettings,
             'company' => $company,
             'from_date' => $from_date,

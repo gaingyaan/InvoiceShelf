@@ -78,6 +78,13 @@ import type { TaxType } from '../../../types/domain/tax'
 import type { Currency } from '../../../types/domain/currency'
 import type { DocumentFormData, DocumentTax } from './use-document-calculations'
 
+declare global {
+  interface Window {
+    __taxTypes?: TaxType[]
+    __userHasAbility?: (ability: string) => boolean
+  }
+}
+
 interface Props {
   ability: string
   store: Record<string, unknown>
@@ -109,15 +116,14 @@ const emit = defineEmits<Emits>()
 const { t } = useI18n()
 const modalStore = useModalStore()
 
-// We assume these stores are available globally or injected
-// In the v2 arch, we'll use a lighter approach
 const taxTypes = computed<TaxType[]>(() => {
-  // Access taxTypeStore through the store's taxTypes or a global store
-  return (window as Record<string, unknown>).__taxTypes as TaxType[] ?? []
+  return (window.__taxTypes ?? []).filter(
+    (taxType) => taxType.transaction_type === 'sales',
+  )
 })
 
 const canAddTax = computed(() => {
-  return (window as Record<string, unknown>).__userHasAbility?.(props.ability) ?? false
+  return window.__userHasAbility?.(props.ability) ?? false
 })
 
 const selectedTax = ref<TaxType | null>(null)
@@ -210,7 +216,11 @@ function openTaxModal(): void {
   modalStore.openModal({
     title: t('settings.tax_types.add_tax'),
     componentName: 'TaxTypeModal',
-    data: { itemIndex: props.itemIndex, taxIndex: props.index },
+    data: {
+      itemIndex: props.itemIndex,
+      taxIndex: props.index,
+      transaction_type: 'sales',
+    },
     size: 'sm',
   })
 }

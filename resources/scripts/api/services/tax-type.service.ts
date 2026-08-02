@@ -1,20 +1,37 @@
 import { client } from '../client'
 import { API } from '../endpoints'
-import type { TaxType } from '@/scripts/types/domain/tax'
-import type { ApiResponse, ListParams } from '@/scripts/types/api'
+import type {
+  TaxType,
+  TaxTypeTransactionType,
+} from '@/scripts/types/domain/tax'
+import type {
+  ApiResponse,
+  ListParams,
+  PaginationMeta,
+} from '@/scripts/types/api'
+
+export interface TaxTypeListParams extends ListParams {
+  transaction_type?: TaxTypeTransactionType
+}
+
+export interface TaxTypeListResponse {
+  data: TaxType[]
+  meta: PaginationMeta
+}
 
 export interface CreateTaxTypePayload {
   name: string
   percent: number
   fixed_amount?: number
   calculation_type?: string | null
+  transaction_type: TaxTypeTransactionType
   compound_tax?: boolean
   collective_tax?: number | null
   description?: string | null
 }
 
 export const taxTypeService = {
-  async list(params?: ListParams): Promise<ApiResponse<TaxType[]>> {
+  async list(params?: TaxTypeListParams): Promise<TaxTypeListResponse> {
     const { data } = await client.get(API.TAX_TYPES, { params })
     return data
   },

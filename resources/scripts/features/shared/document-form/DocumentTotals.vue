@@ -270,7 +270,10 @@ const canCreateTaxType = computed<boolean>(() => {
 
 onMounted(async () => {
   try {
-    const response = await taxTypeService.list({ limit: 'all' as unknown as number })
+    const response = await taxTypeService.list({
+      limit: 'all',
+      transaction_type: 'sales',
+    })
     availableTaxTypes.value = response.data
   } catch {
     // Silently fail

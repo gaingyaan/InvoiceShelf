@@ -66,6 +66,8 @@ class ExpensesController extends Controller
     {
         $this->authorize('view', $expense);
 
+        $expense->load('taxes.taxType');
+
         return new ExpenseResource($expense);
     }
 
@@ -78,7 +80,7 @@ class ExpensesController extends Controller
     {
         $this->authorize('update', $expense);
 
-        $this->expenseService->update($expense, $request);
+        $expense = $this->expenseService->update($expense, $request);
 
         return new ExpenseResource($expense);
     }

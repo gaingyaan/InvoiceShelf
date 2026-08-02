@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\DB;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
@@ -41,6 +42,13 @@ class Expense extends Model implements HasMedia
             'notes' => 'string',
             'exchange_rate' => 'float',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::deleting(function (Expense $expense): void {
+            $expense->taxes()->delete();
+        });
     }
 
     public function registerMediaCollections(): void
@@ -76,6 +84,11 @@ class Expense extends Model implements HasMedia
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'creator_id');
+    }
+
+    public function taxes(): HasMany
+    {
+        return $this->hasMany(Tax::class);
     }
 
     public function getFormattedExpenseDateAttribute(mixed $value): string

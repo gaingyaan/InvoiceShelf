@@ -19,7 +19,7 @@ interface TableColumn {
 interface FetchParams {
   page: number
   filter: Record<string, unknown>
-  sort: { fieldName: string; order: string }
+  sort: { fieldName: string; order: 'asc' | 'desc' }
 }
 
 interface FetchResult {
@@ -63,6 +63,12 @@ const taxTypeColumns = computed<TableColumn[]>(() => [
   {
     key: 'amount',
     label: t('settings.tax_types.amount'),
+    thClass: 'extra',
+    tdClass: 'font-medium text-heading',
+  },
+  {
+    key: 'transaction_type',
+    label: t('tax_types.used_for'),
     thClass: 'extra',
     tdClass: 'font-medium text-heading',
   },
@@ -140,11 +146,11 @@ async function fetchData({ page, sort }: FetchParams): Promise<FetchResult> {
   const response = await taxTypeService.list(data)
 
   return {
-    data: (response as Record<string, unknown>).data as unknown[],
+    data: response.data,
     pagination: {
-      totalPages: ((response as Record<string, unknown>).meta as Record<string, number>).last_page,
+      totalPages: response.meta.last_page,
       currentPage: page,
-      totalCount: ((response as Record<string, unknown>).meta as Record<string, number>).total,
+      totalCount: response.meta.total,
       limit: 5,
     },
   }
@@ -159,6 +165,7 @@ function openTaxModal(): void {
     title: t('settings.tax_types.add_tax'),
     componentName: 'TaxTypeModal',
     size: 'sm',
+    data: { transaction_type: 'sales' },
     refreshData: table.value?.refresh,
   })
 }
@@ -198,6 +205,12 @@ function openTaxModal(): void {
           <BaseFormatMoney :amount="row.data.fixed_amount" :currency="defaultCurrency" />
         </template>
         <template v-else> - </template>
+      </template>
+
+      <template #cell-transaction_type="{ row }">
+        <BaseBadge>
+          {{ $t(`tax_types.${row.data.transaction_type}`) }}
+        </BaseBadge>
       </template>
 
       <template v-if="hasAtleastOneAbility()" #cell-actions="{ row }">

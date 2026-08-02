@@ -49,6 +49,13 @@ class TaxTypeRequest extends FormRequest
             'collective_tax' => [
                 'nullable',
             ],
+            'transaction_type' => [
+                'sometimes',
+                Rule::in([
+                    TaxType::TRANSACTION_TYPE_SALES,
+                    TaxType::TRANSACTION_TYPE_PURCHASES,
+                ]),
+            ],
         ];
 
         if ($this->isMethod('PUT')) {
@@ -66,7 +73,18 @@ class TaxTypeRequest extends FormRequest
 
     public function getTaxTypePayload()
     {
-        return collect($this->validated())
+        $payload = collect($this->validated());
+
+        if (! $payload->has('transaction_type')) {
+            $payload->put(
+                'transaction_type',
+                ($this->isMethod('PUT') || $this->isMethod('PATCH'))
+                    ? $this->route('tax_type')->transaction_type
+                    : TaxType::TRANSACTION_TYPE_SALES
+            );
+        }
+
+        return $payload
             ->merge([
                 'company_id' => $this->header('company'),
                 'type' => TaxType::TYPE_GENERAL,

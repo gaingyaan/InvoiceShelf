@@ -110,3 +110,72 @@ test('create fixed amount tax type', function () {
 
     $this->assertDatabaseHas('tax_types', $taxType);
 });
+
+test('defaults tax type transaction type to sales for legacy create requests', function () {
+    $taxType = TaxType::factory()->raw();
+    unset($taxType['transaction_type']);
+
+    postJson('api/v1/tax-types', $taxType)
+        ->assertCreated()
+        ->assertJsonPath('data.transaction_type', TaxType::TRANSACTION_TYPE_SALES);
+
+    $this->assertDatabaseHas('tax_types', [
+        'name' => $taxType['name'],
+        'transaction_type' => TaxType::TRANSACTION_TYPE_SALES,
+    ]);
+});
+
+test('creates purchase tax types and returns their transaction type', function () {
+    $taxType = TaxType::factory()->raw([
+        'transaction_type' => TaxType::TRANSACTION_TYPE_PURCHASES,
+    ]);
+
+    postJson('api/v1/tax-types', $taxType)
+        ->assertCreated()
+        ->assertJsonPath('data.transaction_type', TaxType::TRANSACTION_TYPE_PURCHASES);
+
+    $this->assertDatabaseHas('tax_types', $taxType);
+});
+
+test('preserves transaction type when legacy updates omit it', function () {
+    $taxType = TaxType::factory()->create([
+        'transaction_type' => TaxType::TRANSACTION_TYPE_PURCHASES,
+    ]);
+    $payload = TaxType::factory()->raw();
+    unset($payload['transaction_type']);
+
+    putJson("api/v1/tax-types/{$taxType->id}", $payload)
+        ->assertOk()
+        ->assertJsonPath('data.transaction_type', TaxType::TRANSACTION_TYPE_PURCHASES);
+
+    $this->assertDatabaseHas('tax_types', [
+        'id' => $taxType->id,
+        'transaction_type' => TaxType::TRANSACTION_TYPE_PURCHASES,
+    ]);
+});
+
+test('filters tax types by transaction type', function () {
+    $companyId = User::find(1)->companies()->first()->id;
+    TaxType::factory()->create([
+        'company_id' => $companyId,
+        'transaction_type' => TaxType::TRANSACTION_TYPE_SALES,
+    ]);
+    $purchaseTaxType = TaxType::factory()->create([
+        'company_id' => $companyId,
+        'transaction_type' => TaxType::TRANSACTION_TYPE_PURCHASES,
+    ]);
+
+    getJson('api/v1/tax-types?limit=all&transaction_type=purchases')
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.id', $purchaseTaxType->id)
+        ->assertJsonPath('data.0.transaction_type', TaxType::TRANSACTION_TYPE_PURCHASES);
+});
+
+test('rejects unknown transaction types', function () {
+    $taxType = TaxType::factory()->raw(['transaction_type' => 'other']);
+
+    postJson('api/v1/tax-types', $taxType)
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('transaction_type');
+});

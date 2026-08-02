@@ -9,6 +9,7 @@ import type {
   ExpenseCategory,
   CreateExpensePayload,
 } from '../../../types/domain/expense'
+import type { ExpenseTax } from '../../../types/domain/tax'
 import type { PaymentMethod } from '../../../types/domain/payment'
 import type { Currency } from '../../../types/domain/currency'
 import type { CustomFieldValue } from '../../../types/domain/custom-field'
@@ -40,6 +41,7 @@ export interface ExpenseFormData {
   receiptFiles: ReceiptFile[]
   customFields: CustomFieldValue[]
   fields: CustomFieldValue[]
+  taxes: ExpenseTax[]
 }
 
 function createExpenseStub(): ExpenseFormData {
@@ -60,6 +62,7 @@ function createExpenseStub(): ExpenseFormData {
     receiptFiles: [],
     customFields: [],
     fields: [],
+    taxes: [],
   }
 }
 
@@ -112,6 +115,7 @@ export const useExpenseStore = defineStore('expense', {
       const data = response.data
 
       Object.assign(this.currentExpense, data)
+      this.currentExpense.taxes = data.taxes ?? []
       this.currentExpense.selectedCurrency = data.currency ?? null
       this.currentExpense.attachment_receipt = null
 

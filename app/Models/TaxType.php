@@ -32,6 +32,10 @@ class TaxType extends Model
 
     public const TYPE_MODULE = 'MODULE';
 
+    public const TRANSACTION_TYPE_SALES = 'sales';
+
+    public const TRANSACTION_TYPE_PURCHASES = 'purchases';
+
     public function taxes(): HasMany
     {
         return $this->hasMany(Tax::class);
@@ -52,6 +56,11 @@ class TaxType extends Model
         $query->orWhere('id', $tax_type_id);
     }
 
+    public function scopeWhereTransactionType(Builder $query, string $transaction_type): void
+    {
+        $query->where('transaction_type', $transaction_type);
+    }
+
     public function scopeApplyFilters(Builder $query, array $filters): void
     {
         $filters = collect($filters);
@@ -62,6 +71,10 @@ class TaxType extends Model
 
         if ($filters->get('company_id')) {
             $query->whereCompany($filters->get('company_id'));
+        }
+
+        if ($filters->get('transaction_type')) {
+            $query->whereTransactionType($filters->get('transaction_type'));
         }
 
         if ($filters->get('search')) {

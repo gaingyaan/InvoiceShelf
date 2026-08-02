@@ -213,30 +213,38 @@
             />
           </BaseInputGroup>
 
-          <!-- Mobile Save Button -->
-          <div class="block md:hidden">
-            <BaseButton
-              :loading="isSaving"
-              :tabindex="6"
-              variant="primary"
-              type="submit"
-              class="flex justify-center w-full"
-            >
-              <template #left="slotProps">
-                <BaseIcon
-                  v-if="!isSaving"
-                  name="ArrowDownOnSquareIcon"
-                  :class="slotProps.class"
-                />
-              </template>
-              {{
-                isEdit
-                  ? $t('expenses.update_expense')
-                  : $t('expenses.save_expense')
-              }}
-            </BaseButton>
-          </div>
         </BaseInputGrid>
+
+        <ExpenseTaxSection
+          v-model="expenseStore.currentExpense.taxes"
+          :amount="expenseStore.currentExpense.amount"
+          :currency="expenseStore.currentExpense.selectedCurrency"
+          :is-loading="isFetchingInitialData"
+        />
+
+        <!-- Mobile Save Button -->
+        <div class="mt-4 block md:hidden">
+          <BaseButton
+            :loading="isSaving"
+            :tabindex="6"
+            variant="primary"
+            type="submit"
+            class="flex w-full justify-center"
+          >
+            <template #left="slotProps">
+              <BaseIcon
+                v-if="!isSaving"
+                name="ArrowDownOnSquareIcon"
+                :class="slotProps.class"
+              />
+            </template>
+            {{
+              isEdit
+                ? $t('expenses.update_expense')
+                : $t('expenses.save_expense')
+            }}
+          </BaseButton>
+        </div>
       </BaseCard>
     </form>
   </BasePage>
@@ -250,6 +258,7 @@ import { useExpenseStore } from '../store'
 import { useGlobalStore } from '../../../../stores/global.store'
 import { useCompanyStore } from '../../../../stores/company.store'
 import { ExchangeRateConverter } from '../../../shared/document-form'
+import ExpenseTaxSection from '../components/ExpenseTaxSection.vue'
 import type { ExpenseCategory } from '../../../../types/domain/expense'
 import type { Customer } from '../../../../types/domain/customer'
 import type { Currency } from '../../../../types/domain/currency'
@@ -349,6 +358,10 @@ async function submitForm(): Promise<void> {
   const formData: Record<string, unknown> = {
     ...expenseStore.currentExpense,
     expense_number: expenseStore.currentExpense.expense_number || '',
+    taxes: expenseStore.currentExpense.taxes.map((tax) => ({
+      tax_type_id: tax.tax_type_id,
+      amount: tax.amount,
+    })),
   }
 
   try {

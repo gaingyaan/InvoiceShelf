@@ -38,7 +38,10 @@ class ItemsController extends Controller
 
         return ItemResource::collection($items)
             ->additional(['meta' => [
-                'tax_types' => TaxType::whereCompany()->latest()->get(),
+                'tax_types' => TaxType::whereCompany()
+                    ->whereTransactionType(TaxType::TRANSACTION_TYPE_SALES)
+                    ->latest()
+                    ->get(),
                 'item_total_count' => Item::whereCompany()->count(),
             ]]);
     }

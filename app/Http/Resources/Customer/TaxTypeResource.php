@@ -18,6 +18,7 @@ class TaxTypeResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'percent' => $this->percent,
+            'transaction_type' => $this->transaction_type,
             'compound_tax' => $this->compound_tax,
             'collective_tax' => $this->collective_tax,
             'description' => $this->description,

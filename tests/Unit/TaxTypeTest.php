@@ -14,3 +14,15 @@ test('tax type has many taxes', function () {
     $this->assertCount(4, $taxtype->taxes);
     $this->assertTrue($taxtype->taxes()->exists());
 });
+
+test('tax type filters by transaction type', function () {
+    TaxType::factory()->create(['transaction_type' => TaxType::TRANSACTION_TYPE_SALES]);
+    $purchaseTaxType = TaxType::factory()->create([
+        'transaction_type' => TaxType::TRANSACTION_TYPE_PURCHASES,
+    ]);
+
+    expect(TaxType::whereTransactionType(TaxType::TRANSACTION_TYPE_PURCHASES)->get())
+        ->pluck('id')
+        ->all()
+        ->toBe([$purchaseTaxType->id]);
+});

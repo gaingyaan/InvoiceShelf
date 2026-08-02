@@ -48,7 +48,7 @@ class CompanyService
         }
 
         if ($company->expenses()->exists()) {
-            $company->expenses()->delete();
+            $company->expenses->each->delete();
         }
 
         if ($company->expenseCategories()->exists()) {

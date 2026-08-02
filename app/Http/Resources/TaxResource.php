@@ -21,6 +21,7 @@ class TaxResource extends JsonResource
             'estimate_id' => $this->estimate_id,
             'invoice_item_id' => $this->invoice_item_id,
             'estimate_item_id' => $this->estimate_item_id,
+            'expense_id' => $this->expense_id,
             'item_id' => $this->item_id,
             'company_id' => $this->company_id,
             'name' => $this->name,
