@@ -169,12 +169,8 @@ export const API = {
 
   // Modules
   MODULES: '/api/v1/modules',
-  MODULES_CHECK: '/api/v1/modules/check',
-  MODULES_DOWNLOAD: '/api/v1/modules/download',
-  MODULES_UPLOAD: '/api/v1/modules/upload',
-  MODULES_UNZIP: '/api/v1/modules/unzip',
-  MODULES_COPY: '/api/v1/modules/copy',
-  MODULES_COMPLETE: '/api/v1/modules/complete',
+  MODULES_INSTALL: '/api/v1/modules/install',
+  MODULES_PAIRING: '/api/v1/modules/pairing',
 
   // Self Update
   CHECK_UPDATE: '/api/v1/check/update',

@@ -66,7 +66,7 @@
         <div class="rounded-xl border border-line-default bg-surface-secondary p-6">
           <!-- Not purchased -->
           <template v-if="!moduleData.purchased">
-            <a :href="buyLink" target="_blank">
+            <a :href="buyLink" target="_blank" rel="noopener">
               <BaseButton size="lg" class="w-full flex items-center justify-center">
                 <BaseIcon name="ShoppingCartIcon" class="mr-2" />
                 {{ $t('modules.buy_now') }}
@@ -413,7 +413,7 @@ const displayImages = computed<Array<{ url: string }>>(() => {
 })
 
 const buyLink = computed<string>(() => {
-  return `/modules/${moduleData.value?.slug ?? ''}`
+  return moduleData.value?.purchase_url ?? '#'
 })
 
 watch(() => route.params.slug, () => {
@@ -440,7 +440,7 @@ async function loadData(): Promise<void> {
 }
 
 async function handleInstall(): Promise<void> {
-  if (!moduleData.value) return
+  if (!moduleData.value?.latest_module_version) return
 
   installationSteps.length = 0
   isInstalling.value = true
@@ -448,9 +448,7 @@ async function handleInstall(): Promise<void> {
   const success = await moduleStore.installModule(
     {
       slug: moduleData.value.slug,
-      module_name: moduleData.value.module_name,
       version: moduleData.value.latest_module_version,
-      checksum_sha256: moduleData.value.latest_module_checksum_sha256,
     },
     (step) => {
       const existing = installationSteps.find(

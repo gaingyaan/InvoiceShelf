@@ -18,7 +18,8 @@
 
     <!-- Module Styles -->
     @foreach(\InvoiceShelf\Modules\Registry::allStyles() as $name => $path)
-        <link rel="stylesheet" href="/modules/styles/{{ $name }}">
+        @php($version = \App\Support\Module\ModuleAssetVersion::forPath($path))
+        <link rel="stylesheet" href="/modules/styles/{{ $name }}@if($version)?v={{ $version }}@endif">
     @endforeach
 
     @vite('resources/scripts/main.ts')
@@ -42,7 +43,8 @@
         @if (\Illuminate\Support\Str::startsWith($path, ['http://', 'https://']))
             <script type="module" src="{!! $path !!}"></script>
         @else
-            <script type="module" src="/modules/scripts/{{ $name }}"></script>
+            @php($version = \App\Support\Module\ModuleAssetVersion::forPath($path))
+            <script type="module" src="/modules/scripts/{{ $name }}@if($version)?v={{ $version }}@endif"></script>
         @endif
     @endforeach
 

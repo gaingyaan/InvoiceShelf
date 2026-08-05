@@ -10,8 +10,7 @@ use Illuminate\Support\Facades\File;
  * and the starter i18n files that the boilerplate references.
  *
  * The test generates a throwaway module, inspects the generated files, then
- * cleans up (including nwidart's status entry) so the rest of the suite is
- * unaffected.
+ * cleans it up so the rest of the suite is unaffected.
  */
 beforeEach(function () {
     $this->scaffoldModule = 'ScaffoldProbe';
@@ -28,15 +27,6 @@ afterEach(function () {
         File::deleteDirectory($this->scaffoldPath);
     }
 
-    // nwidart writes module activation state to storage/app/modules_statuses.json
-    // when module:make auto-enables the new module. Remove our scaffold entry
-    // so the file doesn't accumulate stale test data across runs.
-    $statusesFile = storage_path('app/modules_statuses.json');
-    if (File::exists($statusesFile)) {
-        $statuses = json_decode(File::get($statusesFile), true) ?? [];
-        unset($statuses[$this->scaffoldModule]);
-        File::put($statusesFile, json_encode($statuses, JSON_PRETTY_PRINT));
-    }
 });
 
 test('module:make generates a ServiceProvider that uses InvoiceShelf\\Modules\\Registry', function () {

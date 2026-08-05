@@ -104,7 +104,6 @@ export type {
   ActiveProviderResponse,
   Module,
   ModuleInstallPayload,
-  ModuleCheckResponse,
   Backup,
   BackupListResponse,
   CreateBackupPayload,

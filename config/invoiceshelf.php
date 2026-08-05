@@ -44,14 +44,45 @@ return [
     /*
     * Marketplace and updater base URL.
     *
-    * The marketplace client (App\Support\Module\ModuleInstaller) and the
-    * updater (App\Support\Update\Updater) both build their HTTP client base
-    * URI from this value via App\Traits\SiteApi::getRemote(). Override via
+    * The marketplace client (App\Services\Marketplace\MarketplaceClient) and
+    * updater (App\Support\Update\Updater) both use this value as their HTTP
+    * base URI (the updater via App\Traits\SiteApi::getRemote()). Override via
     * INVOICESHELF_BASE_URL in .env to point a self-hosted instance or local
     * dev environment at a non-production marketplace (e.g. a local checkout
     * of the invoiceshelf/website repo).
     */
     'base_url' => env('INVOICESHELF_BASE_URL', 'https://invoiceshelf.com'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Secure marketplace
+    |--------------------------------------------------------------------------
+    |
+    | Release manifests are signed by the marketplace. Keep production signing
+    | keys here rather than accepting a key supplied by a catalogue response.
+    | Values are base64 encoded Ed25519 public keys (32 byte raw keys). The
+    | official key is a built-in trust anchor; MARKETPLACE_PUBLIC_KEYS can add
+    | keys for rotation or replace an existing key ID during an emergency roll.
+    |
+    */
+    'marketplace' => [
+        'channel' => env('MARKETPLACE_CHANNEL', 'stable'),
+        'module_api_version' => (string) env('MARKETPLACE_MODULE_API_VERSION', '1.0.0'),
+        // JSON object: {"key-id":"base64-ed25519-public-key"}. Keys add to
+        // (or replace values in) the built-in pinned map. Key identity is part
+        // of the signed release and must match this trusted map.
+        'public_keys' => array_replace(
+            [
+                'official-modules-2026-01' => 'sIDGuOAaMVzPv9I/GPbWp9ci5aUI5HcM5rZ0tKxW6dc=',
+            ],
+            json_decode((string) env('MARKETPLACE_PUBLIC_KEYS', '{}'), true) ?: [],
+        ),
+        'max_zip_entries' => (int) env('MARKETPLACE_MAX_ZIP_ENTRIES', 10000),
+        'max_zip_compressed_bytes' => (int) env('MARKETPLACE_MAX_ZIP_COMPRESSED_BYTES', 134217728),
+        'max_zip_uncompressed_bytes' => (int) env('MARKETPLACE_MAX_ZIP_UNCOMPRESSED_BYTES', 256000000),
+        'max_zip_compression_ratio' => (int) env('MARKETPLACE_MAX_ZIP_COMPRESSION_RATIO', 200),
+        'lease_seconds' => (int) env('MARKETPLACE_LEASE_SECONDS', 900),
+    ],
 
     /*
     * Whether the app runs inside the official Docker image. The image's

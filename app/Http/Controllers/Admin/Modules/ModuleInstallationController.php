@@ -3,67 +3,22 @@
 namespace App\Http\Controllers\Admin\Modules;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\UnzipUpdateRequest;
-use App\Http\Requests\UploadModuleRequest;
-use App\Support\Module\ModuleInstaller;
+use App\Http\Requests\InstallMarketplaceModuleRequest;
+use App\Services\Marketplace\MarketplaceInstaller;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class ModuleInstallationController extends Controller
 {
-    public function download(Request $request): JsonResponse
+    public function install(InstallMarketplaceModuleRequest $request, MarketplaceInstaller $installer): JsonResponse
     {
         $this->authorize('manage modules');
 
-        $response = ModuleInstaller::download(
-            (string) $request->slug,
-            (string) $request->version,
-            $request->checksum_sha256 ? (string) $request->checksum_sha256 : null,
+        $response = $installer->install(
+            $request->string('slug')->toString(),
+            $request->string('version')->toString(),
+            $request->string('channel')->toString() ?: (string) config('invoiceshelf.marketplace.channel', 'stable'),
         );
 
-        return response()->json($response);
-    }
-
-    public function upload(UploadModuleRequest $request): JsonResponse
-    {
-        $this->authorize('manage modules');
-
-        $response = ModuleInstaller::upload($request);
-
-        return response()->json($response);
-    }
-
-    public function unzip(UnzipUpdateRequest $request): JsonResponse
-    {
-        $this->authorize('manage modules');
-
-        $path = ModuleInstaller::unzip($request->module_name ?? $request->module, $request->path);
-
-        return response()->json([
-            'success' => true,
-            'path' => $path,
-        ]);
-    }
-
-    public function copy(Request $request): JsonResponse
-    {
-        $this->authorize('manage modules');
-
-        $response = ModuleInstaller::copyFiles($request->module_name ?? $request->module, $request->path);
-
-        return response()->json([
-            'success' => $response,
-        ]);
-    }
-
-    public function complete(Request $request): JsonResponse
-    {
-        $this->authorize('manage modules');
-
-        $response = ModuleInstaller::complete($request->module_name ?? $request->module, $request->version);
-
-        return response()->json([
-            'success' => $response,
-        ]);
+        return response()->json($response, $response['success'] ? 200 : 422);
     }
 }

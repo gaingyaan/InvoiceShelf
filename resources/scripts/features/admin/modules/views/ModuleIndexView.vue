@@ -10,58 +10,26 @@
     <BaseCard class="mt-6">
       <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <h6 class="text-heading text-lg font-medium">Marketplace Access</h6>
+          <h6 class="text-heading text-lg font-medium">Marketplace access</h6>
           <p class="mt-1 text-sm text-muted">
-            Public modules are always available. Add your marketplace token to unlock premium modules tied to your website subscription.
+            Pair this InvoiceShelf instance with your marketplace account. The device credential stays encrypted on this server.
           </p>
-        </div>
-
-        <span
-          class="inline-flex rounded-full px-3 py-1 text-sm font-medium"
-          :class="statusClass"
-        >
-          {{ statusLabel }}
-        </span>
-      </div>
-
-      <div class="grid mt-6 lg:grid-cols-2">
-        <form class="space-y-4" @submit.prevent="submitApiToken">
-          <BaseInputGroup
-            :label="$t('modules.api_token')"
-            required
-            :error="v$.api_token.$error ? String(v$.api_token.$errors[0]?.$message) : undefined"
-          >
-            <BaseInput
-              v-model="moduleStore.currentUser.api_token"
-              :invalid="v$.api_token.$error"
-              @input="v$.api_token.$touch()"
-            />
-          </BaseInputGroup>
-
-          <div class="flex flex-wrap gap-3">
-            <BaseButton :loading="isSaving" type="submit">
-              <template #left="slotProps">
-                <BaseIcon name="ArrowDownOnSquareIcon" :class="slotProps.class" />
-              </template>
-              Save Token
-            </BaseButton>
-
-            <BaseButton
-              v-if="moduleStore.apiToken"
-              variant="primary-outline"
-              type="button"
-              @click="clearApiToken"
-            >
-              Clear Token
-            </BaseButton>
-
-            <a :href="tokenPageUrl" target="_blank" rel="noopener" class="inline-flex">
-              <BaseButton variant="primary-outline" type="button">
-                Manage Token
-              </BaseButton>
-            </a>
+          <div v-if="pairingCode" class="mt-4 space-y-1 text-sm text-body">
+            <p>Enter code <strong>{{ pairingCode.user_code }}</strong> at the marketplace verification page.</p>
+            <a v-if="pairingCode.verification_uri_complete || pairingCode.verification_uri" class="text-primary-600 underline" :href="pairingCode.verification_uri_complete || pairingCode.verification_uri || undefined" target="_blank" rel="noopener">Open verification page</a>
           </div>
-        </form>
+        </div>
+        <div class="flex flex-wrap gap-3">
+          <BaseButton v-if="!moduleStore.marketplacePairing?.paired" :loading="isPairing" @click="startPairing">
+            Pair marketplace
+          </BaseButton>
+          <BaseButton v-if="pairingCode" variant="primary-outline" :loading="isPolling" @click="pollPairing">
+            I have approved this device
+          </BaseButton>
+          <BaseButton v-if="moduleStore.marketplacePairing?.paired" variant="primary-outline" @click="disconnect">
+            Disconnect
+          </BaseButton>
+        </div>
       </div>
     </BaseCard>
 
@@ -70,28 +38,16 @@
         <BaseTab :title="$t('general.all')" filter="" />
         <BaseTab :title="$t('modules.installed')" filter="INSTALLED" />
       </BaseTabGroup>
-
-      <div
-        v-if="isFetchingModule"
-        class="grid mt-6 w-full grid-cols-1 items-start gap-6 lg:grid-cols-2 xl:grid-cols-3"
-      >
+      <div v-if="isFetchingModule" class="grid mt-6 w-full grid-cols-1 items-start gap-6 lg:grid-cols-2 xl:grid-cols-3">
         <div v-for="n in 3" :key="n" class="h-80 bg-surface-tertiary rounded-lg animate-pulse" />
       </div>
-
-      <div v-else>
-        <div
-          v-if="filteredModules.length"
-          class="grid mt-6 w-full grid-cols-1 items-start gap-6 lg:grid-cols-2 xl:grid-cols-3"
-        >
-          <div v-for="(mod, idx) in filteredModules" :key="idx">
-            <ModuleCard :data="mod" />
-          </div>
-        </div>
-        <div v-else class="mt-24">
-          <label class="flex items-center justify-center text-muted">
-            {{ $t('modules.no_modules_installed') }}
-          </label>
-        </div>
+      <div v-else-if="filteredModules.length" class="grid mt-6 w-full grid-cols-1 items-start gap-6 lg:grid-cols-2 xl:grid-cols-3">
+        <ModuleCard v-for="mod in filteredModules" :key="mod.slug" :data="mod" />
+      </div>
+      <div v-else class="mt-24">
+        <label class="flex items-center justify-center text-muted">
+          {{ activeTab === 'INSTALLED' ? $t('modules.no_modules_installed') : 'No marketplace modules are available yet.' }}
+        </label>
       </div>
     </div>
   </BasePage>
@@ -99,103 +55,26 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
-import { required, minLength, helpers } from '@vuelidate/validators'
-import { useVuelidate } from '@vuelidate/core'
 import { useModuleStore } from '../store'
 import ModuleCard from '../components/ModuleCard.vue'
-import type { Module } from '../../../../types/domain/module'
-import { useGlobalStore } from '@/scripts/stores/global.store'
+import type { MarketplacePairingCode } from '@/scripts/api/services/module.service'
+import type { Module } from '@/scripts/types/domain/module'
 import { useNotificationStore } from '@/scripts/stores/notification.store'
 
 const moduleStore = useModuleStore()
-const globalStore = useGlobalStore()
 const notificationStore = useNotificationStore()
-const { t } = useI18n()
+const activeTab = ref('')
+const isFetchingModule = ref(false)
+const isPairing = ref(false)
+const isPolling = ref(false)
+const pairingCode = ref<MarketplacePairingCode | null>(null)
 
-const activeTab = ref<string>('')
-const isSaving = ref<boolean>(false)
-const isFetchingModule = ref<boolean>(false)
-
-const rules = computed(() => ({
-  api_token: {
-    required: helpers.withMessage(t('validation.required'), required),
-    minLength: helpers.withMessage(
-      t('validation.name_min_length', { count: 3 }),
-      minLength(3),
-    ),
-  },
-}))
-
-const v$ = useVuelidate(
-  rules,
-  computed(() => moduleStore.currentUser),
-)
-
-const filteredModules = computed<Module[]>(() => {
-  if (activeTab.value === 'INSTALLED') {
-    return moduleStore.installedModules
-  }
-  return moduleStore.modules
-})
-
-const statusLabel = computed<string>(() => {
-  if (moduleStore.marketplaceStatus.invalidToken) {
-    return 'Invalid token'
-  }
-
-  if (moduleStore.marketplaceStatus.premium) {
-    return 'Premium modules unlocked'
-  }
-
-  if (moduleStore.marketplaceStatus.authenticated) {
-    return 'Connected'
-  }
-
-  return 'Public modules only'
-})
-
-const statusClass = computed<string>(() => {
-  if (moduleStore.marketplaceStatus.invalidToken) {
-    return 'bg-red-100 text-red-700'
-  }
-
-  if (moduleStore.marketplaceStatus.premium) {
-    return 'bg-amber-100 text-amber-800'
-  }
-
-  if (moduleStore.marketplaceStatus.authenticated) {
-    return 'bg-green-100 text-green-700'
-  }
-
-  return 'bg-surface-secondary text-muted'
-})
-
-const baseUrl = computed<string>(() => {
-  return String(globalStore.config?.base_url ?? '')
-})
-
-const tokenPageUrl = computed<string>(() => {
-  return `${baseUrl.value}/marketplace/token`
-})
+const filteredModules = computed<Module[]>(() => activeTab.value === 'INSTALLED'
+  ? moduleStore.installedModules
+  : moduleStore.modules)
 
 onMounted(async () => {
-  const savedToken = String(globalStore.globalSettings?.api_token ?? '').trim() || null
-  moduleStore.setApiToken(savedToken)
-
-  if (savedToken) {
-    const response = await moduleStore.checkApiToken(savedToken)
-    if (response.error === 'invalid_token') {
-      notificationStore.showNotification({
-        type: 'error',
-        message: 'Saved marketplace token is invalid. Public modules are shown until you update it.',
-      })
-    }
-  } else {
-    moduleStore.clearMarketplaceStatus()
-  }
-
-  await fetchModulesData()
+  await Promise.all([moduleStore.fetchMarketplacePairing(), fetchModulesData()])
 })
 
 async function fetchModulesData(): Promise<void> {
@@ -207,55 +86,34 @@ async function fetchModulesData(): Promise<void> {
   }
 }
 
-async function submitApiToken(): Promise<void> {
-  v$.value.$touch()
-  if (v$.value.$invalid) return
-
-  isSaving.value = true
-
+async function startPairing(): Promise<void> {
+  isPairing.value = true
   try {
-    const token = moduleStore.currentUser.api_token ?? ''
-    const response = await moduleStore.checkApiToken(token)
-
-    if (!response.success) {
-      notificationStore.showNotification({
-        type: 'error',
-        message: response.error === 'invalid_token'
-          ? 'Invalid marketplace token'
-          : 'Unable to validate marketplace token',
-      })
-      return
-    }
-
-    await globalStore.updateGlobalSettings({
-      data: {
-        settings: {
-          api_token: token,
-        },
-      },
-      message: 'Marketplace token saved',
-    })
-
-    moduleStore.setApiToken(token)
-    await fetchModulesData()
+    pairingCode.value = await moduleStore.startMarketplacePairing()
   } finally {
-    isSaving.value = false
+    isPairing.value = false
   }
 }
 
-async function clearApiToken(): Promise<void> {
-  await globalStore.updateGlobalSettings({
-    data: {
-      settings: {
-        api_token: null,
-      },
-    },
-    message: 'Marketplace token cleared',
-  })
+async function pollPairing(): Promise<void> {
+  isPolling.value = true
+  try {
+    const result = await moduleStore.pollMarketplacePairing()
+    if (result.status === 'paired') {
+      pairingCode.value = null
+      notificationStore.showNotification({ type: 'success', message: 'Marketplace paired' })
+      await fetchModulesData()
+    } else {
+      notificationStore.showNotification({ type: 'info', message: 'Waiting for marketplace approval' })
+    }
+  } finally {
+    isPolling.value = false
+  }
+}
 
-  moduleStore.setApiToken(null)
-  moduleStore.clearMarketplaceStatus()
-  v$.value.$reset()
+async function disconnect(): Promise<void> {
+  await moduleStore.disconnectMarketplace()
+  notificationStore.showNotification({ type: 'success', message: 'Marketplace disconnected' })
   await fetchModulesData()
 }
 

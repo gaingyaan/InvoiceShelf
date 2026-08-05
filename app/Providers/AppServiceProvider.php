@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\AiConversation;
+use App\Models\User;
 use App\Policies\AiConversationPolicy;
 use App\Policies\CompanyPolicy;
 use App\Policies\CreditNotePolicy;
@@ -68,6 +69,7 @@ class AppServiceProvider extends ServiceProvider
 
         Gate::policy(Role::class, RolePolicy::class);
         Gate::policy(AiConversation::class, AiConversationPolicy::class);
+        Gate::define('manage module settings', fn (User $user): bool => $user->isSuperAdmin() || $user->isOwner());
 
         View::addNamespace('pdf_templates', storage_path('app/templates/pdf'));
 

@@ -35,12 +35,28 @@ export interface Module {
   slug: string
   module_name: string
   access_tier: 'public' | 'premium'
+  access: 'free' | 'paid'
+  entitlement?: {
+    active?: boolean
+    status?: string
+    expires_at?: string | null
+  } | null
+  compatibility?: {
+    invoiceshelf?: string | null
+    module_api?: string | number | null
+    php?: string | null
+    extensions?: string[]
+    compatible?: boolean
+  } | null
+  release_state?: 'published' | 'yanked' | string
+  yanked_reason?: string | null
+  channel?: 'stable' | 'insider'
   faq: ModuleFaq[] | null
   highlights: string[] | null
   installed_module_version: string | null
   installed_module_version_updated_at: string | null
-  latest_module_version: string
-  latest_module_version_updated_at: string
+  latest_module_version: string | null
+  latest_module_version_updated_at: string | null
   latest_min_invoiceshelf_version: string | null
   latest_module_checksum_sha256: string | null
   is_dev: boolean
@@ -49,6 +65,7 @@ export interface Module {
   monthly_price: number | null
   name: string
   purchased: boolean
+  purchase_url: string | null
   reviews: ModuleReview[]
   screenshots: ModuleScreenshot[] | null
   short_description: string | null

@@ -17,42 +17,57 @@ class ModuleResource extends JsonResource
      */
     public function toArray($request): array
     {
-        $installedModule = ModelsModule::where('name', $this->module_name)->first();
+        $moduleName = data_get($this->resource, 'module_name');
+        $installedModule = is_string($moduleName)
+            ? ModelsModule::where('name', $moduleName)->first()
+            : null;
+        $release = data_get($this->resource, 'release');
+        $latestVersion = data_get($this->resource, 'latest_module_version') ?? data_get($release, 'version');
+        $compatibility = data_get($this->resource, 'compatibility') ?? data_get($release, 'compatibility');
+        $access = data_get($this->resource, 'access', 'free');
 
         return [
-            'id' => $this->id,
-            'average_rating' => $this->average_rating,
-            'cover' => $this->cover,
-            'slug' => $this->slug,
-            'module_name' => $this->module_name,
-            'access_tier' => $this->access_tier ?? 'public',
-            'faq' => $this->faq,
-            'highlights' => $this->highlights,
+            'id' => data_get($this->resource, 'id'),
+            'average_rating' => data_get($this->resource, 'average_rating'),
+            'cover' => data_get($this->resource, 'cover'),
+            'slug' => data_get($this->resource, 'slug'),
+            'module_name' => $moduleName,
+            'access_tier' => data_get($this->resource, 'access_tier') ?? ($access === 'paid' ? 'premium' : 'public'),
+            'access' => $access,
+            'entitlement' => data_get($this->resource, 'entitlement'),
+            'compatibility' => $compatibility,
+            'compatible' => data_get($this->resource, 'compatible'),
+            'release_state' => data_get($this->resource, 'release_state') ?? data_get($release, 'state') ?? 'published',
+            'yanked_reason' => data_get($this->resource, 'yanked_reason') ?? data_get($release, 'yanked_reason'),
+            'channel' => data_get($this->resource, 'channel') ?? data_get($release, 'channel') ?? 'stable',
+            'faq' => data_get($this->resource, 'faq'),
+            'highlights' => data_get($this->resource, 'highlights'),
             'installed_module_version' => $this->getInstalledModuleVersion($installedModule),
             'installed_module_version_updated_at' => $this->getInstalledModuleUpdatedAt($installedModule),
-            'latest_module_version' => $this->latest_module_version,
-            'latest_module_version_updated_at' => $this->latest_module_version_updated_at,
-            'latest_min_invoiceshelf_version' => $this->latest_min_invoiceshelf_version ?? null,
-            'latest_module_checksum_sha256' => $this->latest_module_checksum_sha256 ?? null,
-            'is_dev' => $this->is_dev,
-            'license' => $this->license,
-            'long_description' => $this->long_description,
-            'monthly_price' => $this->monthly_price,
-            'name' => $this->name,
-            'purchased' => $this->purchased ?? true,
-            'reviews' => $this->reviews ?? [],
-            'screenshots' => $this->screenshots,
-            'short_description' => $this->short_description,
-            'type' => $this->type,
-            'yearly_price' => $this->yearly_price,
-            'author_name' => $this->author_name,
-            'author_avatar' => $this->author_avatar,
+            'latest_module_version' => $latestVersion,
+            'latest_module_version_updated_at' => data_get($this->resource, 'latest_module_version_updated_at') ?? data_get($release, 'published_at'),
+            'latest_min_invoiceshelf_version' => data_get($this->resource, 'latest_min_invoiceshelf_version'),
+            'latest_module_checksum_sha256' => data_get($this->resource, 'latest_module_checksum_sha256') ?? data_get($release, 'artifact.sha256'),
+            'is_dev' => (bool) data_get($this->resource, 'is_dev', false),
+            'license' => data_get($this->resource, 'license', 'AGPL-3.0-only'),
+            'long_description' => data_get($this->resource, 'long_description'),
+            'monthly_price' => data_get($this->resource, 'monthly_price'),
+            'name' => data_get($this->resource, 'name'),
+            'purchased' => data_get($this->resource, 'purchased') ?? ($access === 'free' || (bool) data_get($this->resource, 'entitlement.active', false)),
+            'purchase_url' => data_get($this->resource, 'purchase_url'),
+            'reviews' => data_get($this->resource, 'reviews', []),
+            'screenshots' => data_get($this->resource, 'screenshots'),
+            'short_description' => data_get($this->resource, 'short_description'),
+            'type' => data_get($this->resource, 'type'),
+            'yearly_price' => data_get($this->resource, 'yearly_price'),
+            'author_name' => data_get($this->resource, 'author_name') ?? data_get($this->resource, 'author.name'),
+            'author_avatar' => data_get($this->resource, 'author_avatar') ?? data_get($this->resource, 'author.avatar'),
             'installed' => $this->moduleInstalled($installedModule),
             'enabled' => $this->moduleEnabled($installedModule),
-            'update_available' => $this->updateAvailable($installedModule),
-            'video_link' => $this->video_link,
-            'video_thumbnail' => $this->video_thumbnail,
-            'links' => $this->links,
+            'update_available' => $this->updateAvailable($installedModule, $latestVersion),
+            'video_link' => data_get($this->resource, 'video_link') ?? data_get($this->resource, 'video.url'),
+            'video_thumbnail' => data_get($this->resource, 'video_thumbnail') ?? data_get($this->resource, 'video.thumbnail'),
+            'links' => data_get($this->resource, 'links'),
         ];
     }
 
@@ -84,16 +99,16 @@ class ModuleResource extends JsonResource
         return (bool) ($installedModule?->installed && $installedModule?->enabled);
     }
 
-    public function updateAvailable(?ModelsModule $installedModule): bool
+    public function updateAvailable(?ModelsModule $installedModule, mixed $latestVersion): bool
     {
         if (! $installedModule || ! $installedModule->installed) {
             return false;
         }
 
-        if (! isset($this->latest_module_version) || ! is_string($this->latest_module_version)) {
+        if (! is_string($latestVersion)) {
             return false;
         }
 
-        return version_compare($installedModule->version, $this->latest_module_version, '<');
+        return version_compare($installedModule->version, $latestVersion, '<');
     }
 }

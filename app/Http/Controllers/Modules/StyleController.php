@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Modules;
 
 use App\Http\Controllers\Controller;
+use App\Support\Module\ModuleAssetVersion;
 use DateTime;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -23,14 +24,25 @@ class StyleController extends Controller
     {
         $path = ModuleRegistry::styleFor($style);
 
-        abort_if($path === null, 404);
+        abort_if($path === null || ! is_file($path), 404);
 
-        return response(
-            file_get_contents($path),
+        $contents = file_get_contents($path);
+        abort_if(! is_string($contents), 404);
+        $version = ModuleAssetVersion::forContents($contents);
+        $cacheControl = is_string($request->query('v')) && hash_equals($version, $request->query('v'))
+            ? 'public, max-age=31536000, immutable'
+            : 'no-store';
+
+        $response = response(
+            $contents,
             200,
             [
                 'Content-Type' => 'text/css',
             ]
         )->setLastModified(DateTime::createFromFormat('U', (string) filemtime($path)));
+
+        $response->headers->set('Cache-Control', $cacheControl);
+
+        return $response;
     }
 }

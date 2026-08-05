@@ -3,11 +3,21 @@ import { API } from '../endpoints'
 import type { ApiResponse } from '@/scripts/types/api'
 import type { Module } from '@/scripts/types/domain/module'
 
-export interface ModuleCheckResponse {
-  error?: string
-  success?: boolean
-  authenticated?: boolean
-  premium?: boolean
+export type { Module } from '@/scripts/types/domain/module'
+
+export interface MarketplacePairingStatus {
+  paired: boolean
+  expired: boolean
+  paired_at: string | null
+}
+
+export interface MarketplacePairingCode {
+  device_code: string
+  user_code: string | null
+  verification_uri: string | null
+  verification_uri_complete: string | null
+  expires_in: number
+  interval: number
 }
 
 export interface ModuleDetailMeta {
@@ -16,10 +26,8 @@ export interface ModuleDetailMeta {
 
 export interface ModuleInstallPayload {
   slug: string
-  module_name: string
   version: string
-  checksum_sha256?: string | null
-  path?: string
+  channel?: 'stable' | 'insider'
 }
 
 export interface ModuleDetailResponse {
@@ -38,8 +46,23 @@ export const moduleService = {
     return data
   },
 
-  async checkToken(apiToken: string): Promise<ModuleCheckResponse> {
-    const { data } = await client.get(`${API.MODULES_CHECK}?api_token=${apiToken}`)
+  async pairingStatus(): Promise<MarketplacePairingStatus> {
+    const { data } = await client.get(API.MODULES_PAIRING)
+    return data
+  },
+
+  async startPairing(): Promise<MarketplacePairingCode> {
+    const { data } = await client.post(`${API.MODULES_PAIRING}/start`)
+    return data
+  },
+
+  async pollPairing(): Promise<{ status: 'pending' | 'paired' }> {
+    const { data } = await client.post(`${API.MODULES_PAIRING}/poll`)
+    return data
+  },
+
+  async disconnectMarketplace(): Promise<{ success: boolean }> {
+    const { data } = await client.delete(API.MODULES_PAIRING)
     return data
   },
 
@@ -53,29 +76,8 @@ export const moduleService = {
     return data
   },
 
-  // Installation flow
-  async download(payload: ModuleInstallPayload): Promise<{ success: boolean }> {
-    const { data } = await client.post(API.MODULES_DOWNLOAD, payload)
-    return data
-  },
-
-  async upload(payload: FormData): Promise<{ success: boolean }> {
-    const { data } = await client.post(API.MODULES_UPLOAD, payload)
-    return data
-  },
-
-  async unzip(payload: ModuleInstallPayload): Promise<{ success: boolean }> {
-    const { data } = await client.post(API.MODULES_UNZIP, payload)
-    return data
-  },
-
-  async copy(payload: ModuleInstallPayload): Promise<{ success: boolean }> {
-    const { data } = await client.post(API.MODULES_COPY, payload)
-    return data
-  },
-
-  async complete(payload: ModuleInstallPayload): Promise<{ success: boolean }> {
-    const { data } = await client.post(API.MODULES_COMPLETE, payload)
+  async install(payload: ModuleInstallPayload): Promise<{ success: boolean; error?: string }> {
+    const { data } = await client.post(API.MODULES_INSTALL, payload)
     return data
   },
 }

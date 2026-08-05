@@ -11,14 +11,6 @@ class ModulesPolicy
 
     public function manageModules(User $user)
     {
-        if ($user->isSuperAdmin()) {
-            return true;
-        }
-
-        if ($user->isOwner()) {
-            return true;
-        }
-
-        return false;
+        return $user->isSuperAdmin();
     }
 }

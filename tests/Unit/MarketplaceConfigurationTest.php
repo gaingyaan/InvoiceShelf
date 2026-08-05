@@ -1,0 +1,48 @@
+<?php
+
+const OFFICIAL_MARKETPLACE_KEY_ID = 'official-modules-2026-01';
+const OFFICIAL_MARKETPLACE_PUBLIC_KEY = 'sIDGuOAaMVzPv9I/GPbWp9ci5aUI5HcM5rZ0tKxW6dc=';
+
+test('marketplace configuration includes the official signing key by default', function () {
+    expect(marketplacePublicKeysConfigFor(null))
+        ->toBe([OFFICIAL_MARKETPLACE_KEY_ID => OFFICIAL_MARKETPLACE_PUBLIC_KEY]);
+});
+
+test('marketplace public-key configuration adds and rotates trusted keys', function () {
+    $keys = marketplacePublicKeysConfigFor(json_encode([
+        'rotated-modules-2027-01' => 'additional-public-key',
+        OFFICIAL_MARKETPLACE_KEY_ID => 'replacement-public-key',
+    ], JSON_THROW_ON_ERROR));
+
+    expect($keys)->toBe([
+        OFFICIAL_MARKETPLACE_KEY_ID => 'replacement-public-key',
+        'rotated-modules-2027-01' => 'additional-public-key',
+    ]);
+});
+
+function marketplacePublicKeysConfigFor(?string $override): array
+{
+    $previous = getenv('MARKETPLACE_PUBLIC_KEYS');
+
+    if ($override === null) {
+        putenv('MARKETPLACE_PUBLIC_KEYS');
+        unset($_ENV['MARKETPLACE_PUBLIC_KEYS'], $_SERVER['MARKETPLACE_PUBLIC_KEYS']);
+    } else {
+        putenv("MARKETPLACE_PUBLIC_KEYS={$override}");
+        $_ENV['MARKETPLACE_PUBLIC_KEYS'] = $override;
+        $_SERVER['MARKETPLACE_PUBLIC_KEYS'] = $override;
+    }
+
+    $configuration = require config_path('invoiceshelf.php');
+
+    if ($previous === false) {
+        putenv('MARKETPLACE_PUBLIC_KEYS');
+        unset($_ENV['MARKETPLACE_PUBLIC_KEYS'], $_SERVER['MARKETPLACE_PUBLIC_KEYS']);
+    } else {
+        putenv("MARKETPLACE_PUBLIC_KEYS={$previous}");
+        $_ENV['MARKETPLACE_PUBLIC_KEYS'] = $previous;
+        $_SERVER['MARKETPLACE_PUBLIC_KEYS'] = $previous;
+    }
+
+    return $configuration['marketplace']['public_keys'];
+}

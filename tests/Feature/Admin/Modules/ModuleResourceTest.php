@@ -5,7 +5,7 @@ use App\Models\Module as InstalledModule;
 use Illuminate\Http\Request;
 
 it('maps the marketplace payload shape expected by the admin modules ui', function () {
-    $payload = (object) [
+    $payload = [
         'id' => 7,
         'slug' => 'sales-tax-us',
         'name' => 'Sales Tax US',

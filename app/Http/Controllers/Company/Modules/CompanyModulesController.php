@@ -20,16 +20,16 @@ use InvoiceShelf\Modules\Registry as ModuleRegistry;
  * settings (per CompanySetting under the module.{slug}.* prefix).
  *
  * Slug convention: nwidart stores the module's PascalCase class name in
- * `modules.name` (e.g. "HelloWorld"), but URLs and registry keys use the
- * kebab-case form ("hello-world") for readability. We normalize via
- * Str::kebab() so module authors can call Registry::registerMenu('hello-world')
+ * `modules.name` (e.g. "SalesTaxUs"), but URLs and registry keys use the
+ * kebab-case form ("sales-tax-us") for readability. We normalize via
+ * Str::kebab() so module authors can call Registry::registerMenu('sales-tax-us')
  * naturally without thinking about the storage format.
  */
 class CompanyModulesController extends Controller
 {
     public function index(): JsonResponse
     {
-        $this->authorize('manage modules');
+        $this->authorize('manage module settings');
 
         $modules = Module::query()
             ->where('enabled', true)

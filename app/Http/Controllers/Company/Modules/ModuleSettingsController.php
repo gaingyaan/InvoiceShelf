@@ -25,7 +25,7 @@ class ModuleSettingsController extends Controller
 {
     public function show(Request $request, string $slug): JsonResponse
     {
-        $this->authorize('manage modules');
+        $this->authorize('manage module settings');
 
         $schema = ModuleRegistry::settingsFor($slug);
 
@@ -50,7 +50,7 @@ class ModuleSettingsController extends Controller
 
     public function update(Request $request, string $slug): JsonResponse
     {
-        $this->authorize('manage modules');
+        $this->authorize('manage module settings');
 
         $schema = ModuleRegistry::settingsFor($slug);
 
@@ -139,7 +139,7 @@ class ModuleSettingsController extends Controller
     /**
      * Translate section titles and field labels in the schema so the
      * frontend receives ready-to-display strings instead of Laravel
-     * translation keys it cannot resolve (e.g. `helloworld::settings.greeting`).
+     * translation keys it cannot resolve (e.g. `sales_tax_us::settings.greeting`).
      *
      * @param  array{sections: list<array<string, mixed>>}  $schema
      * @return array{sections: list<array<string, mixed>>}

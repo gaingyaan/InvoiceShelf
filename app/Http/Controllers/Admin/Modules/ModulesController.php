@@ -7,53 +7,49 @@ use App\Events\ModuleEnabledEvent;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ModuleResource;
 use App\Models\Module as ModelsModule;
-use App\Support\Module\ModuleInstaller;
+use App\Services\Marketplace\MarketplaceClient;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Nwidart\Modules\Facades\Module;
 
 class ModulesController extends Controller
 {
-    public function index(Request $request)
+    public function index(MarketplaceClient $client)
     {
         $this->authorize('manage modules');
 
-        $response = ModuleInstaller::getModules();
+        $response = $client->catalog();
+        $body = $response->json();
+        $modules = is_array($body) ? ($body['modules'] ?? $body['data'] ?? null) : null;
 
-        if (($response['status'] ?? 0) !== 200 || ! isset($response['body']->modules)) {
+        if (! $response->successful() || ! is_array($modules)) {
             return response()->json(['error' => 'marketplace_unavailable'], 503);
         }
 
-        return ModuleResource::collection(collect($response['body']->modules));
+        return ModuleResource::collection(collect($modules));
     }
 
-    public function show(Request $request, string $module)
+    public function show(string $module, MarketplaceClient $client)
     {
         $this->authorize('manage modules');
 
-        $response = ModuleInstaller::getModule($module);
+        $response = $client->module($module);
+        $body = $response->json();
 
-        if (($response['status'] ?? 0) === 404) {
+        if ($response->status() === 404) {
             return response()->json(['error' => 'not_found'], 404);
         }
 
-        if (($response['status'] ?? 0) !== 200 || ! isset($response['body']->data)) {
+        if (! $response->successful() || ! is_array($body) || ! is_array($body['module'] ?? null)) {
             return response()->json(['error' => 'marketplace_unavailable'], 503);
         }
 
-        return (new ModuleResource($response['body']->data))
+        return (new ModuleResource($body['module']))
             ->additional(['meta' => [
                 'modules' => ModuleResource::collection(
-                    collect($response['body']->meta->modules ?? [])
+                    collect($body['meta']['modules'] ?? [])
                 ),
             ]]);
-    }
-
-    public function checkToken(Request $request): JsonResponse
-    {
-        $this->authorize('manage modules');
-
-        return ModuleInstaller::checkToken($request->api_token);
     }
 
     public function enable(Request $request, string $module): JsonResponse

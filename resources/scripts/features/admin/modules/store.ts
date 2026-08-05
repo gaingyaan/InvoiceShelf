@@ -1,17 +1,14 @@
 import { defineStore } from 'pinia'
 import { moduleService } from '../../../api/services/module.service'
+import type { Module } from '../../../types/domain/module'
 import type {
-  Module,
-} from '../../../types/domain/module'
-import type {
-  ModuleCheckResponse,
+  MarketplacePairingCode,
+  MarketplacePairingStatus,
   ModuleDetailResponse,
   ModuleInstallPayload,
 } from '../../../api/services/module.service'
 
-// ----------------------------------------------------------------
-// Types
-// ----------------------------------------------------------------
+export type { ModuleDetailResponse, ModuleDetailMeta } from '../../../api/services/module.service'
 
 export interface InstallationStep {
   translationKey: string
@@ -21,22 +18,10 @@ export interface InstallationStep {
   completed: boolean
 }
 
-// ----------------------------------------------------------------
-// Store
-// ----------------------------------------------------------------
-
 export interface ModuleState {
   currentModule: ModuleDetailResponse | null
   modules: Module[]
-  apiToken: string | null
-  currentUser: {
-    api_token: string | null
-  }
-  marketplaceStatus: {
-    authenticated: boolean
-    premium: boolean
-    invalidToken: boolean
-  }
+  marketplacePairing: MarketplacePairingStatus | null
   enableModules: string[]
 }
 
@@ -44,24 +29,13 @@ export const useModuleStore = defineStore('modules', {
   state: (): ModuleState => ({
     currentModule: null,
     modules: [],
-    apiToken: null,
-    currentUser: {
-      api_token: null,
-    },
-    marketplaceStatus: {
-      authenticated: false,
-      premium: false,
-      invalidToken: false,
-    },
+    marketplacePairing: null,
     enableModules: [],
   }),
 
   getters: {
-    salesTaxUSEnabled: (state): boolean =>
-      state.enableModules.includes('SalesTaxUS'),
-
-    installedModules: (state): Module[] =>
-      state.modules.filter((m) => m.installed),
+    salesTaxUSEnabled: (state): boolean => state.enableModules.includes('SalesTaxUS'),
+    installedModules: (state): Module[] => state.modules.filter((m) => m.installed),
   },
 
   actions: {
@@ -76,27 +50,25 @@ export const useModuleStore = defineStore('modules', {
       return response
     },
 
-    async checkApiToken(token: string): Promise<ModuleCheckResponse> {
-      const response = await moduleService.checkToken(token)
-      this.marketplaceStatus = {
-        authenticated: response.authenticated ?? false,
-        premium: response.premium ?? false,
-        invalidToken: response.error === 'invalid_token',
-      }
+    async fetchMarketplacePairing(): Promise<MarketplacePairingStatus> {
+      const response = await moduleService.pairingStatus()
+      this.marketplacePairing = response
       return response
     },
 
-    setApiToken(token: string | null): void {
-      this.apiToken = token
-      this.currentUser.api_token = token
+    async startMarketplacePairing(): Promise<MarketplacePairingCode> {
+      return moduleService.startPairing()
     },
 
-    clearMarketplaceStatus(): void {
-      this.marketplaceStatus = {
-        authenticated: false,
-        premium: false,
-        invalidToken: false,
-      }
+    async pollMarketplacePairing(): Promise<{ status: 'pending' | 'paired' }> {
+      const response = await moduleService.pollPairing()
+      if (response.status === 'paired') await this.fetchMarketplacePairing()
+      return response
+    },
+
+    async disconnectMarketplace(): Promise<void> {
+      await moduleService.disconnectMarketplace()
+      this.marketplacePairing = { paired: false, expired: false, paired_at: null }
     },
 
     async disableModule(moduleName: string): Promise<{ success: boolean }> {
@@ -111,99 +83,30 @@ export const useModuleStore = defineStore('modules', {
       payload: ModuleInstallPayload,
       onStepUpdate?: (step: InstallationStep) => void,
     ): Promise<boolean> {
-      const steps: InstallationStep[] = [
-        {
-          translationKey: 'modules.download_zip_file',
-          stepUrl: '/api/v1/modules/download',
-          time: null,
-          started: false,
-          completed: false,
-        },
-        {
-          translationKey: 'modules.unzipping_package',
-          stepUrl: '/api/v1/modules/unzip',
-          time: null,
-          started: false,
-          completed: false,
-        },
-        {
-          translationKey: 'modules.copying_files',
-          stepUrl: '/api/v1/modules/copy',
-          time: null,
-          started: false,
-          completed: false,
-        },
-        {
-          translationKey: 'modules.completing_installation',
-          stepUrl: '/api/v1/modules/complete',
-          time: null,
-          started: false,
-          completed: false,
-        },
-      ]
-
-      let path: string | null = null
-
-      for (const step of steps) {
-        step.started = true
-        onStepUpdate?.(step)
-
-        try {
-          const stepFns: Record<string, () => Promise<Record<string, unknown>>> = {
-            '/api/v1/modules/download': () =>
-              moduleService.download({
-                ...payload,
-                path: path ?? undefined,
-              }) as Promise<Record<string, unknown>>,
-            '/api/v1/modules/unzip': () =>
-              moduleService.unzip({
-                ...payload,
-                path: path ?? undefined,
-              }) as Promise<Record<string, unknown>>,
-            '/api/v1/modules/copy': () =>
-              moduleService.copy({
-                ...payload,
-                path: path ?? undefined,
-              }) as Promise<Record<string, unknown>>,
-            '/api/v1/modules/complete': () =>
-              moduleService.complete({
-                ...payload,
-                path: path ?? undefined,
-              }) as Promise<Record<string, unknown>>,
-          }
-
-          const result = await stepFns[step.stepUrl]()
-          step.completed = true
-          onStepUpdate?.(step)
-
-          if ((result as Record<string, unknown>).path) {
-            path = (result as Record<string, unknown>).path as string
-          }
-
-          if (!(result as Record<string, unknown>).success) {
-            const message = (result as Record<string, unknown>).error
-            if (typeof message === 'string') {
-              const { useNotificationStore } = await import('@/scripts/stores/notification.store')
-              useNotificationStore().showNotification({
-                type: 'error',
-                message,
-              })
-            }
-            return false
-          }
-        } catch (err: unknown) {
-          step.completed = true
-          onStepUpdate?.(step)
-          const { useNotificationStore } = await import('@/scripts/stores/notification.store')
-          useNotificationStore().showNotification({
-            type: 'error',
-            message: err instanceof Error ? err.message : 'Module installation failed',
-          })
-          return false
-        }
+      const step: InstallationStep = {
+        translationKey: 'modules.completing_installation',
+        stepUrl: '/api/v1/modules/install',
+        time: null,
+        started: true,
+        completed: false,
       }
+      onStepUpdate?.(step)
 
-      return true
+      try {
+        const response = await moduleService.install(payload)
+        step.completed = true
+        onStepUpdate?.(step)
+        return response.success
+      } catch (err: unknown) {
+        step.completed = true
+        onStepUpdate?.(step)
+        const { useNotificationStore } = await import('@/scripts/stores/notification.store')
+        useNotificationStore().showNotification({
+          type: 'error',
+          message: err instanceof Error ? err.message : 'Module installation failed',
+        })
+        return false
+      }
     },
   },
 })

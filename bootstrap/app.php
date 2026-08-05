@@ -21,6 +21,7 @@ use App\Http\Middleware\TrimStrings;
 use App\Http\Middleware\TrustProxies;
 use App\Http\Middleware\UseInstallWizardTokenAuth;
 use App\Providers\AppServiceProvider;
+use App\Services\Marketplace\ModuleRuntimeAutoloader;
 use Illuminate\Auth\Middleware\Authorize;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -31,6 +32,11 @@ use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Lavary\Menu\ServiceProvider;
+
+// Marketplace modules are installed after Composer's autoload map is built.
+// Register their app/ prefixes before package discovery loads enabled module
+// service providers during application bootstrap.
+ModuleRuntimeAutoloader::registerInstalledModules(dirname(__DIR__).'/Modules');
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withProviders([
