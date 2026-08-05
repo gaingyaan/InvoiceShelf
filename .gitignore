@@ -35,4 +35,10 @@ yarn.lock
 /GEMINI.md
 /.github/copilot-instructions.md
 /.cursor/
-/.claude/settings.local.json
+/.claude/
+
+# Generated IDE metadata belongs to each developer's local environment.
+/.phpstorm.meta.php
+/_ide_helper.php
+/_ide_helper_models.php
+/*.code-workspace

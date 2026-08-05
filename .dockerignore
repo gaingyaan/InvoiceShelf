@@ -1,4 +1,5 @@
 .idea/
+.claude/
 .git/
 
 .github/
@@ -40,9 +41,10 @@ Dockerfile
 LICENSE
 Makefile
 SECURITY.md
-_ide_helper.php
+.phpstorm.meta.php
+_ide_helper*.php
 crowdin.yml
-invoiceshelf.code-workspace
+*.code-workspace
 package-lock.json
 phpunit.xml
 readme.md
