@@ -8,13 +8,16 @@ use App\Http\Requests\DeleteCustomersRequest;
 use App\Http\Resources\CustomerResource;
 use App\Models\Customer;
 use App\Services\CustomerService;
+use App\Services\CustomerStatementService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class CustomersController extends Controller
 {
     public function __construct(
         private readonly CustomerService $customerService,
+        private readonly CustomerStatementService $customerStatementService,
     ) {}
 
     /**
@@ -31,9 +34,11 @@ class CustomersController extends Controller
         $customers = Customer::with('creator')
             ->whereCompany()
             ->applyFilters($request->all())
-            ->withSum('invoices as base_due_amount', 'base_due_amount')
-            ->withSum('invoices as due_amount', 'due_amount')
             ->paginateData($limit);
+
+        $this->customerStatementService->hydrateAccountSummaries(
+            $customers instanceof LengthAwarePaginator ? $customers->getCollection() : $customers
+        );
 
         return CustomerResource::collection($customers)
             ->additional(['meta' => [
@@ -52,6 +57,7 @@ class CustomersController extends Controller
         $this->authorize('create', Customer::class);
 
         $customer = $this->customerService->create($request);
+        $this->customerStatementService->hydrateAccountSummaries([$customer]);
 
         return new CustomerResource($customer);
     }
@@ -64,6 +70,8 @@ class CustomersController extends Controller
     public function show(Customer $customer)
     {
         $this->authorize('view', $customer);
+
+        $this->customerStatementService->hydrateAccountSummaries([$customer]);
 
         return new CustomerResource($customer);
     }
@@ -79,6 +87,7 @@ class CustomersController extends Controller
         $this->authorize('update', $customer);
 
         $customer = $this->customerService->update($request, $customer);
+        $this->customerStatementService->hydrateAccountSummaries([$customer]);
 
         return new CustomerResource($customer);
     }

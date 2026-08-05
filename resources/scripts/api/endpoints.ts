@@ -35,6 +35,7 @@ export const API = {
   CUSTOMERS: '/api/v1/customers',
   CUSTOMERS_DELETE: '/api/v1/customers/delete',
   CUSTOMER_STATS: '/api/v1/customers', // append /{id}/stats
+  CUSTOMER_STATEMENT: '/api/v1/customers', // append /{id}/statement
 
   // Items & Units
   ITEMS: '/api/v1/items',

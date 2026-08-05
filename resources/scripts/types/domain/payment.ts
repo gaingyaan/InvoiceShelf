@@ -31,7 +31,6 @@ export interface Payment {
   notes: string | null
   amount: number
   unique_hash: string
-  invoice_id: number | null
   company_id: number
   payment_method_id: number | null
   creator_id: number
@@ -45,7 +44,11 @@ export interface Payment {
   formatted_payment_date: string
   payment_pdf_url: string
   customer?: Customer
-  invoice?: Invoice
+  allocations?: PaymentAllocation[]
+  allocated_amount?: number
+  unallocated_amount?: number
+  base_allocated_amount?: number
+  base_unallocated_amount?: number
   payment_method?: PaymentMethod
   fields?: CustomFieldValue[]
   company?: Company
@@ -53,12 +56,20 @@ export interface Payment {
   transaction?: Transaction
 }
 
+export interface PaymentAllocation {
+  id?: number
+  invoice_id: number
+  amount: number
+  base_amount?: number
+  invoice?: Invoice
+}
+
 export interface CreatePaymentPayload {
   payment_date: string
   payment_number: string
   customer_id: number
   amount: number
-  invoice_id?: number | null
+  allocations?: Array<Pick<PaymentAllocation, 'invoice_id' | 'amount'>>
   payment_method_id?: number | null
   notes?: string | null
   exchange_rate?: number

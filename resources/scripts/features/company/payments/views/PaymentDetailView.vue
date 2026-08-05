@@ -150,6 +150,26 @@
       </div>
     </div>
 
+    <BaseCard v-if="currentPayment.id" class="mb-4">
+      <div class="flex flex-wrap items-center justify-between gap-4 mb-3">
+        <h2 class="text-base font-semibold text-heading">{{ $t('payments.allocations') }}</h2>
+        <div class="text-sm text-muted">
+          {{ $t('payments.unapplied_credit') }}:
+          <BaseFormatMoney :amount="paymentUnallocatedAmount" :currency="currentPayment.customer?.currency" />
+        </div>
+      </div>
+      <div v-if="paymentAllocations.length" class="divide-y divide-line-light">
+        <div v-for="allocation in paymentAllocations" :key="allocation.id ?? allocation.invoice_id" class="flex items-center justify-between gap-4 py-3 text-sm">
+          <router-link v-if="allocation.invoice" :to="`/admin/invoices/${allocation.invoice.id}/view`" class="font-medium text-primary-500">
+            {{ allocation.invoice.invoice_number }}
+          </router-link>
+          <span v-else class="font-medium text-heading">{{ $t('payments.invoice') }}</span>
+          <BaseFormatMoney :amount="allocation.amount" :currency="currentPayment.customer?.currency" class="font-medium text-heading" />
+        </div>
+      </div>
+      <p v-else class="py-2 text-sm text-muted">{{ $t('payments.no_allocations') }}</p>
+    </BaseCard>
+
     <!-- PDF Preview -->
     <BasePdfPreview :src="shareableLink" />
 
@@ -167,7 +187,7 @@ import SendPaymentModal from '../components/SendPaymentModal.vue'
 import LoadingIcon from '@/scripts/components/icons/LoadingIcon.vue'
 import { useUserStore } from '../../../../stores/user.store'
 import { useModalStore } from '../../../../stores/modal.store'
-import type { Payment } from '../../../../types/domain/payment'
+import type { Payment, PaymentAllocation } from '../../../../types/domain/payment'
 
 interface Props {
   canEdit?: boolean
@@ -245,6 +265,10 @@ const shareableLink = computed<string | false>(() => {
   const hash = (paymentData.value as Payment).unique_hash
   return hash ? `/payments/pdf/${hash}` : false
 })
+
+const currentPayment = computed<Payment>(() => paymentData.value as Payment)
+const paymentAllocations = computed<PaymentAllocation[]>(() => (paymentData.value as Payment).allocations ?? [])
+const paymentUnallocatedAmount = computed<number>(() => (paymentData.value as Payment).unallocated_amount ?? 0)
 
 watch(route, () => {
   loadPayment()

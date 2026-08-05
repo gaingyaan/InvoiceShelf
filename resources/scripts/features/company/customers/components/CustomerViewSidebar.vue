@@ -5,6 +5,7 @@ import { useRoute } from 'vue-router'
 import { useCustomerStore } from '../store'
 import { useDebounceFn } from '@vueuse/core'
 import LoadingIcon from '@/scripts/components/icons/LoadingIcon.vue'
+import type { Currency } from '@/scripts/types/domain/currency'
 
 interface SearchData {
   orderBy: string | null
@@ -17,7 +18,8 @@ interface CustomerListItem {
   name: string
   contact_name: string | null
   due_amount: number | null
-  currency: Record<string, unknown> | null
+  account_balance?: number | null
+  currency: Currency | null
 }
 
 const customerStore = useCustomerStore()
@@ -76,13 +78,23 @@ async function loadCustomers(
   })
   isFetching.value = false
 
-  if (!customerList.value) customerList.value = []
-  customerList.value = [...customerList.value, ...response.data]
+  const nextCustomers: CustomerListItem[] = [
+    ...(customerList.value ?? []),
+    ...response.data.map((customer) => ({
+      id: customer.id,
+      name: customer.name,
+      contact_name: customer.contact_name,
+      due_amount: customer.due_amount,
+      account_balance: customer.account_balance,
+      currency: customer.currency ?? null,
+    })),
+  ]
+  customerList.value = nextCustomers
 
   currentPageNumber.value = pageNumber ?? 1
   lastPageNumber.value = response.meta.last_page
 
-  const customerFound = customerList.value.find(
+  const customerFound = nextCustomers.find(
     (cust) => cust.id === Number(route.params.id)
   )
 
@@ -252,9 +264,10 @@ loadCustomers()
           </div>
           <div class="flex-1 font-bold text-right whitespace-nowrap">
             <BaseFormatMoney
-              :amount="customer.due_amount !== null ? customer.due_amount : 0"
+              :amount="Math.abs(customer.account_balance ?? customer.due_amount ?? 0)"
               :currency="customer.currency"
             />
+            <span v-if="(customer.account_balance ?? customer.due_amount ?? 0) < 0" class="block mt-1 text-xs font-medium text-status-green">{{ $t('customers.credit') }}</span>
           </div>
         </router-link>
       </div>

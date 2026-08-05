@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Company\Payment;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DeletePaymentsRequest;
 use App\Http\Requests\PaymentRequest;
+use App\Http\Requests\ReplacePaymentAllocationsRequest;
 use App\Http\Requests\SendPaymentRequest;
 use App\Http\Resources\PaymentResource;
 use App\Models\Payment;
+use App\Services\Document\PaymentAllocationService;
 use App\Services\Document\PaymentService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -16,6 +18,7 @@ use Illuminate\Mail\Markdown;
 class PaymentsController extends Controller
 {
     public function __construct(
+        private readonly PaymentAllocationService $paymentAllocationService,
         private readonly PaymentService $paymentService,
     ) {}
 
@@ -30,12 +33,12 @@ class PaymentsController extends Controller
 
         $limit = $request->has('limit') ? $request->limit : 10;
 
-        $payments = Payment::whereCompany()
+        $payments = Payment::with(['allocations.invoice'])
+            ->whereCompany()
             ->join('customers', 'customers.id', '=', 'payments.customer_id')
-            ->leftJoin('invoices', 'invoices.id', '=', 'payments.invoice_id')
             ->leftJoin('payment_methods', 'payment_methods.id', '=', 'payments.payment_method_id')
             ->applyFilters($request->all())
-            ->select('payments.*', 'customers.name', 'invoices.invoice_number', 'payment_methods.name as payment_mode')
+            ->select('payments.*', 'customers.name', 'payment_methods.name as payment_mode')
             ->latest()
             ->paginateData($limit);
 
@@ -64,7 +67,7 @@ class PaymentsController extends Controller
     {
         $this->authorize('view', $payment);
 
-        return new PaymentResource($payment);
+        return new PaymentResource($payment->load(['allocations.invoice']));
     }
 
     public function update(PaymentRequest $request, Payment $payment)
@@ -74,6 +77,17 @@ class PaymentsController extends Controller
         $payment = $this->paymentService->update($payment, $request);
 
         return new PaymentResource($payment);
+    }
+
+    public function replaceAllocations(ReplacePaymentAllocationsRequest $request, Payment $payment)
+    {
+        $this->authorize('update', $payment);
+
+        abort_unless((int) $payment->company_id === (int) $request->header('company'), 404);
+
+        $payment = $this->paymentAllocationService->replace($payment, $request->validated('allocations'));
+
+        return new PaymentResource($payment->load(['allocations.invoice']));
     }
 
     public function delete(DeletePaymentsRequest $request)

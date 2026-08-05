@@ -3822,6 +3822,76 @@
                 }
             }
         },
+        "/customers/{customer}/credit-allocations": {
+            "post": {
+                "operationId": "creditAllocations.store",
+                "tags": [
+                    "CreditAllocations"
+                ],
+                "parameters": [
+                    {
+                        "name": "customer",
+                        "in": "path",
+                        "required": true,
+                        "description": "The customer ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "company",
+                        "in": "header",
+                        "required": true,
+                        "description": "ID of the company the request operates on (multi-tenancy).",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreditAllocationRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        }
+                                    },
+                                    "required": [
+                                        "success"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
         "/currencies": {
             "get": {
                 "operationId": "admin.currencies",
@@ -4152,6 +4222,134 @@
                     },
                     "401": {
                         "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/customers/{customer}/statement": {
+            "get": {
+                "operationId": "customer.customerStatement",
+                "tags": [
+                    "CustomerStatement"
+                ],
+                "parameters": [
+                    {
+                        "name": "customer",
+                        "in": "path",
+                        "required": true,
+                        "description": "The customer ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "type",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "activity",
+                                "outstanding"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "from_date",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "to_date",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "as_of",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1,
+                            "maximum": 100
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "company",
+                        "in": "header",
+                        "required": true,
+                        "description": "ID of the company the request operates on (multi-tenancy).",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`CustomerStatementResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/CustomerStatementResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
                     }
                 }
             }
@@ -4858,8 +5056,7 @@
                                             "type": "object",
                                             "properties": {
                                                 "database_connection": {
-                                                    "type": "string",
-                                                    "const": "mysql"
+                                                    "type": "string"
                                                 },
                                                 "database_host": {
                                                     "type": "string",
@@ -16504,6 +16701,75 @@
                 }
             }
         },
+        "/invoices/{invoice}/credit-note": {
+            "post": {
+                "operationId": "invoices.createCreditNote",
+                "tags": [
+                    "Invoices"
+                ],
+                "parameters": [
+                    {
+                        "name": "invoice",
+                        "in": "path",
+                        "required": true,
+                        "description": "The invoice ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "company",
+                        "in": "header",
+                        "required": true,
+                        "description": "ID of the company the request operates on (multi-tenancy).",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateCreditNoteRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "`CreditNoteResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/CreditNoteResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/invoices/{invoice}/status": {
             "post": {
                 "operationId": "invoices.changeStatus",
@@ -16530,6 +16796,16 @@
                         }
                     }
                 ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ChangeInvoiceStatusRequest"
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "200": {
                         "description": "",
@@ -16557,6 +16833,9 @@
                     },
                     "401": {
                         "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
                     }
                 }
             }
@@ -16776,19 +17055,11 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "`InvoiceResource`",
+                        "description": "",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/components/schemas/InvoiceResource"
-                                        }
-                                    },
-                                    "required": [
-                                        "data"
-                                    ]
+                                    "type": "object"
                                 }
                             }
                         }
@@ -16900,6 +17171,7 @@
                                             "properties": {
                                                 "invoiceTotalCount": {
                                                     "type": "integer",
+                                                    "description": "Issued invoices only: a credit note is a reversal document,\nnot another invoice the customer received.",
                                                     "minimum": 0
                                                 }
                                             },
@@ -19432,27 +19704,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "pdf_driver": {
-                                            "type": "string"
-                                        },
-                                        "gotenberg_host": {
-                                            "type": "string"
-                                        },
-                                        "gotenberg_margins": {
-                                            "type": "string"
-                                        },
-                                        "gotenberg_papersize": {
-                                            "type": "string"
-                                        }
-                                    },
-                                    "required": [
-                                        "pdf_driver",
-                                        "gotenberg_host",
-                                        "gotenberg_margins",
-                                        "gotenberg_papersize"
-                                    ]
+                                    "type": "string"
                                 }
                             }
                         }
@@ -19956,6 +20208,76 @@
                                     },
                                     "required": [
                                         "success"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/payments/{payment}/allocations": {
+            "put": {
+                "operationId": "payments.replaceAllocations",
+                "tags": [
+                    "Payments"
+                ],
+                "parameters": [
+                    {
+                        "name": "payment",
+                        "in": "path",
+                        "required": true,
+                        "description": "The payment ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "company",
+                        "in": "header",
+                        "required": true,
+                        "description": "ID of the company the request operates on (multi-tenancy).",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ReplacePaymentAllocationsRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`PaymentResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/PaymentResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
                                     ]
                                 }
                             }
@@ -21694,6 +22016,76 @@
                     },
                     "403": {
                         "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/customers/{customer}/statement/send": {
+            "post": {
+                "operationId": "customer.sendCustomerStatement",
+                "tags": [
+                    "SendCustomerStatement"
+                ],
+                "parameters": [
+                    {
+                        "name": "customer",
+                        "in": "path",
+                        "required": true,
+                        "description": "The customer ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "company",
+                        "in": "header",
+                        "required": true,
+                        "description": "ID of the company the request operates on (multi-tenancy).",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SendCustomerStatementRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        }
+                                    },
+                                    "required": [
+                                        "success"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
                     },
                     "401": {
                         "$ref": "#/components/responses/AuthenticationException"
@@ -25518,12 +25910,6 @@
                             "null"
                         ]
                     },
-                    "invoice_id": {
-                        "type": [
-                            "integer",
-                            "null"
-                        ]
-                    },
                     "company_id": {
                         "type": [
                             "integer",
@@ -25549,10 +25935,56 @@
                         ]
                     },
                     "base_amount": {
-                        "type": [
-                            "integer",
-                            "null"
-                        ]
+                        "type": "integer"
+                    },
+                    "allocations": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "invoice_id": {
+                                    "type": "integer"
+                                },
+                                "amount": {
+                                    "type": "integer"
+                                },
+                                "base_amount": {
+                                    "type": "integer"
+                                },
+                                "invoice": {
+                                    "anyOf": [
+                                        {
+                                            "$ref": "#/components/schemas/App.Http.Resources.Customer.InvoiceResource"
+                                        },
+                                        {
+                                            "type": "null"
+                                        }
+                                    ]
+                                }
+                            },
+                            "required": [
+                                "id",
+                                "invoice_id",
+                                "amount",
+                                "base_amount",
+                                "invoice"
+                            ]
+                        }
+                    },
+                    "allocated_amount": {
+                        "type": "integer"
+                    },
+                    "unallocated_amount": {
+                        "type": "integer"
+                    },
+                    "base_allocated_amount": {
+                        "type": "integer"
+                    },
+                    "base_unallocated_amount": {
+                        "type": "integer"
                     },
                     "currency_id": {
                         "type": [
@@ -25577,9 +26009,6 @@
                     },
                     "customer": {
                         "$ref": "#/components/schemas/App.Http.Resources.Customer.CustomerResource"
-                    },
-                    "invoice": {
-                        "$ref": "#/components/schemas/App.Http.Resources.Customer.InvoiceResource"
                     },
                     "payment_method": {
                         "$ref": "#/components/schemas/App.Http.Resources.Customer.PaymentMethodResource"
@@ -25607,12 +26036,16 @@
                     "notes",
                     "amount",
                     "unique_hash",
-                    "invoice_id",
                     "company_id",
                     "payment_method_id",
                     "customer_id",
                     "exchange_rate",
                     "base_amount",
+                    "allocations",
+                    "allocated_amount",
+                    "unallocated_amount",
+                    "base_allocated_amount",
+                    "base_unallocated_amount",
                     "currency_id",
                     "transaction_id",
                     "formatted_created_at",
@@ -25679,7 +26112,7 @@
                         ]
                     },
                     "compound_tax": {
-                        "type": "integer"
+                        "type": "boolean"
                     },
                     "base_amount": {
                         "type": [
@@ -25740,6 +26173,9 @@
                             "null"
                         ]
                     },
+                    "transaction_type": {
+                        "type": "string"
+                    },
                     "compound_tax": {
                         "type": "boolean"
                     },
@@ -25766,6 +26202,7 @@
                     "id",
                     "name",
                     "percent",
+                    "transaction_type",
                     "compound_tax",
                     "collective_tax",
                     "description",
@@ -25864,6 +26301,22 @@
                     "currencies"
                 ],
                 "title": "BulkExchangeRateRequest"
+            },
+            "ChangeInvoiceStatusRequest": {
+                "type": "object",
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "SENT",
+                            "COMPLETED"
+                        ]
+                    }
+                },
+                "required": [
+                    "status"
+                ],
+                "title": "ChangeInvoiceStatusRequest"
             },
             "CompaniesRequest": {
                 "type": "object",
@@ -26259,6 +26712,475 @@
                     "phone_code"
                 ],
                 "title": "CountryResource"
+            },
+            "CreateCreditNoteRequest": {
+                "type": "object",
+                "properties": {
+                    "reason": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 1000
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "quantity": {
+                                    "type": "number"
+                                }
+                            },
+                            "required": [
+                                "id",
+                                "quantity"
+                            ]
+                        }
+                    }
+                },
+                "title": "CreateCreditNoteRequest"
+            },
+            "CreditAllocationRequest": {
+                "type": "object",
+                "properties": {
+                    "allocations": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "payment_id": {
+                                    "type": "integer"
+                                },
+                                "invoice_id": {
+                                    "type": "integer"
+                                },
+                                "amount": {
+                                    "type": "integer",
+                                    "minimum": 1
+                                }
+                            },
+                            "required": [
+                                "payment_id",
+                                "invoice_id",
+                                "amount"
+                            ]
+                        },
+                        "minItems": 1
+                    }
+                },
+                "required": [
+                    "allocations"
+                ],
+                "title": "CreditAllocationRequest"
+            },
+            "CreditNoteResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "invoice_date": {
+                        "type": "string"
+                    },
+                    "due_date": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "invoice_number": {
+                        "type": "string"
+                    },
+                    "reference_number": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "type": {
+                        "type": "string"
+                    },
+                    "related_invoice_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "paid_status": {
+                        "type": "string"
+                    },
+                    "tax_per_item": {
+                        "type": "string"
+                    },
+                    "tax_included": {
+                        "type": "integer"
+                    },
+                    "discount_per_item": {
+                        "type": "string"
+                    },
+                    "notes": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "discount_type": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "discount": {
+                        "type": [
+                            "number",
+                            "null"
+                        ]
+                    },
+                    "discount_val": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "sub_total": {
+                        "type": "integer"
+                    },
+                    "total": {
+                        "type": "integer"
+                    },
+                    "tax": {
+                        "type": "integer"
+                    },
+                    "due_amount": {
+                        "type": "integer"
+                    },
+                    "sent": {
+                        "type": "integer"
+                    },
+                    "viewed": {
+                        "type": "integer"
+                    },
+                    "unique_hash": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "template_name": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "customer_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "recurring_invoice_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "sequence_number": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "exchange_rate": {
+                        "type": [
+                            "number",
+                            "null"
+                        ]
+                    },
+                    "base_discount_val": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "base_sub_total": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "base_total": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "creator_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "base_tax": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "base_due_amount": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "currency_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "formatted_created_at": {
+                        "type": "string"
+                    },
+                    "invoice_pdf_url": {
+                        "type": "string"
+                    },
+                    "formatted_invoice_date": {
+                        "type": "string"
+                    },
+                    "formatted_due_date": {
+                        "type": "string"
+                    },
+                    "allow_edit": {
+                        "type": "string"
+                    },
+                    "payment_module_enabled": {
+                        "type": "string"
+                    },
+                    "sales_tax_type": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "sales_tax_address_type": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "overdue": {
+                        "type": "integer"
+                    },
+                    "credit_notes": {
+                        "type": "array",
+                        "description": "Credit notes reversing this invoice (minimal reference so the\nUI can flag the invoice as cancelled and link to the storno\ndocument, mirroring the related_invoice back-link). Emitted only\nwhere the relation was eager-loaded: probing it per row costs two\nqueries each, and this resource is serialized in paginated lists.",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "invoice_number": {
+                                    "type": "string"
+                                }
+                            },
+                            "required": [
+                                "id",
+                                "invoice_number"
+                            ]
+                        }
+                    },
+                    "credit_reason": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "Why this invoice was credited, if it was. Set only by the\ncredit-note flow, never by the invoice form."
+                    },
+                    "credited_total": {
+                        "type": "integer",
+                        "description": "How much of the invoice has been credited off it, as a positive\nnumber of cents (credit notes store negative totals), and whether\nthat covers the whole document. Both are read off the same loaded\nrelation the banner uses, so they cost no extra query."
+                    },
+                    "credited_status": {
+                        "type": "string",
+                        "enum": [
+                            "FULL",
+                            "PARTIAL",
+                            "NONE"
+                        ]
+                    },
+                    "credited_quantities": {
+                        "type": "string",
+                        "description": "Credited quantity per ORIGINAL line, which is what a partial\ncredit form needs to offer the remaining quantities. Emitted only\nwhen the credit notes' items came along."
+                    },
+                    "payment_allocations": {
+                        "type": "array",
+                        "description": "Allocation rows explain how this invoice was settled without\nreintroducing the removed singular payment.invoice relation.\nThey are loaded for the detail response only, so index listings\nremain free of per-row payment queries.",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "payment_id": {
+                                    "type": "integer"
+                                },
+                                "amount": {
+                                    "type": "integer"
+                                },
+                                "base_amount": {
+                                    "type": "integer"
+                                },
+                                "payment": {
+                                    "type": [
+                                        "object",
+                                        "null"
+                                    ],
+                                    "properties": {
+                                        "id": {
+                                            "type": "integer"
+                                        },
+                                        "payment_number": {
+                                            "type": "string"
+                                        },
+                                        "formatted_payment_date": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "id",
+                                        "payment_number",
+                                        "formatted_payment_date"
+                                    ]
+                                }
+                            },
+                            "required": [
+                                "id",
+                                "payment_id",
+                                "amount",
+                                "base_amount",
+                                "payment"
+                            ]
+                        }
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/InvoiceItemResource"
+                        }
+                    },
+                    "customer": {
+                        "$ref": "#/components/schemas/CustomerResource"
+                    },
+                    "creator": {
+                        "$ref": "#/components/schemas/UserResource"
+                    },
+                    "taxes": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/TaxResource"
+                        }
+                    },
+                    "fields": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CustomFieldValueResource"
+                        }
+                    },
+                    "company": {
+                        "$ref": "#/components/schemas/CompanyResource"
+                    },
+                    "currency": {
+                        "$ref": "#/components/schemas/CurrencyResource"
+                    },
+                    "related_invoice": {
+                        "type": "object",
+                        "description": "type + related_invoice_id come from InvoiceResource; this adds the\nexpanded reference to the original invoice being reversed.\nRead off the loaded relation rather than probing it: the caller\neager-loads relatedInvoice, so an exists() query here would be\npure overhead.",
+                        "properties": {
+                            "id": {
+                                "type": "string"
+                            },
+                            "invoice_number": {
+                                "type": "string"
+                            },
+                            "invoice_date": {
+                                "type": "string"
+                            },
+                            "formatted_invoice_date": {
+                                "type": "string"
+                            },
+                            "total": {
+                                "type": "string"
+                            },
+                            "unique_hash": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "id",
+                            "invoice_number",
+                            "invoice_date",
+                            "formatted_invoice_date",
+                            "total",
+                            "unique_hash"
+                        ]
+                    }
+                },
+                "required": [
+                    "id",
+                    "invoice_date",
+                    "due_date",
+                    "invoice_number",
+                    "reference_number",
+                    "type",
+                    "related_invoice_id",
+                    "status",
+                    "paid_status",
+                    "tax_per_item",
+                    "tax_included",
+                    "discount_per_item",
+                    "notes",
+                    "discount_type",
+                    "discount",
+                    "discount_val",
+                    "sub_total",
+                    "total",
+                    "tax",
+                    "due_amount",
+                    "sent",
+                    "viewed",
+                    "unique_hash",
+                    "template_name",
+                    "customer_id",
+                    "recurring_invoice_id",
+                    "sequence_number",
+                    "exchange_rate",
+                    "base_discount_val",
+                    "base_sub_total",
+                    "base_total",
+                    "creator_id",
+                    "base_tax",
+                    "base_due_amount",
+                    "currency_id",
+                    "formatted_created_at",
+                    "invoice_pdf_url",
+                    "formatted_invoice_date",
+                    "formatted_due_date",
+                    "allow_edit",
+                    "payment_module_enabled",
+                    "sales_tax_type",
+                    "sales_tax_address_type",
+                    "overdue",
+                    "credit_reason"
+                ],
+                "title": "CreditNoteResource"
             },
             "Currency": {
                 "type": "object",
@@ -27186,6 +28108,24 @@
                     "base_due_amount": {
                         "type": "string"
                     },
+                    "invoice_due_amount": {
+                        "type": "string"
+                    },
+                    "base_invoice_due_amount": {
+                        "type": "string"
+                    },
+                    "available_credit": {
+                        "type": "string"
+                    },
+                    "base_available_credit": {
+                        "type": "string"
+                    },
+                    "account_balance": {
+                        "type": "string"
+                    },
+                    "base_account_balance": {
+                        "type": "string"
+                    },
                     "prefix": {
                         "type": [
                             "string",
@@ -27238,10 +28178,150 @@
                     "avatar",
                     "due_amount",
                     "base_due_amount",
+                    "invoice_due_amount",
+                    "base_invoice_due_amount",
+                    "available_credit",
+                    "base_available_credit",
+                    "account_balance",
+                    "base_account_balance",
                     "prefix",
                     "tax_id"
                 ],
                 "title": "CustomerResource"
+            },
+            "CustomerStatementResource": {
+                "anyOf": [
+                    {
+                        "type": "object",
+                        "properties": {
+                            "type": {
+                                "type": "string"
+                            },
+                            "customer": {
+                                "$ref": "#/components/schemas/CustomerResource"
+                            },
+                            "currency": {
+                                "$ref": "#/components/schemas/CurrencyResource"
+                            },
+                            "as_of": {
+                                "type": "string"
+                            },
+                            "invoices": {
+                                "type": "array",
+                                "items": {}
+                            },
+                            "credits": {
+                                "type": "array",
+                                "items": {}
+                            },
+                            "invoice_due_amount": {
+                                "type": "integer"
+                            },
+                            "base_invoice_due_amount": {
+                                "type": "integer"
+                            },
+                            "available_credit": {
+                                "type": "integer"
+                            },
+                            "base_available_credit": {
+                                "type": "integer"
+                            },
+                            "account_balance": {
+                                "type": "integer"
+                            },
+                            "base_account_balance": {
+                                "type": "integer"
+                            }
+                        },
+                        "required": [
+                            "type",
+                            "customer",
+                            "currency",
+                            "as_of",
+                            "invoices",
+                            "credits",
+                            "invoice_due_amount",
+                            "base_invoice_due_amount",
+                            "available_credit",
+                            "base_available_credit",
+                            "account_balance",
+                            "base_account_balance"
+                        ]
+                    },
+                    {
+                        "type": "object",
+                        "properties": {
+                            "type": {
+                                "type": "string"
+                            },
+                            "customer": {
+                                "$ref": "#/components/schemas/CustomerResource"
+                            },
+                            "currency": {
+                                "$ref": "#/components/schemas/CurrencyResource"
+                            },
+                            "from_date": {
+                                "type": "string"
+                            },
+                            "to_date": {
+                                "type": "string"
+                            },
+                            "opening_balance": {
+                                "type": "integer"
+                            },
+                            "base_opening_balance": {
+                                "type": "integer"
+                            },
+                            "closing_balance": {
+                                "type": "integer"
+                            },
+                            "base_closing_balance": {
+                                "type": "integer"
+                            },
+                            "entries": {
+                                "type": "array",
+                                "items": {}
+                            },
+                            "meta": {
+                                "type": "object",
+                                "properties": {
+                                    "current_page": {
+                                        "type": "integer"
+                                    },
+                                    "last_page": {
+                                        "type": "integer"
+                                    },
+                                    "per_page": {
+                                        "type": "integer"
+                                    },
+                                    "total": {
+                                        "type": "integer"
+                                    }
+                                },
+                                "required": [
+                                    "current_page",
+                                    "last_page",
+                                    "per_page",
+                                    "total"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "type",
+                            "customer",
+                            "currency",
+                            "from_date",
+                            "to_date",
+                            "opening_balance",
+                            "base_opening_balance",
+                            "closing_balance",
+                            "base_closing_balance",
+                            "entries",
+                            "meta"
+                        ]
+                    }
+                ],
+                "title": "CustomerStatementResource"
             },
             "DatabaseEnvironmentRequest": {
                 "type": "object",
@@ -28255,7 +29335,8 @@
                         ]
                     },
                     "amount": {
-                        "type": "string"
+                        "type": "integer",
+                        "minimum": 0
                     },
                     "customer_id": {
                         "type": [
@@ -28280,6 +29361,25 @@
                         "format": "binary",
                         "contentMediaType": "application/octet-stream",
                         "maxLength": 20000
+                    },
+                    "taxes": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "tax_type_id": {
+                                    "type": "integer"
+                                },
+                                "amount": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                }
+                            },
+                            "required": [
+                                "tax_type_id",
+                                "amount"
+                            ]
+                        }
                     }
                 },
                 "required": [
@@ -28373,6 +29473,12 @@
                             "integer",
                             "null"
                         ]
+                    },
+                    "taxes": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/TaxResource"
+                        }
                     },
                     "customer": {
                         "$ref": "#/components/schemas/CustomerResource"
@@ -28662,6 +29768,21 @@
                     },
                     "tax_included": {
                         "type": "integer"
+                    },
+                    "type": {
+                        "type": "string"
+                    },
+                    "related_invoice_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "credit_reason": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
                     }
                 },
                 "required": [
@@ -28705,7 +29826,10 @@
                     "sales_tax_type",
                     "sales_tax_address_type",
                     "overdue",
-                    "tax_included"
+                    "tax_included",
+                    "type",
+                    "related_invoice_id",
+                    "credit_reason"
                 ],
                 "title": "Invoice"
             },
@@ -28866,6 +29990,15 @@
                     "reference_number": {
                         "type": [
                             "string",
+                            "null"
+                        ]
+                    },
+                    "type": {
+                        "type": "string"
+                    },
+                    "related_invoice_id": {
+                        "type": [
+                            "integer",
                             "null"
                         ]
                     },
@@ -29037,6 +30170,98 @@
                     "overdue": {
                         "type": "integer"
                     },
+                    "credit_notes": {
+                        "type": "array",
+                        "description": "Credit notes reversing this invoice (minimal reference so the\nUI can flag the invoice as cancelled and link to the storno\ndocument, mirroring the related_invoice back-link). Emitted only\nwhere the relation was eager-loaded: probing it per row costs two\nqueries each, and this resource is serialized in paginated lists.",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "invoice_number": {
+                                    "type": "string"
+                                }
+                            },
+                            "required": [
+                                "id",
+                                "invoice_number"
+                            ]
+                        }
+                    },
+                    "credit_reason": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "Why this invoice was credited, if it was. Set only by the\ncredit-note flow, never by the invoice form."
+                    },
+                    "credited_total": {
+                        "type": "integer",
+                        "description": "How much of the invoice has been credited off it, as a positive\nnumber of cents (credit notes store negative totals), and whether\nthat covers the whole document. Both are read off the same loaded\nrelation the banner uses, so they cost no extra query."
+                    },
+                    "credited_status": {
+                        "type": "string",
+                        "enum": [
+                            "FULL",
+                            "PARTIAL",
+                            "NONE"
+                        ]
+                    },
+                    "credited_quantities": {
+                        "type": "string",
+                        "description": "Credited quantity per ORIGINAL line, which is what a partial\ncredit form needs to offer the remaining quantities. Emitted only\nwhen the credit notes' items came along."
+                    },
+                    "payment_allocations": {
+                        "type": "array",
+                        "description": "Allocation rows explain how this invoice was settled without\nreintroducing the removed singular payment.invoice relation.\nThey are loaded for the detail response only, so index listings\nremain free of per-row payment queries.",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "payment_id": {
+                                    "type": "integer"
+                                },
+                                "amount": {
+                                    "type": "integer"
+                                },
+                                "base_amount": {
+                                    "type": "integer"
+                                },
+                                "payment": {
+                                    "type": [
+                                        "object",
+                                        "null"
+                                    ],
+                                    "properties": {
+                                        "id": {
+                                            "type": "integer"
+                                        },
+                                        "payment_number": {
+                                            "type": "string"
+                                        },
+                                        "formatted_payment_date": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "id",
+                                        "payment_number",
+                                        "formatted_payment_date"
+                                    ]
+                                }
+                            },
+                            "required": [
+                                "id",
+                                "payment_id",
+                                "amount",
+                                "base_amount",
+                                "payment"
+                            ]
+                        }
+                    },
                     "items": {
                         "type": "array",
                         "items": {
@@ -29074,6 +30299,8 @@
                     "due_date",
                     "invoice_number",
                     "reference_number",
+                    "type",
+                    "related_invoice_id",
                     "status",
                     "paid_status",
                     "tax_per_item",
@@ -29110,7 +30337,8 @@
                     "payment_module_enabled",
                     "sales_tax_type",
                     "sales_tax_address_type",
-                    "overdue"
+                    "overdue",
+                    "credit_reason"
                 ],
                 "title": "InvoiceResource"
             },
@@ -29666,10 +30894,53 @@
                 "properties": {
                     "pdf_driver": {
                         "type": "string"
+                    },
+                    "pdf_paper_width": {
+                        "type": "string"
+                    },
+                    "pdf_paper_height": {
+                        "type": "string"
+                    },
+                    "pdf_orientation": {
+                        "type": "string",
+                        "enum": [
+                            "portrait",
+                            "landscape"
+                        ]
+                    },
+                    "pdf_margin_top": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "pdf_margin_right": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "pdf_margin_bottom": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "pdf_margin_left": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "pdf_page_numbers": {
+                        "type": "boolean"
                     }
                 },
                 "required": [
-                    "pdf_driver"
+                    "pdf_driver",
+                    "pdf_paper_width",
+                    "pdf_paper_height",
+                    "pdf_orientation"
                 ],
                 "title": "PDFConfigurationRequest"
             },
@@ -29722,7 +30993,7 @@
                         "type": "string"
                     },
                     "customer_id": {
-                        "type": "string"
+                        "type": "integer"
                     },
                     "exchange_rate": {
                         "type": [
@@ -29731,16 +31002,11 @@
                         ]
                     },
                     "amount": {
-                        "type": "string"
+                        "type": "integer",
+                        "minimum": 1
                     },
                     "payment_number": {
                         "type": "string"
-                    },
-                    "invoice_id": {
-                        "type": [
-                            "string",
-                            "null"
-                        ]
                     },
                     "payment_method_id": {
                         "type": [
@@ -29753,6 +31019,28 @@
                             "string",
                             "null"
                         ]
+                    },
+                    "allocations": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "invoice_id": {
+                                    "type": "integer"
+                                },
+                                "amount": {
+                                    "type": "integer",
+                                    "minimum": 1
+                                }
+                            },
+                            "required": [
+                                "invoice_id",
+                                "amount"
+                            ]
+                        }
                     }
                 },
                 "required": [
@@ -29787,12 +31075,6 @@
                             "null"
                         ]
                     },
-                    "invoice_id": {
-                        "type": [
-                            "integer",
-                            "null"
-                        ]
-                    },
                     "company_id": {
                         "type": [
                             "integer",
@@ -29824,10 +31106,56 @@
                         ]
                     },
                     "base_amount": {
-                        "type": [
-                            "integer",
-                            "null"
-                        ]
+                        "type": "integer"
+                    },
+                    "allocations": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "invoice_id": {
+                                    "type": "integer"
+                                },
+                                "amount": {
+                                    "type": "integer"
+                                },
+                                "base_amount": {
+                                    "type": "integer"
+                                },
+                                "invoice": {
+                                    "anyOf": [
+                                        {
+                                            "$ref": "#/components/schemas/InvoiceResource"
+                                        },
+                                        {
+                                            "type": "null"
+                                        }
+                                    ]
+                                }
+                            },
+                            "required": [
+                                "id",
+                                "invoice_id",
+                                "amount",
+                                "base_amount",
+                                "invoice"
+                            ]
+                        }
+                    },
+                    "allocated_amount": {
+                        "type": "integer"
+                    },
+                    "unallocated_amount": {
+                        "type": "integer"
+                    },
+                    "base_allocated_amount": {
+                        "type": "integer"
+                    },
+                    "base_unallocated_amount": {
+                        "type": "integer"
                     },
                     "currency_id": {
                         "type": [
@@ -29859,9 +31187,6 @@
                     "customer": {
                         "$ref": "#/components/schemas/CustomerResource"
                     },
-                    "invoice": {
-                        "$ref": "#/components/schemas/InvoiceResource"
-                    },
                     "payment_method": {
                         "$ref": "#/components/schemas/PaymentMethodResource"
                     },
@@ -29888,13 +31213,17 @@
                     "notes",
                     "amount",
                     "unique_hash",
-                    "invoice_id",
                     "company_id",
                     "payment_method_id",
                     "creator_id",
                     "customer_id",
                     "exchange_rate",
                     "base_amount",
+                    "allocations",
+                    "allocated_amount",
+                    "unallocated_amount",
+                    "base_allocated_amount",
+                    "base_unallocated_amount",
                     "currency_id",
                     "transaction_id",
                     "sequence_number",
@@ -30217,6 +31546,34 @@
                 ],
                 "title": "RecurringInvoiceResource"
             },
+            "ReplacePaymentAllocationsRequest": {
+                "type": "object",
+                "properties": {
+                    "allocations": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "invoice_id": {
+                                    "type": "integer"
+                                },
+                                "amount": {
+                                    "type": "integer",
+                                    "minimum": 1
+                                }
+                            },
+                            "required": [
+                                "invoice_id",
+                                "amount"
+                            ]
+                        }
+                    }
+                },
+                "required": [
+                    "allocations"
+                ],
+                "title": "ReplacePaymentAllocationsRequest"
+            },
             "Role": {
                 "type": "object",
                 "properties": {
@@ -30320,6 +31677,70 @@
                     "abilities"
                 ],
                 "title": "RoleResource"
+            },
+            "SendCustomerStatementRequest": {
+                "type": "object",
+                "properties": {
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "activity",
+                            "outstanding"
+                        ]
+                    },
+                    "from_date": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date"
+                    },
+                    "to_date": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date"
+                    },
+                    "as_of": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date"
+                    },
+                    "subject": {
+                        "type": "string"
+                    },
+                    "body": {
+                        "type": "string"
+                    },
+                    "to": {
+                        "type": "string",
+                        "format": "email"
+                    },
+                    "cc": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "email"
+                    },
+                    "bcc": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "email"
+                    }
+                },
+                "required": [
+                    "type",
+                    "subject",
+                    "body",
+                    "to"
+                ],
+                "title": "SendCustomerStatementRequest"
             },
             "SendEstimatesRequest": {
                 "type": "object",
@@ -30474,6 +31895,12 @@
                             "null"
                         ]
                     },
+                    "expense_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
                     "item_id": {
                         "type": [
                             "integer",
@@ -30508,7 +31935,7 @@
                         ]
                     },
                     "compound_tax": {
-                        "type": "integer"
+                        "type": "boolean"
                     },
                     "base_amount": {
                         "type": [
@@ -30545,6 +31972,7 @@
                     "estimate_id",
                     "invoice_item_id",
                     "estimate_item_id",
+                    "expense_id",
                     "item_id",
                     "company_id",
                     "name",
@@ -30618,6 +32046,9 @@
                             "integer",
                             "null"
                         ]
+                    },
+                    "transaction_type": {
+                        "type": "string"
                     }
                 },
                 "required": [
@@ -30632,7 +32063,8 @@
                     "updated_at",
                     "type",
                     "calculation_type",
-                    "fixed_amount"
+                    "fixed_amount",
+                    "transaction_type"
                 ],
                 "title": "TaxType"
             },
@@ -30678,6 +32110,13 @@
                             "string",
                             "null"
                         ]
+                    },
+                    "transaction_type": {
+                        "type": "string",
+                        "enum": [
+                            "sales",
+                            "purchases"
+                        ]
                     }
                 },
                 "required": [
@@ -30713,6 +32152,9 @@
                     "type": {
                         "type": "string"
                     },
+                    "transaction_type": {
+                        "type": "string"
+                    },
                     "compound_tax": {
                         "type": "boolean"
                     },
@@ -30742,6 +32184,7 @@
                     "fixed_amount",
                     "calculation_type",
                     "type",
+                    "transaction_type",
                     "compound_tax",
                     "collective_tax",
                     "description",

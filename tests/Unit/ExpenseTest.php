@@ -1,7 +1,11 @@
 <?php
 
 use App\Models\Company;
+use App\Models\Customer;
 use App\Models\Expense;
+use App\Models\Invoice;
+use App\Models\Payment;
+use App\Models\PaymentAllocation;
 use App\Models\Tax;
 use App\Models\TaxType;
 use App\Models\User;
@@ -72,4 +76,47 @@ test('company deletion removes receipt taxes through expense model events', func
     app(CompanyService::class)->delete($company, $user);
 
     $this->assertDatabaseMissing('taxes', ['id' => $tax->id]);
+});
+
+test('customer deletion removes payment allocations before bulk payment deletion', function () {
+    $customer = Customer::factory()->create();
+    $invoice = Invoice::factory()->create([
+        'company_id' => $customer->company_id,
+        'customer_id' => $customer->id,
+    ]);
+    $payment = Payment::factory()->create([
+        'company_id' => $customer->company_id,
+        'customer_id' => $customer->id,
+    ]);
+    $allocation = PaymentAllocation::factory()->create([
+        'payment_id' => $payment->id,
+        'invoice_id' => $invoice->id,
+    ]);
+
+    app(CustomerService::class)->delete(collect([$customer->id]));
+
+    $this->assertDatabaseMissing('payment_allocations', ['id' => $allocation->id]);
+});
+
+test('company deletion removes payment allocations before bulk payment deletion', function () {
+    $user = User::find(1);
+    $company = Company::factory()->create(['owner_id' => $user->id]);
+    $user->companies()->attach($company);
+    $customer = Customer::factory()->create(['company_id' => $company->id]);
+    $invoice = Invoice::factory()->create([
+        'company_id' => $company->id,
+        'customer_id' => $customer->id,
+    ]);
+    $payment = Payment::factory()->create([
+        'company_id' => $company->id,
+        'customer_id' => $customer->id,
+    ]);
+    $allocation = PaymentAllocation::factory()->create([
+        'payment_id' => $payment->id,
+        'invoice_id' => $invoice->id,
+    ]);
+
+    app(CompanyService::class)->delete($company, $user);
+
+    $this->assertDatabaseMissing('payment_allocations', ['id' => $allocation->id]);
 });

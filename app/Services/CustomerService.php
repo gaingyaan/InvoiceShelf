@@ -7,6 +7,7 @@ use App\Models\Customer;
 use App\Models\Expense;
 use App\Models\Invoice;
 use App\Models\Payment;
+use App\Models\PaymentAllocation;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -86,6 +87,16 @@ class CustomerService
                 $customer->estimates()->delete();
             }
 
+            // There are no database foreign keys for payment allocations. Clear
+            // them before the bulk payment delete, then remove invoices so an
+            // allocation cannot outlive either side of the relationship.
+            if ($customer->payments()->exists()) {
+                PaymentAllocation::query()
+                    ->whereIn('payment_id', $customer->payments()->select('id'))
+                    ->delete();
+                $customer->payments()->delete();
+            }
+
             if ($customer->invoices()->exists()) {
                 $customer->invoices->map(function ($invoice) {
                     if ($invoice->transactions()->exists()) {
@@ -93,10 +104,6 @@ class CustomerService
                     }
                     $invoice->delete();
                 });
-            }
-
-            if ($customer->payments()->exists()) {
-                $customer->payments()->delete();
             }
 
             if ($customer->addresses()->exists()) {

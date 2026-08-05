@@ -7,6 +7,7 @@ use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\User;
 use App\Services\Document\CreditNoteService;
+use App\Services\Document\PaymentAllocationService;
 use Illuminate\Support\Facades\Artisan;
 use Laravel\Sanctum\Sanctum;
 
@@ -85,17 +86,20 @@ function payableInvoice(int $lines = 2, int $price = 10000): Invoice
 }
 
 /**
- * A payment payload aimed at an invoice, with everything the cap depends on
- * pinned so the request is decided by the amount alone.
+ * A payment payload with an explicit allocation instead of the retired
+ * singular invoice_id field.
  */
 function paymentPayloadFor(Invoice $invoice, int $amount): array
 {
     return Payment::factory()->raw([
-        'invoice_id' => $invoice->id,
         'customer_id' => $invoice->customer_id,
         'currency_id' => $invoice->currency_id,
         'exchange_rate' => 1,
         'amount' => $amount,
+        'allocations' => [[
+            'invoice_id' => $invoice->id,
+            'amount' => $amount,
+        ]],
     ]);
 }
 
@@ -115,15 +119,28 @@ test('get payment', function () {
 
 test('create payment', function () {
     $invoice = Invoice::factory()->create([
+        'type' => Invoice::TYPE_INVOICE,
+        'status' => Invoice::STATUS_SENT,
+        'sent' => true,
+        'sub_total' => 100,
+        'total' => 100,
         'due_amount' => 100,
+        'base_sub_total' => 100,
+        'base_total' => 100,
+        'base_due_amount' => 100,
         'exchange_rate' => 1,
     ]);
 
     $payment = Payment::factory()->raw([
-        'invoice_id' => $invoice->id,
         'payment_number' => 'PAY-000001',
+        'customer_id' => $invoice->customer_id,
+        'currency_id' => $invoice->currency_id,
         'amount' => $invoice->due_amount,
         'exchange_rate' => 1,
+        'allocations' => [[
+            'invoice_id' => $invoice->id,
+            'amount' => $invoice->due_amount,
+        ]],
     ]);
 
     $response = postJson('api/v1/payments', $payment);
@@ -136,6 +153,35 @@ test('create payment', function () {
         'amount' => $payment['amount'],
         'company_id' => $payment['company_id'],
     ]);
+
+    $response->assertJsonMissingPath('data.invoice_id')
+        ->assertJsonMissingPath('data.invoice');
+});
+
+test('the retired singular invoice field is rejected', function () {
+    $invoice = payableInvoice();
+    $payment = Payment::factory()->raw([
+        'customer_id' => $invoice->customer_id,
+        'currency_id' => $invoice->currency_id,
+        'amount' => $invoice->due_amount,
+        'exchange_rate' => 1,
+        'invoice_id' => $invoice->id,
+    ]);
+
+    postJson('api/v1/payments', $payment)
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('invoice_id');
+});
+
+test('an explicitly null allocation list is rejected instead of causing a server error', function () {
+    $payment = Payment::factory()->raw([
+        'exchange_rate' => 1,
+        'allocations' => null,
+    ]);
+
+    postJson('api/v1/payments', $payment)
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('allocations');
 });
 
 test('store validates using a form request', function () {
@@ -152,6 +198,9 @@ test('update payment', function () {
     // edited payment's own amount, so a random invoice total paired with two
     // random payment amounts overpays the invoice at random.
     $invoice = Invoice::factory()->create([
+        'type' => Invoice::TYPE_INVOICE,
+        'status' => Invoice::STATUS_SENT,
+        'sent' => true,
         'sub_total' => 10000,
         'total' => 10000,
         'due_amount' => 4000,
@@ -163,17 +212,27 @@ test('update payment', function () {
 
     $payment = Payment::factory()->create([
         'payment_date' => '1988-08-18',
-        'invoice_id' => $invoice->id,
+        'company_id' => $invoice->company_id,
+        'customer_id' => $invoice->customer_id,
+        'currency_id' => $invoice->currency_id,
         'exchange_rate' => 1,
         'amount' => 6000,
+    ]);
+    app(PaymentAllocationService::class)->replace($payment, [
+        ['invoice_id' => $invoice->id, 'amount' => 6000],
     ]);
 
     // The edited payment's own amount returns to the pool, so the whole invoice
     // total is payable again.
     $payment2 = Payment::factory()->raw([
-        'invoice_id' => $invoice->id,
+        'customer_id' => $invoice->customer_id,
+        'currency_id' => $invoice->currency_id,
         'exchange_rate' => 1,
         'amount' => 10000,
+        'allocations' => [[
+            'invoice_id' => $invoice->id,
+            'amount' => 10000,
+        ]],
     ]);
 
     putJson("api/v1/payments/{$payment->id}", $payment2)
@@ -185,6 +244,66 @@ test('update payment', function () {
         'customer_id' => $payment2['customer_id'],
         'amount' => $payment2['amount'],
     ]);
+});
+
+test('updating a payment without allocations preserves its existing allocations', function () {
+    $invoice = payableInvoice(1, 500);
+    $payment = Payment::factory()->create([
+        'company_id' => $invoice->company_id,
+        'customer_id' => $invoice->customer_id,
+        'currency_id' => $invoice->currency_id,
+        'amount' => 500,
+        'base_amount' => 500,
+        'exchange_rate' => 1,
+    ]);
+    app(PaymentAllocationService::class)->replace($payment, [
+        ['invoice_id' => $invoice->id, 'amount' => 500],
+    ]);
+
+    $payload = Payment::factory()->raw([
+        'payment_number' => $payment->payment_number,
+        'payment_date' => (string) $payment->payment_date,
+        'customer_id' => $payment->customer_id,
+        'currency_id' => $payment->currency_id,
+        'amount' => 500,
+        'exchange_rate' => 1,
+        'notes' => 'Updated without replacing allocations',
+    ]);
+
+    putJson("api/v1/payments/{$payment->id}", $payload)->assertOk();
+
+    expect($payment->fresh()->allocations()->count())->toBe(1)
+        ->and($payment->fresh()->allocations()->sum('amount'))->toBe(500)
+        ->and($invoice->fresh()->due_amount)->toBe(0);
+});
+
+test('replace allocations endpoint moves a payment between invoices', function () {
+    $first = payableInvoice(1, 500);
+    $second = payableInvoice(1, 500);
+    $second->update([
+        'company_id' => $first->company_id,
+        'customer_id' => $first->customer_id,
+        'currency_id' => $first->currency_id,
+    ]);
+    $payment = Payment::factory()->create([
+        'company_id' => $first->company_id,
+        'customer_id' => $first->customer_id,
+        'currency_id' => $first->currency_id,
+        'amount' => 500,
+        'base_amount' => 500,
+        'exchange_rate' => 1,
+    ]);
+    app(PaymentAllocationService::class)->replace($payment, [
+        ['invoice_id' => $first->id, 'amount' => 500],
+    ]);
+
+    putJson("api/v1/payments/{$payment->id}/allocations", [
+        'allocations' => [['invoice_id' => $second->id, 'amount' => 500]],
+    ])->assertOk()
+        ->assertJsonPath('data.allocations.0.invoice_id', $second->id);
+
+    expect($first->fresh()->due_amount)->toBe(500)
+        ->and($second->fresh()->due_amount)->toBe(0);
 });
 
 test('update validates using a form request', function () {
@@ -265,16 +384,21 @@ test('create payment without invoice', function () {
 });
 
 test('create payment with invoice', function () {
-    $payment = Payment::factory()->raw([
-        'payment_number' => 'PAY-000001',
+    $invoice = Invoice::factory()->create([
+        'type' => Invoice::TYPE_INVOICE,
+        'status' => Invoice::STATUS_SENT,
+        'sent' => true,
     ]);
 
-    $invoice = Invoice::factory()->create();
-
     $payment = Payment::factory()->raw([
-        'invoice_id' => $invoice->id,
+        'customer_id' => $invoice->customer_id,
+        'currency_id' => $invoice->currency_id,
         'amount' => $invoice->due_amount,
         'exchange_rate' => 1,
+        'allocations' => [[
+            'invoice_id' => $invoice->id,
+            'amount' => $invoice->due_amount,
+        ]],
     ]);
 
     postJson('api/v1/payments', $payment)->assertOk();
@@ -282,7 +406,6 @@ test('create payment with invoice', function () {
     $this->assertDatabaseHas('payments', [
         'payment_number' => $payment['payment_number'],
         'customer_id' => $payment['customer_id'],
-        'invoice_id' => $payment['invoice_id'],
         'amount' => $payment['amount'],
         'company_id' => $payment['company_id'],
     ]);
@@ -290,6 +413,9 @@ test('create payment with invoice', function () {
 
 test('create payment with partially paid', function () {
     $invoice = Invoice::factory()->create([
+        'type' => Invoice::TYPE_INVOICE,
+        'status' => Invoice::STATUS_SENT,
+        'sent' => true,
         'sub_total' => 100,
         'total' => 100,
         'due_amount' => 100,
@@ -302,11 +428,14 @@ test('create payment with partially paid', function () {
     ]);
 
     $payment = Payment::factory()->raw([
-        'invoice_id' => $invoice->id,
         'customer_id' => $invoice->customer_id,
         'exchange_rate' => $invoice->exchange_rate,
         'amount' => 100,
         'currency_id' => $invoice->currency_id,
+        'allocations' => [[
+            'invoice_id' => $invoice->id,
+            'amount' => 100,
+        ]],
     ]);
 
     $response = postJson('api/v1/payments', $payment)->assertOk();
@@ -319,12 +448,12 @@ test('create payment with partially paid', function () {
 
     $this->assertDatabaseHas('invoices', [
         'id' => $invoice['id'],
-        'invoice_number' => $response['data']['invoice']['invoice_number'],
-        'total' => $response['data']['invoice']['total'],
-        'customer_id' => $response['data']['invoice']['customer_id'],
-        'exchange_rate' => $response['data']['invoice']['exchange_rate'],
-        'base_total' => $response['data']['invoice']['base_total'],
-        'paid_status' => $response['data']['invoice']['paid_status'],
+        'invoice_number' => $response['data']['allocations'][0]['invoice']['invoice_number'],
+        'total' => $response['data']['allocations'][0]['invoice']['total'],
+        'customer_id' => $response['data']['allocations'][0]['invoice']['customer_id'],
+        'exchange_rate' => $response['data']['allocations'][0]['invoice']['exchange_rate'],
+        'base_total' => $response['data']['allocations'][0]['invoice']['base_total'],
+        'paid_status' => $response['data']['allocations'][0]['invoice']['paid_status'],
     ]);
 });
 
@@ -338,7 +467,7 @@ test('rejects a payment worth more than the invoice due amount', function () {
 
     postJson('api/v1/payments', paymentPayloadFor($invoice, 20001))
         ->assertStatus(422)
-        ->assertJsonPath('errors.amount.0', 'payment_amount_exceeds_invoice_due_amount');
+        ->assertJsonPath('errors.allocations.0', 'payment_allocation_exceeds_invoice_balance');
 
     $invoice->refresh();
 
@@ -376,7 +505,7 @@ test('rejects a payment worth more than the balance a partial credit note left',
 
     postJson('api/v1/payments', paymentPayloadFor($invoice, 10001))
         ->assertStatus(422)
-        ->assertJsonPath('errors.amount.0', 'payment_amount_exceeds_invoice_due_amount');
+        ->assertJsonPath('errors.allocations.0', 'payment_allocation_exceeds_invoice_balance');
 
     $invoice->refresh();
 

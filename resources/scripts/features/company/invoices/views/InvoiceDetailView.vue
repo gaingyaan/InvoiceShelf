@@ -114,6 +114,22 @@
       </span>
     </div>
 
+    <BaseCard v-if="invoicePaymentAllocations.length" class="mb-4">
+      <h2 class="mb-3 text-base font-semibold text-heading">{{ $t('invoices.allocated_payments') }}</h2>
+      <div class="divide-y divide-line-light">
+        <div v-for="allocation in invoicePaymentAllocations" :key="allocation.id" class="flex items-center justify-between gap-4 py-3 text-sm">
+          <div>
+            <router-link v-if="allocation.payment" :to="`/admin/payments/${allocation.payment.id}/view`" class="font-medium text-primary-500">
+              {{ allocation.payment.payment_number }}
+            </router-link>
+            <span v-else class="font-medium text-heading">{{ $t('payments.payment') }}</span>
+            <span v-if="allocation.payment?.formatted_payment_date" class="block mt-1 text-xs text-muted">{{ allocation.payment.formatted_payment_date }}</span>
+          </div>
+          <BaseFormatMoney :amount="allocation.amount" :currency="invoiceData.customer?.currency" class="font-medium text-heading" />
+        </div>
+      </div>
+    </BaseCard>
+
     <!-- Sidebar -->
     <div
       class="fixed top-0 left-0 hidden h-full pt-16 pb-[6.4rem] ml-56 bg-surface xl:ml-64 w-88 xl:block"
@@ -298,7 +314,7 @@ import LoadingIcon from '@/scripts/components/icons/LoadingIcon.vue'
 import { useUserStore } from '../../../../stores/user.store'
 import { useDialogStore } from '../../../../stores/dialog.store'
 import { useModalStore } from '../../../../stores/modal.store'
-import type { Invoice } from '../../../../types/domain/invoice'
+import type { Invoice, InvoicePaymentAllocation } from '../../../../types/domain/invoice'
 
 interface Props {
   canEdit?: boolean
@@ -402,6 +418,8 @@ const isCredited = computed<boolean>(() => {
 const isFullyCredited = computed<boolean>(() => {
   return invoiceData.value?.credited_status !== 'PARTIAL'
 })
+
+const invoicePaymentAllocations = computed<InvoicePaymentAllocation[]>(() => invoiceData.value?.payment_allocations ?? [])
 
 const getOrderBy = computed<boolean>(() => {
   return searchData.orderBy === 'asc' || searchData.orderBy === null

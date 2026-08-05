@@ -87,10 +87,11 @@
           </span>
         </template>
 
-        <template #cell-invoice_number="{ row }">
-          <span>
-            {{ row.data.invoice?.invoice_number ?? $t('payments.no_invoice') }}
+        <template #cell-allocations="{ row }">
+          <span v-if="row.data.allocations?.length">
+            {{ allocationReferences(row.data.allocations) }}
           </span>
+          <span v-else>{{ $t('payments.no_invoice') }}</span>
         </template>
 
         <template #cell-amount="{ row }">
@@ -123,7 +124,7 @@ import { ref, computed, reactive } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { debouncedWatch } from '@vueuse/core'
 import { useCustomerPortalStore } from '../store'
-import type { Payment, PaymentMethod } from '../../../types/domain/payment'
+import type { Payment, PaymentAllocation, PaymentMethod } from '../../../types/domain/payment'
 
 const store = useCustomerPortalStore()
 const { t } = useI18n()
@@ -163,7 +164,7 @@ const paymentColumns = computed<TableColumn[]>(() => [
   },
   { key: 'payment_number', label: t('payments.payment_number') },
   { key: 'payment_mode', label: t('payments.payment_mode') },
-  { key: 'invoice_number', label: t('invoices.invoice_number') },
+  { key: 'allocations', label: t('invoices.invoice_number'), sortable: false },
   { key: 'amount', label: t('payments.amount') },
   {
     key: 'actions',
@@ -177,6 +178,13 @@ debouncedWatch(filters, () => refreshTable(), { debounce: 500 })
 
 async function searchPaymentModes(search: string): Promise<PaymentMethod[]> {
   return store.fetchPaymentModes(search)
+}
+
+function allocationReferences(allocations: PaymentAllocation[] | undefined): string {
+  return allocations
+    ?.map((allocation) => allocation.invoice?.invoice_number)
+    .filter(Boolean)
+    .join(', ') ?? ''
 }
 
 interface FetchParams {

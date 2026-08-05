@@ -6,12 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\CustomerResource;
 use App\Models\Customer;
 use App\Services\CustomerService;
+use App\Services\CustomerStatementService;
 use Illuminate\Http\Request;
 
 class CustomerStatsController extends Controller
 {
     public function __construct(
         private readonly CustomerService $customerService,
+        private readonly CustomerStatementService $customerStatementService,
     ) {}
 
     public function __invoke(Request $request, Customer $customer)
@@ -25,6 +27,7 @@ class CustomerStatsController extends Controller
         );
 
         $customer = Customer::find($customer->id);
+        $this->customerStatementService->hydrateAccountSummaries([$customer]);
 
         return (new CustomerResource($customer))
             ->additional(['meta' => [

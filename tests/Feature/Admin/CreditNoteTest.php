@@ -7,6 +7,7 @@ use App\Models\CompanySetting;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Payment;
+use App\Models\PaymentAllocation;
 use App\Models\Tax;
 use App\Models\User;
 use App\Services\Document\CreditNoteService;
@@ -138,9 +139,16 @@ function creditableTax(Invoice $invoice, array $tax, array $owner): Tax
 function creditablePayment(Invoice $invoice, int $amount): Payment
 {
     $payment = Payment::factory()->create([
-        'invoice_id' => $invoice->id,
+        'company_id' => $invoice->company_id,
         'customer_id' => $invoice->customer_id,
         'amount' => $amount,
+    ]);
+
+    PaymentAllocation::factory()->create([
+        'payment_id' => $payment->id,
+        'invoice_id' => $invoice->id,
+        'amount' => $amount,
+        'base_amount' => (int) round($amount * $invoice->exchange_rate),
     ]);
 
     $due = (int) $invoice->due_amount - $amount;

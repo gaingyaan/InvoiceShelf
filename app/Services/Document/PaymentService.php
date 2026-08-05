@@ -16,129 +16,118 @@ use App\Support\Pdf\PdfTemplateUtils;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class PaymentService
 {
+    public function __construct(
+        private readonly PaymentAllocationService $paymentAllocationService,
+    ) {}
+
     public function create(Request $request): Payment
     {
         $data = $request->getPaymentPayload();
+        $allocations = $request->validated('allocations') ?? [];
 
-        if ($request->invoice_id) {
-            $invoice = Invoice::find($request->invoice_id);
-            $invoice->subtractInvoicePayment($request->amount);
-        }
+        $payment = DB::transaction(function () use ($data, $allocations, $request): Payment {
+            $payment = Payment::create($data);
+            $payment->unique_hash = Hashids::connection(Payment::class)->encode($payment->id);
 
-        $payment = Payment::create($data);
-        $payment->unique_hash = Hashids::connection(Payment::class)->encode($payment->id);
+            $serial = (new SerialNumberService)
+                ->setModel($payment)
+                ->setCompany($payment->company_id)
+                ->setCustomer($payment->customer_id)
+                ->setNextNumbers();
 
-        $serial = (new SerialNumberService)
-            ->setModel($payment)
-            ->setCompany($payment->company_id)
-            ->setCustomer($payment->customer_id)
-            ->setNextNumbers();
+            $payment->sequence_number = $serial->nextSequenceNumber;
+            $payment->customer_sequence_number = $serial->nextCustomerSequenceNumber;
+            $payment->save();
 
-        $payment->sequence_number = $serial->nextSequenceNumber;
-        $payment->customer_sequence_number = $serial->nextCustomerSequenceNumber;
-        $payment->save();
+            $this->paymentAllocationService->replace($payment, $allocations);
 
-        $companyCurrency = CompanySetting::getSetting('currency', $request->header('company'));
+            $companyCurrency = CompanySetting::getSetting('currency', $request->header('company'));
 
-        if ((string) $payment['currency_id'] !== $companyCurrency) {
-            ExchangeRateLog::addExchangeRateLog($payment);
-        }
+            if ((string) $payment->currency_id !== $companyCurrency) {
+                ExchangeRateLog::addExchangeRateLog($payment);
+            }
 
-        $customFields = $request->customFields;
+            if ($request->customFields) {
+                $payment->addCustomFields($request->customFields);
+            }
 
-        if ($customFields) {
-            $payment->addCustomFields($customFields);
-        }
+            return $payment;
+        });
 
-        return Payment::with([
-            'customer',
-            'invoice',
-            'paymentMethod',
-            'fields',
-        ])->find($payment->id);
+        return $this->loadPayment($payment);
     }
 
     public function update(Payment $payment, Request $request): Payment
     {
         $data = $request->getPaymentPayload();
+        $replaceAllocations = $request->exists('allocations');
+        $requestedAllocations = $request->validated('allocations') ?? [];
 
-        if ($request->invoice_id && (! $payment->invoice_id || $payment->invoice_id !== $request->invoice_id)) {
-            $invoice = Invoice::find($request->invoice_id);
-            $invoice->subtractInvoicePayment($request->amount);
-        }
+        $payment = DB::transaction(function () use ($payment, $data, $replaceAllocations, $requestedAllocations, $request): Payment {
+            $lockedPayment = Payment::query()->whereKey($payment->id)->lockForUpdate()->firstOrFail();
+            $allocations = $replaceAllocations
+                ? $requestedAllocations
+                : $lockedPayment->allocations()
+                    ->get(['invoice_id', 'amount'])
+                    ->map(fn ($allocation) => [
+                        'invoice_id' => (int) $allocation->invoice_id,
+                        'amount' => (int) $allocation->amount,
+                    ])
+                    ->all();
+            $customerChanged = (int) $lockedPayment->customer_id !== (int) $data['customer_id'];
 
-        if ($payment->invoice_id && (! $request->invoice_id || $payment->invoice_id !== $request->invoice_id)) {
-            $invoice = Invoice::find($payment->invoice_id);
-            $invoice->addInvoicePayment($payment->amount);
-        }
+            if ($customerChanged && $allocations !== []) {
+                throw ValidationException::withMessages([
+                    'customer_id' => ['payment_customer_change_requires_unallocated_credit'],
+                ]);
+            }
 
-        if ($payment->invoice_id && $payment->invoice_id === $request->invoice_id && $request->amount !== $payment->amount) {
-            $invoice = Invoice::find($payment->invoice_id);
-            $invoice->addInvoicePayment($payment->amount);
-            $invoice->subtractInvoicePayment($request->amount);
-        }
+            $serial = (new SerialNumberService)
+                ->setModel($lockedPayment)
+                ->setCompany($lockedPayment->company_id)
+                ->setCustomer($data['customer_id'])
+                ->setModelObject($lockedPayment->id)
+                ->setNextNumbers();
 
-        $serial = (new SerialNumberService)
-            ->setModel($payment)
-            ->setCompany($payment->company_id)
-            ->setCustomer($request->customer_id)
-            ->setModelObject($payment->id)
-            ->setNextNumbers();
+            $data['customer_sequence_number'] = $serial->nextCustomerSequenceNumber;
+            $lockedPayment->update($data);
+            $this->paymentAllocationService->replace($lockedPayment, $allocations);
 
-        $data['customer_sequence_number'] = $serial->nextCustomerSequenceNumber;
-        $payment->update($data);
+            $companyCurrency = CompanySetting::getSetting('currency', $request->header('company'));
 
-        $companyCurrency = CompanySetting::getSetting('currency', $request->header('company'));
+            if ((string) $lockedPayment->currency_id !== $companyCurrency) {
+                ExchangeRateLog::addExchangeRateLog($lockedPayment);
+            }
 
-        if ((string) $data['currency_id'] !== $companyCurrency) {
-            ExchangeRateLog::addExchangeRateLog($payment);
-        }
+            if ($request->customFields) {
+                $lockedPayment->updateCustomFields($request->customFields);
+            }
 
-        $customFields = $request->customFields;
+            return $lockedPayment;
+        });
 
-        if ($customFields) {
-            $payment->updateCustomFields($customFields);
-        }
-
-        return Payment::with([
-            'customer',
-            'invoice',
-            'paymentMethod',
-        ])->find($payment->id);
+        return $this->loadPayment($payment);
     }
 
     public function delete(Collection $ids): bool
     {
-        foreach ($ids as $id) {
-            $payment = Payment::find($id);
+        DB::transaction(function () use ($ids): void {
+            foreach ($ids->sort() as $id) {
+                $payment = Payment::query()->whereKey($id)->lockForUpdate()->first();
 
-            if ($payment->invoice_id != null) {
-                $invoice = Invoice::find($payment->invoice_id);
-                $invoice->due_amount = ((int) $invoice->due_amount + (int) $payment->amount);
+                if (! $payment) {
+                    continue;
+                }
 
-                // The paid status follows the payments that remain, not the
-                // balance. On an uncredited invoice the two rules agree exactly
-                // (the restored due equals the total precisely when no payment
-                // is left), but on a credited one the due amount is already net
-                // of its credit notes, so comparing it with the total would call
-                // an invoice unpaid while money is still recorded against it.
-                $remainingPaid = (int) $invoice->payments()
-                    ->whereKeyNot($payment->getKey())
-                    ->sum('amount');
-
-                $invoice->paid_status = $remainingPaid > 0
-                    ? Invoice::STATUS_PARTIALLY_PAID
-                    : Invoice::STATUS_UNPAID;
-
-                $invoice->status = $invoice->getPreviousStatus();
-                $invoice->save();
+                $this->paymentAllocationService->replace($payment, []);
+                $payment->delete();
             }
-
-            $payment->delete();
-        }
+        });
 
         return true;
     }
@@ -176,6 +165,8 @@ class PaymentService
 
     public function getPdfData(Payment $payment)
     {
+        $payment->loadMissing('allocations.invoice.currency');
+
         $company = Company::find($payment->company_id);
         $locale = CompanySetting::getSetting('language', $company->id);
 
@@ -216,24 +207,38 @@ class PaymentService
 
         $data['payment_number'] = $serial->getNextNumber();
         $data['payment_date'] = Carbon::now();
-        $data['amount'] = $invoice->total;
-        $data['invoice_id'] = $invoice->id;
+        $data['amount'] = $invoice->due_amount;
         $data['payment_method_id'] = request()->payment_method_id;
         $data['customer_id'] = $invoice->customer_id;
         $data['exchange_rate'] = $invoice->exchange_rate;
-        $data['base_amount'] = $data['amount'] * $data['exchange_rate'];
+        $data['base_amount'] = (int) round($data['amount'] * $data['exchange_rate']);
         $data['currency_id'] = $invoice->currency_id;
         $data['company_id'] = $invoice->company_id;
         $data['transaction_id'] = $transaction->id;
 
-        $payment = Payment::create($data);
-        $payment->unique_hash = Hashids::connection(Payment::class)->encode($payment->id);
-        $payment->sequence_number = $serial->nextSequenceNumber;
-        $payment->customer_sequence_number = $serial->nextCustomerSequenceNumber;
-        $payment->save();
+        return DB::transaction(function () use ($data, $serial, $invoice): Payment {
+            $payment = Payment::create($data);
+            $payment->unique_hash = Hashids::connection(Payment::class)->encode($payment->id);
+            $payment->sequence_number = $serial->nextSequenceNumber;
+            $payment->customer_sequence_number = $serial->nextCustomerSequenceNumber;
+            $payment->save();
 
-        $invoice->subtractInvoicePayment($invoice->total);
+            $this->paymentAllocationService->replace($payment, [[
+                'invoice_id' => $invoice->id,
+                'amount' => (int) $data['amount'],
+            ]]);
 
-        return $payment;
+            return $payment;
+        });
+    }
+
+    private function loadPayment(Payment $payment): Payment
+    {
+        return Payment::with([
+            'customer',
+            'allocations.invoice',
+            'paymentMethod',
+            'fields',
+        ])->findOrFail($payment->id);
     }
 }

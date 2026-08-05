@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useCustomerStore } from '../store'
 import { useUserStore } from '../../../../stores/user.store'
 import CustomerDropdown from '../components/CustomerDropdown.vue'
 import CustomerViewSidebar from '@/scripts/features/company/customers/components/CustomerViewSidebar.vue'
 import CustomerChart from '@/scripts/features/company/customers/components/CustomerChart.vue'
+import CustomerStatement from '@/scripts/features/company/customers/components/CustomerStatement.vue'
+import CustomerBalanceCard from '@/scripts/features/company/customers/components/CustomerBalanceCard.vue'
+import type { Customer } from '@/scripts/types/domain/customer'
 
 const ABILITIES = {
   EDIT_CUSTOMER: 'edit-customer',
@@ -14,6 +17,8 @@ const ABILITIES = {
   CREATE_INVOICE: 'create-invoice',
   CREATE_PAYMENT: 'create-payment',
   CREATE_EXPENSE: 'create-expense',
+  VIEW_CUSTOMER: 'view-customer',
+  VIEW_FINANCIAL_REPORTS: 'view-financial-reports',
 } as const
 
 const customerStore = useCustomerStore()
@@ -27,6 +32,30 @@ const pageTitle = computed<string>(() => {
 })
 
 const isLoading = computed<boolean>(() => customerStore.isFetchingViewData)
+
+const customerCurrency = computed(() => customerStore.selectedViewCustomer.currency)
+const selectedCustomer = computed<Customer | null>(() => (
+  customerStore.selectedViewCustomer.id
+    ? customerStore.selectedViewCustomer as Customer
+    : null
+))
+const invoiceDueAmount = computed(() => customerStore.selectedViewCustomer.invoice_due_amount ?? customerStore.selectedViewCustomer.due_amount ?? 0)
+const availableCredit = computed(() => customerStore.selectedViewCustomer.available_credit ?? 0)
+const accountBalance = computed(() => customerStore.selectedViewCustomer.account_balance ?? (invoiceDueAmount.value - availableCredit.value))
+const canViewStatement = computed(() => {
+  return userStore.hasAbilities(ABILITIES.VIEW_CUSTOMER)
+    && userStore.hasAbilities(ABILITIES.VIEW_FINANCIAL_REPORTS)
+})
+
+watch(
+  () => route.params.id,
+  (id) => {
+    if (id) {
+      void customerStore.fetchViewCustomer({ id: Number(id) })
+    }
+  },
+  { immediate: true },
+)
 
 function canCreateTransaction(): boolean {
   return userStore.hasAbilities([
@@ -136,7 +165,18 @@ function refreshData(): void {
     <!-- Customer View Sidebar -->
     <CustomerViewSidebar />
 
-    <!-- Chart -->
-    <CustomerChart />
+    <BaseTabGroup>
+      <BaseTab :title="$t('customers.overview')">
+        <div class="grid gap-4 mt-6 md:grid-cols-3 xl:grid-cols-2 min-[1400px]:grid-cols-3">
+          <CustomerBalanceCard :label="$t('customers.invoice_due')" :amount="invoiceDueAmount" :currency="customerCurrency" />
+          <CustomerBalanceCard :label="$t('customers.available_credit')" :amount="availableCredit" :currency="customerCurrency" />
+          <CustomerBalanceCard class="xl:col-span-2 min-[1400px]:col-span-1" :label="$t('customers.net_account_balance')" :amount="accountBalance" :currency="customerCurrency" :credit-label="$t('customers.credit')" />
+        </div>
+        <CustomerChart />
+      </BaseTab>
+      <BaseTab v-if="canViewStatement" :title="$t('customers.statement')">
+        <CustomerStatement v-if="selectedCustomer" :customer="selectedCustomer" />
+      </BaseTab>
+    </BaseTabGroup>
   </BasePage>
 </template>

@@ -58,6 +58,25 @@ const ERROR_TRANSLATION_MAP: Record<string, string> = {
   'credit_note_must_credit_something': 'errors.credit_note_must_credit_something',
   'payment_amount_exceeds_invoice_due_amount':
     'errors.payment_amount_exceeds_invoice_due_amount',
+  'payment_amount_must_be_positive': 'payments.invalid_amount_message',
+  'payment_allocation_required': 'errors.payment_allocation_required',
+  'payment_allocation_invalid': 'errors.payment_allocation_invalid',
+  'payment_allocation_duplicate_invoice': 'errors.payment_allocation_duplicate_invoice',
+  'payment_allocation_exceeds_payment_amount':
+    'errors.payment_allocation_exceeds_payment_amount',
+  'payment_allocation_payment_not_found':
+    'errors.payment_allocation_payment_not_found',
+  'payment_allocation_invoice_not_found':
+    'errors.payment_allocation_invoice_not_found',
+  'payment_allocation_invoice_mismatch':
+    'errors.payment_allocation_invoice_mismatch',
+  'payment_allocation_invoice_not_payable':
+    'errors.payment_allocation_invoice_not_payable',
+  'payment_allocation_exceeds_invoice_balance':
+    'errors.payment_allocation_exceeds_invoice_balance',
+  'payment_customer_change_requires_unallocated_credit':
+    'errors.payment_customer_change_requires_unallocated_credit',
+  'invoice_has_payment_allocations': 'errors.payment_attached',
   'credit_item_not_on_invoice': 'errors.credit_item_not_on_invoice',
   'credit_quantity_invalid': 'errors.credit_quantity_invalid',
   'a_credit_note_cannot_be_cloned': 'errors.credit_note_cannot_be_cloned',

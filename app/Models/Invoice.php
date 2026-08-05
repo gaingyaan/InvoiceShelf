@@ -12,6 +12,7 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Str;
@@ -96,9 +97,16 @@ class Invoice extends Model implements HasMedia
         return $this->hasMany(Tax::class);
     }
 
-    public function payments(): HasMany
+    public function allocations(): HasMany
     {
-        return $this->hasMany(Payment::class);
+        return $this->hasMany(PaymentAllocation::class);
+    }
+
+    public function payments(): BelongsToMany
+    {
+        return $this->belongsToMany(Payment::class, 'payment_allocations')
+            ->withPivot(['amount', 'base_amount'])
+            ->withTimestamps();
     }
 
     public function currency(): BelongsTo

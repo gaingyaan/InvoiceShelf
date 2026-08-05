@@ -33,6 +33,7 @@ class CreditNoteService
 {
     public function __construct(
         private readonly DocumentItemService $documentItemService,
+        private readonly InvoiceBalanceService $invoiceBalanceService,
     ) {}
 
     /**
@@ -63,7 +64,7 @@ class CreditNoteService
             $before = $this->creditedQuantities($original);
             $after = $this->targetQuantities($invoiced, $before, $items);
 
-            $paid = (int) $original->payments()->sum('amount');
+            $paid = (int) $original->allocations()->sum('amount');
             $creditedBefore = $this->creditedTotal($original);
 
             $this->guard($original, $invoiced, $before, $after, $paid, $creditedBefore);
@@ -118,43 +119,9 @@ class CreditNoteService
         return -(int) $invoice->creditNotes()->sum('total');
     }
 
-    /**
-     * Recompute the invoice's balance and status from what it was paid and what
-     * has been credited off it.
-     *
-     * This deliberately does not live in {@see Invoice::getInvoiceStatusByAmount()}:
-     * that method is called from the payment flow, and PaymentService::create()
-     * adjusts the invoice BEFORE the Payment row is written, so a rule derived
-     * from payments()->sum() would read a stale total there and settle the
-     * invoice one payment short. This method only runs when a credit note is
-     * created or deleted, where every payment and every credit note involved is
-     * already persisted.
-     */
     public function recalculateBalance(Invoice $invoice): void
     {
-        $paid = (int) $invoice->payments()->sum('amount');
-        $credited = $this->creditedTotal($invoice);
-        $due = max(0, (int) $invoice->total - $paid - $credited);
-
-        $invoice->due_amount = $due;
-        $invoice->base_due_amount = (int) round($due * $invoice->exchange_rate);
-
-        if ($due === 0) {
-            // Nothing is owed any more, whether that came from money or from a
-            // reversal, so the invoice must drop out of every "awaiting
-            // payment" view. Which of the two settled it is carried by the
-            // creditNotes relation, not by the status.
-            $invoice->status = Invoice::STATUS_COMPLETED;
-            $invoice->paid_status = Invoice::STATUS_PAID;
-            $invoice->overdue = false;
-        } else {
-            $invoice->status = $invoice->getPreviousStatus();
-            $invoice->paid_status = $paid > 0
-                ? Invoice::STATUS_PARTIALLY_PAID
-                : Invoice::STATUS_UNPAID;
-        }
-
-        $invoice->save();
+        $this->invoiceBalanceService->recalculate($invoice);
     }
 
     /**

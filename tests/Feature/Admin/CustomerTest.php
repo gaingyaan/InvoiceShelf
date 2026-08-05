@@ -33,6 +33,21 @@ test('get customers', function () {
     $response->assertOk();
 });
 
+test('get all customers hydrates account summaries without pagination', function () {
+    $customer = Customer::factory()->create([
+        'company_id' => User::find(1)->companies()->first()->id,
+    ]);
+
+    getJson('api/v1/customers?limit=all')
+        ->assertOk()
+        ->assertJsonFragment([
+            'id' => $customer->id,
+            'invoice_due_amount' => 0,
+            'available_credit' => 0,
+            'account_balance' => 0,
+        ]);
+});
+
 test('customer stats', function () {
     $customer = Customer::factory()->create();
 

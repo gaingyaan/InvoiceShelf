@@ -171,15 +171,23 @@
           </span>
         </template>
 
-        <template #cell-invoice_number="{ row }">
-          <router-link
-            v-if="row.data.invoice?.id"
-            :to="`/admin/invoices/${row.data.invoice.id}/view`"
-            class="font-medium text-primary-500 hover:text-primary-600"
-          >
-            {{ row.data.invoice.invoice_number }}
-          </router-link>
-          <span v-else>-</span>
+        <template #cell-allocations="{ row }">
+          <div v-if="row.data.allocations?.length" class="space-y-1">
+            <template v-for="allocation in row.data.allocations" :key="allocation.id ?? allocation.invoice_id">
+              <div v-if="allocation.invoice" class="flex items-center gap-2">
+                <router-link
+                  :to="`/admin/invoices/${allocation.invoice.id}/view`"
+                  class="font-medium text-primary-500 hover:text-primary-600"
+                >
+                  {{ allocation.invoice.invoice_number }}
+                </router-link>
+                <BasePaidStatusBadge :status="allocation.invoice.paid_status" class="px-1 py-0.5">
+                  <BaseInvoiceStatusLabel :status="allocation.invoice.paid_status" />
+                </BasePaidStatusBadge>
+              </div>
+            </template>
+          </div>
+          <span v-else>{{ $t('payments.unapplied_credit') }}</span>
         </template>
 
         <template #cell-amount="{ row }">
@@ -311,7 +319,7 @@ const paymentColumns = computed<TableColumn[]>(() => [
   { key: 'payment_number', label: t('payments.payment_number') },
   { key: 'name', label: t('payments.customer') },
   { key: 'payment_mode', label: t('payments.payment_mode') },
-  { key: 'invoice_number', label: t('payments.invoice') },
+  { key: 'allocations', label: t('payments.allocations'), sortable: false },
   { key: 'amount', label: t('payments.amount') },
   {
     key: 'actions',
@@ -374,7 +382,7 @@ async function fetchData({ page, sort }: FetchParams): Promise<FetchResult> {
       : undefined,
     payment_number: filters.payment_number || undefined,
     orderByField: sort.fieldName || 'created_at',
-    orderBy: sort.order || 'desc',
+    orderBy: sort.order === 'asc' ? 'asc' as const : 'desc' as const,
     page,
   }
 

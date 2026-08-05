@@ -35,6 +35,12 @@ class CustomerResource extends JsonResource
             'avatar' => $this->avatar,
             'due_amount' => $this->due_amount,
             'base_due_amount' => $this->base_due_amount,
+            'invoice_due_amount' => $this->invoice_due_amount,
+            'base_invoice_due_amount' => $this->base_invoice_due_amount,
+            'available_credit' => $this->available_credit,
+            'base_available_credit' => $this->base_available_credit,
+            'account_balance' => $this->account_balance,
+            'base_account_balance' => $this->base_account_balance,
             'prefix' => $this->prefix,
             'tax_id' => $this->tax_id,
             'billing' => $this->when($this->billingAddress()->exists(), function () {

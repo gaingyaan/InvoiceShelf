@@ -4,6 +4,7 @@ namespace App\Services\Company;
 
 use App\Models\Company;
 use App\Models\CompanySetting;
+use App\Models\PaymentAllocation;
 use App\Models\PaymentMethod;
 use App\Models\Unit;
 use App\Models\User;
@@ -56,6 +57,9 @@ class CompanyService
         }
 
         if ($company->payments()->exists()) {
+            PaymentAllocation::query()
+                ->whereIn('payment_id', $company->payments()->select('id'))
+                ->delete();
             $company->payments()->delete();
         }
 

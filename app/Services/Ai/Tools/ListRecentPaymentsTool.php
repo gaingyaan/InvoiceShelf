@@ -22,7 +22,7 @@ class ListRecentPaymentsTool extends AiTool
 
     public function description(): string
     {
-        return 'List payments received in the last N days for the current company, sorted most recent first. Returns payment number, customer, amount, payment date, and payment method.';
+        return 'List payments received in the last N days for the current company, sorted most recent first. Returns payment number, customer, amount, allocation breakdown, unapplied credit, payment date, and payment method.';
     }
 
     public function parameterSchema(): array
@@ -62,7 +62,7 @@ class ListRecentPaymentsTool extends AiTool
         $payments = Payment::query()
             ->where('company_id', $companyId)
             ->where('payment_date', '>=', $since)
-            ->with(['customer:id,name', 'paymentMethod:id,name'])
+            ->with(['allocations:id,payment_id,invoice_id,amount', 'customer:id,name', 'paymentMethod:id,name'])
             ->latest('payment_date')
             ->limit($limit)
             ->get();
@@ -76,7 +76,12 @@ class ListRecentPaymentsTool extends AiTool
                 'amount' => $p->amount,
                 'customer_id' => $p->customer_id,
                 'customer_name' => $p->customer?->name,
-                'invoice_id' => $p->invoice_id,
+                'allocations' => $p->allocations->map(fn ($allocation) => [
+                    'invoice_id' => $allocation->invoice_id,
+                    'amount' => $allocation->amount,
+                ])->all(),
+                'allocated_amount' => (int) $p->allocations->sum('amount'),
+                'unallocated_amount' => (int) $p->amount - (int) $p->allocations->sum('amount'),
                 'payment_method' => $p->paymentMethod?->name,
             ])->all(),
         ];

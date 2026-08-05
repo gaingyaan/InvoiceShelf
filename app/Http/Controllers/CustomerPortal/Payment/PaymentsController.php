@@ -21,16 +21,15 @@ class PaymentsController extends Controller
     {
         $limit = $request->has('limit') ? $request->limit : 10;
 
-        $payments = Payment::with(['customer', 'invoice', 'paymentMethod', 'creator'])
+        $payments = Payment::with(['customer', 'allocations.invoice', 'paymentMethod', 'creator'])
             ->whereCustomer(Auth::guard('customer')->id())
-            ->leftJoin('invoices', 'invoices.id', '=', 'payments.invoice_id')
             ->applyFilters($request->only([
                 'payment_number',
                 'payment_method_id',
                 'orderByField',
                 'orderBy',
             ]))
-            ->select('payments.*', 'invoices.invoice_number')
+            ->select('payments.*')
             ->latest()
             ->paginateData($limit);
 
@@ -57,6 +56,6 @@ class PaymentsController extends Controller
             return response()->json(['error' => 'payment_not_found'], 404);
         }
 
-        return new PaymentResource($payment);
+        return new PaymentResource($payment->load(['allocations.invoice']));
     }
 }

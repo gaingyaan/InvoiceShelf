@@ -5,6 +5,18 @@ import type { Currency } from './currency'
 import type { Tax } from './tax'
 import type { CustomFieldValue } from './custom-field'
 
+export interface InvoicePaymentAllocation {
+  id: number
+  payment_id: number
+  amount: number
+  base_amount?: number
+  payment?: {
+    id: number
+    payment_number: string
+    formatted_payment_date?: string
+  }
+}
+
 export enum InvoiceStatus {
   DRAFT = 'DRAFT',
   SENT = 'SENT',
@@ -120,6 +132,7 @@ export interface Invoice {
   sales_tax_type: string | null
   sales_tax_address_type: string | null
   overdue: boolean | null
+  payment_allocations?: InvoicePaymentAllocation[]
   items?: InvoiceItem[]
   customer?: Customer
   creator?: User

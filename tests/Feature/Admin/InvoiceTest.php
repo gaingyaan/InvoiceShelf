@@ -8,6 +8,7 @@ use App\Models\Company;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Payment;
+use App\Models\PaymentAllocation;
 use App\Models\Tax;
 use App\Models\User;
 use Illuminate\Support\Facades\Artisan;
@@ -306,8 +307,13 @@ test('cannot complete a partially paid invoice', function () {
     $payment = Payment::factory()->create([
         'company_id' => $invoice->company_id,
         'customer_id' => $invoice->customer_id,
+        'amount' => 5000,
+    ]);
+    PaymentAllocation::factory()->create([
+        'payment_id' => $payment->id,
         'invoice_id' => $invoice->id,
         'amount' => 5000,
+        'base_amount' => 5000,
     ]);
 
     $invoice->update(['paid_status' => Invoice::STATUS_PARTIALLY_PAID]);
@@ -344,8 +350,13 @@ test('completes a fully paid invoice idempotently without removing its payment',
     $payment = Payment::factory()->create([
         'company_id' => $invoice->company_id,
         'customer_id' => $invoice->customer_id,
+        'amount' => 10000,
+    ]);
+    PaymentAllocation::factory()->create([
+        'payment_id' => $payment->id,
         'invoice_id' => $invoice->id,
         'amount' => 10000,
+        'base_amount' => 10000,
     ]);
 
     postJson("api/v1/invoices/{$invoice->id}/status", ['status' => Invoice::STATUS_COMPLETED])

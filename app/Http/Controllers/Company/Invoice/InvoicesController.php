@@ -93,6 +93,7 @@ class InvoicesController extends Controller
         return new InvoiceResource($invoice->load([
             'creditNotes:id,related_invoice_id,invoice_number,total',
             'creditNotes.items:id,invoice_id,source_invoice_item_id,quantity',
+            'allocations.payment',
         ]));
     }
 

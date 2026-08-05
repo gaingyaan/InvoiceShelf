@@ -171,6 +171,12 @@ class InvoiceService
         foreach ($ids as $id) {
             $invoice = Invoice::find($id);
 
+            if ($invoice->allocations()->exists()) {
+                throw ValidationException::withMessages([
+                    'invoice' => ['invoice_has_payment_allocations'],
+                ]);
+            }
+
             if ($invoice->transactions()->exists()) {
                 $invoice->transactions()->delete();
             }
@@ -477,7 +483,7 @@ class InvoiceService
             $invoice->sent = true;
             $invoice->save();
         } elseif ($status == Invoice::STATUS_COMPLETED) {
-            $paid = (int) $invoice->payments()->sum('amount');
+            $paid = (int) $invoice->allocations()->sum('amount');
             $credited = $this->creditNoteService->creditedTotal($invoice);
             $outstanding = max(0, (int) $invoice->total - $paid - $credited);
 

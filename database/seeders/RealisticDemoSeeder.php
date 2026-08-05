@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Facades\Hashids;
+use App\Jobs\GeneratePaymentPdfJob;
 use App\Models\Address;
 use App\Models\AiConversation;
 use App\Models\Company;
@@ -20,12 +21,14 @@ use App\Models\InvoiceItem;
 use App\Models\Item;
 use App\Models\Note;
 use App\Models\Payment;
+use App\Models\PaymentAllocation;
 use App\Models\PaymentMethod;
 use App\Models\RecurringInvoice;
 use App\Models\Tax;
 use App\Models\TaxType;
 use App\Models\Unit;
 use App\Models\User;
+use App\Services\Document\PaymentAllocationService;
 use App\Services\Document\SerialNumberService;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
@@ -238,7 +241,9 @@ class RealisticDemoSeeder extends Seeder
     private function cleanupExistingDemoData(): void
     {
         AiConversation::where('company_id', $this->companyId)->delete(); // cascades to ai_messages
-        Payment::where('company_id', $this->companyId)->delete();
+        $paymentIds = Payment::where('company_id', $this->companyId)->pluck('id');
+        PaymentAllocation::whereIn('payment_id', $paymentIds)->delete();
+        Payment::whereIn('id', $paymentIds)->delete();
         InvoiceItem::where('company_id', $this->companyId)->delete();
         Invoice::where('company_id', $this->companyId)->delete();
         EstimateItem::where('company_id', $this->companyId)->delete();
@@ -376,45 +381,53 @@ class RealisticDemoSeeder extends Seeder
      */
     private function seedInvoicesWithPayments(): void
     {
-        // Distribution plan: [count, status, paid_status, overdue, age_weeks_min, age_weeks_max]
+        // Distribution plan: [count, status, paid_status, overdue, age_weeks_min, age_weeks_max, current_month]
         //
         // Split by time bucket so get_company_stats(period=this_month/last_month/this_quarter) differ.
         $plan = [
-            // This month (0-4 weeks ago) — fresh activity
-            [3, Invoice::STATUS_SENT,      Invoice::STATUS_UNPAID,         false, 0, 3],
-            [2, Invoice::STATUS_VIEWED,    Invoice::STATUS_UNPAID,         false, 0, 4],
-            [2, Invoice::STATUS_DRAFT,     Invoice::STATUS_UNPAID,         false, 0, 2],
-            [3, Invoice::STATUS_COMPLETED, Invoice::STATUS_PAID,           false, 0, 4],
-            [1, Invoice::STATUS_COMPLETED, Invoice::STATUS_PARTIALLY_PAID, false, 0, 4],
+            // Current calendar month — each customer receives posted activity
+            // so its default Account Activity statement is useful immediately.
+            [3, Invoice::STATUS_SENT,      Invoice::STATUS_UNPAID,         false, 0, 3, true],
+            [2, Invoice::STATUS_VIEWED,    Invoice::STATUS_UNPAID,         false, 0, 4, true],
+            [2, Invoice::STATUS_DRAFT,     Invoice::STATUS_UNPAID,         false, 0, 2, true],
+            [3, Invoice::STATUS_COMPLETED, Invoice::STATUS_PAID,           false, 0, 4, true],
+            [1, Invoice::STATUS_COMPLETED, Invoice::STATUS_PARTIALLY_PAID, false, 0, 4, true],
             // Last month (4-8 weeks ago)
-            [2, Invoice::STATUS_VIEWED,    Invoice::STATUS_UNPAID,         false, 4, 8],
-            [1, Invoice::STATUS_DRAFT,     Invoice::STATUS_UNPAID,         false, 4, 8],
-            [2, Invoice::STATUS_SENT,      Invoice::STATUS_UNPAID,         true,  5, 8],  // overdue
-            [3, Invoice::STATUS_COMPLETED, Invoice::STATUS_PAID,           false, 4, 8],
-            [2, Invoice::STATUS_COMPLETED, Invoice::STATUS_PARTIALLY_PAID, false, 4, 8],
+            [2, Invoice::STATUS_VIEWED,    Invoice::STATUS_UNPAID,         false, 4, 8, false],
+            [1, Invoice::STATUS_DRAFT,     Invoice::STATUS_UNPAID,         false, 4, 8, false],
+            [2, Invoice::STATUS_SENT,      Invoice::STATUS_UNPAID,         true,  5, 8, false],  // overdue
+            [3, Invoice::STATUS_COMPLETED, Invoice::STATUS_PAID,           false, 4, 8, false],
+            [2, Invoice::STATUS_COMPLETED, Invoice::STATUS_PARTIALLY_PAID, false, 4, 8, false],
             // 2-3 months ago
-            [2, Invoice::STATUS_SENT,      Invoice::STATUS_UNPAID,         true,  10, 13], // overdue
-            [3, Invoice::STATUS_COMPLETED, Invoice::STATUS_PAID,           false, 8, 13],
-            [2, Invoice::STATUS_COMPLETED, Invoice::STATUS_PARTIALLY_PAID, false, 9, 13],
-            [1, Invoice::STATUS_VIEWED,    Invoice::STATUS_UNPAID,         false, 10, 13],
+            [2, Invoice::STATUS_SENT,      Invoice::STATUS_UNPAID,         true,  10, 13, false], // overdue
+            [3, Invoice::STATUS_COMPLETED, Invoice::STATUS_PAID,           false, 8, 13, false],
+            [2, Invoice::STATUS_COMPLETED, Invoice::STATUS_PARTIALLY_PAID, false, 9, 13, false],
+            [1, Invoice::STATUS_VIEWED,    Invoice::STATUS_UNPAID,         false, 10, 13, false],
             // 4-6 months ago (older)
-            [2, Invoice::STATUS_COMPLETED, Invoice::STATUS_PAID,           false, 16, 24],
-            [1, Invoice::STATUS_COMPLETED, Invoice::STATUS_PARTIALLY_PAID, false, 16, 22],
-            [1, Invoice::STATUS_VIEWED,    Invoice::STATUS_UNPAID,         false, 18, 24],
-            [1, Invoice::STATUS_SENT,      Invoice::STATUS_UNPAID,         false, 18, 24],
-            [1, Invoice::STATUS_DRAFT,     Invoice::STATUS_UNPAID,         false, 20, 26],
+            [2, Invoice::STATUS_COMPLETED, Invoice::STATUS_PAID,           false, 16, 24, false],
+            [1, Invoice::STATUS_COMPLETED, Invoice::STATUS_PARTIALLY_PAID, false, 16, 22, false],
+            [1, Invoice::STATUS_VIEWED,    Invoice::STATUS_UNPAID,         false, 18, 24, false],
+            [1, Invoice::STATUS_SENT,      Invoice::STATUS_UNPAID,         false, 18, 24, false],
+            [1, Invoice::STATUS_DRAFT,     Invoice::STATUS_UNPAID,         false, 20, 26, false],
         ];
 
-        foreach ($plan as [$count, $status, $paidStatus, $overdue, $minWeeks, $maxWeeks]) {
+        $activityCustomerIndex = 0;
+
+        foreach ($plan as [$count, $status, $paidStatus, $overdue, $minWeeks, $maxWeeks, $currentMonth]) {
             for ($i = 0; $i < $count; $i++) {
-                $weeksAgo = random_int($minWeeks, $maxWeeks);
-                $invoiceDate = Carbon::now()->subWeeks($weeksAgo)->subDays(random_int(0, 6))->startOfDay();
+                $invoiceDate = $currentMonth
+                    ? Carbon::now()->startOfMonth()->addDays(random_int(0, Carbon::now()->day - 1))->startOfDay()
+                    : Carbon::now()->subWeeks(random_int($minWeeks, $maxWeeks))->subDays(random_int(0, 6))->startOfDay();
                 $dueDate = $overdue
                     ? Carbon::now()->subDays(random_int(3, 45))->startOfDay()
                     : $invoiceDate->copy()->addDays(30);
 
                 $itemCount = random_int(1, 4);
-                $this->createInvoice($invoiceDate, $dueDate, $status, $paidStatus, $itemCount, $overdue);
+                $customer = $currentMonth && $status !== Invoice::STATUS_DRAFT
+                    ? $this->customers[$activityCustomerIndex++ % count($this->customers)]
+                    : null;
+
+                $this->createInvoice($invoiceDate, $dueDate, $status, $paidStatus, $itemCount, $overdue, $customer);
             }
         }
     }
@@ -426,8 +439,9 @@ class RealisticDemoSeeder extends Seeder
         string $paidStatus,
         int $itemCount,
         bool $overdue,
+        ?Customer $customer = null,
     ): void {
-        $customer = $this->customers[array_rand($this->customers)];
+        $customer ??= $this->customers[array_rand($this->customers)];
         $selectedItems = collect($this->items)->random($itemCount)->all();
 
         // Compute totals from the selected line items
@@ -445,17 +459,15 @@ class RealisticDemoSeeder extends Seeder
         }
 
         // Tax is computed once off the subtotal, not per line, and then has to be
-        // carried through total, due_amount and every base_* twin. Miss due_amount
-        // and a fully paid invoice renders as part-paid.
+        // carried through total and every base_* twin.
         $taxType = $this->taxTypeForDocument($this->invoiceSequence);
         $taxAmount = $taxType ? (int) round($subTotal * $taxType->percent / 100) : 0;
 
         $total = $subTotal + $taxAmount;
-        $dueAmount = match ($paidStatus) {
-            Invoice::STATUS_PAID => 0,
-            Invoice::STATUS_PARTIALLY_PAID => (int) round($total * 0.6),  // 40% paid, 60% still due
-            default => $total,
-        };
+        // PaymentAllocationService is the source of truth for paid balances.
+        // Start with the full balance, then let it reduce the amount after each
+        // seeded payment is allocated.
+        $dueAmount = $total;
 
         $invoiceNumber = 'INV-'.str_pad((string) $this->invoiceSequence, 6, '0', STR_PAD_LEFT);
         $this->invoiceSequence++;
@@ -541,12 +553,13 @@ class RealisticDemoSeeder extends Seeder
             $this->applyDocumentTax($invoice, $taxType, $taxAmount, 'invoice_id');
         }
 
-        // Back-fill payments for PAID and PARTIALLY_PAID invoices.
+        // Back-fill payments for PAID and PARTIALLY_PAID invoices. Allocation
+        // recalculation updates their stored balance and paid status.
         if ($paidStatus === Invoice::STATUS_PAID) {
             $this->createPayment($invoice, $total, $invoiceDate->copy()->addDays(random_int(3, 25)));
         } elseif ($paidStatus === Invoice::STATUS_PARTIALLY_PAID) {
             // 40% of the total, in one payment
-            $partialAmount = $total - $dueAmount;
+            $partialAmount = (int) round($total * 0.4);
             $this->createPayment($invoice, $partialAmount, $invoiceDate->copy()->addDays(random_int(5, 20)));
         }
     }
@@ -562,7 +575,7 @@ class RealisticDemoSeeder extends Seeder
             $paymentDate = Carbon::now()->subDays(random_int(1, 7));
         }
 
-        $payment = Payment::create([
+        $payment = Payment::withoutEvents(fn () => Payment::create([
             'payment_number' => $paymentNumber,
             'payment_date' => $paymentDate->toDateString(),
             'amount' => $amount,
@@ -570,13 +583,12 @@ class RealisticDemoSeeder extends Seeder
             'exchange_rate' => 1,
             'user_id' => $this->user->id,
             'creator_id' => $this->user->id,
-            'invoice_id' => $invoice->id,
             'customer_id' => $invoice->customer_id,
             'payment_method_id' => $this->paymentMethodId,
             'currency_id' => $this->currencyId,
             'company_id' => $this->companyId,
             'notes' => null,
-        ]);
+        ]));
 
         // See seedInvoice(): the PDF routes bind on unique_hash.
         $serial = (new SerialNumberService)
@@ -590,7 +602,14 @@ class RealisticDemoSeeder extends Seeder
         $payment->unique_hash = Hashids::connection(Payment::class)->encode($payment->id);
         $payment->created_at = $paymentDate;
         $payment->updated_at = $paymentDate;
-        $payment->save();
+        Payment::withoutEvents(fn () => $payment->save());
+
+        app(PaymentAllocationService::class)->replace($payment, [[
+            'invoice_id' => $invoice->id,
+            'amount' => $amount,
+        ]]);
+
+        GeneratePaymentPdfJob::dispatch($payment);
     }
 
     private function seedEstimates(): void

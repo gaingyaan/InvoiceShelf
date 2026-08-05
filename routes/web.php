@@ -3,6 +3,7 @@
 use App\Http\Controllers\Company\Auth\LoginController;
 use App\Http\Controllers\Company\Expense\ExpensesController;
 use App\Http\Controllers\Company\Report\CustomerSalesReportController;
+use App\Http\Controllers\Company\Report\CustomerStatementReportController;
 use App\Http\Controllers\Company\Report\ExpensesReportController;
 use App\Http\Controllers\Company\Report\ItemSalesReportController;
 use App\Http\Controllers\Company\Report\ProfitLossReportController;
@@ -51,6 +52,8 @@ Route::post('/{company:slug}/customer/logout', function () {
 // ----------------------------------------------
 
 Route::middleware('auth:sanctum')->prefix('reports')->group(function () {
+
+    Route::get('/customers/{customer}/statement', CustomerStatementReportController::class);
 
     // sales report by customer
     // ----------------------------------

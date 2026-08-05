@@ -31,6 +31,9 @@ export interface Customer {
   avatar: string | number
   due_amount: number | null
   base_due_amount: number | null
+  invoice_due_amount?: number | null
+  available_credit?: number | null
+  account_balance?: number | null
   prefix: string | null
   tax_id: string | null
   billing?: Address

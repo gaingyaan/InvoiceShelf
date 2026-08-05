@@ -344,14 +344,23 @@
                         <td class="attribute-value">
                             &nbsp;{{ $payment->paymentMethod ? $payment->paymentMethod->name : '-' }}</td>
                     </tr>
-                    @if ($payment->invoice && $payment->invoice->invoice_number)
+                    @foreach ($payment->allocations as $allocation)
+                        @if ($allocation->invoice && $allocation->invoice->invoice_number)
+                            <tr>
+                                <td class="attribute-label">@lang('pdf_invoice_label')</td>
+                                <td class="attribute-value"> &nbsp;{{ $allocation->invoice->invoice_number }}</td>
+                            </tr>
+                            <tr>
+                                <td class="attribute-label">@lang('customers.applied')</td>
+                                <td class="attribute-value"> &nbsp;{!! format_money_pdf($allocation->amount, $allocation->invoice->currency) !!}</td>
+                            </tr>
+                        @endif
+                    @endforeach
+                    @php($unallocatedAmount = (int) $payment->amount - (int) $payment->allocations->sum('amount'))
+                    @if ($unallocatedAmount > 0)
                         <tr>
-                            <td class="attribute-label">@lang('pdf_invoice_label')</td>
-                            <td class="attribute-value"> &nbsp;{{ $payment->invoice->invoice_number }}</td>
-                        </tr>
-                        <tr>
-                            <td class="attribute-label">Invoice Amount</td>
-                            <td class="attribute-value"> &nbsp;{!! format_money_pdf($payment->invoice->total, $payment->invoice->currency) !!}</td>
+                            <td class="attribute-label">@lang('unapplied_credit')</td>
+                            <td class="attribute-value"> &nbsp;{!! format_money_pdf($unallocatedAmount, $payment->customer->currency) !!}</td>
                         </tr>
                     @endif
                 </table>
@@ -362,12 +371,6 @@
     <div class="total-display-box">
         <p class="total-display-label">@lang('pdf_payment_amount_received_label')</p>
         <span class="amount">{!! format_money_pdf($payment->amount, $payment->customer->currency) !!}</span>
-        @if ($payment->invoice && $payment->invoice->invoice_number)
-            <br><p class="total-display-label">Balance Due</p>
-            <span class="amount">{!! $payment->invoice->formattedDueAmount !!}</span>
-            <br><p class="total-display-label">Invoice Status</p>
-            <span class="amount">{{ str_replace('_', ' ', optional($payment->invoice)->paid_status ?? optional($payment->invoice)->status) }}</span>
-        @endif
     </div>
     <div class="notes">
         @if ($notes)

@@ -94,7 +94,11 @@ const customerColumns = computed<TableColumn[]>(() => [
     tdClass: 'font-medium text-heading',
   },
   { key: 'phone', label: t('customers.phone') },
-  { key: 'due_amount', label: t('customers.amount_due') },
+  {
+    key: 'account_balance',
+    label: t('customers.net_account_balance'),
+    sortable: false,
+  },
   {
     key: 'created_at',
     label: t('items.added_on'),
@@ -143,7 +147,7 @@ async function fetchData({ page, sort }: FetchParams): Promise<FetchResult> {
     contact_name: filters.contact_name,
     phone: filters.phone,
     orderByField: sort.fieldName || 'created_at',
-    orderBy: sort.order || 'desc',
+    orderBy: sort.order === 'asc' ? 'asc' as const : 'desc' as const,
     page,
   }
 
@@ -368,11 +372,11 @@ function removeMultipleCustomers(): void {
           </span>
         </template>
 
-        <template #cell-due_amount="{ row }">
-          <BaseFormatMoney
-            :amount="row.data.due_amount || 0"
-            :currency="row.data.currency"
-          />
+        <template #cell-account_balance="{ row }">
+          <div>
+            <BaseFormatMoney :amount="Math.abs(row.data.account_balance ?? row.data.due_amount ?? 0)" :currency="row.data.currency" />
+            <span v-if="(row.data.account_balance ?? row.data.due_amount ?? 0) < 0" class="block mt-1 text-xs font-medium text-status-green">{{ $t('customers.credit') }}</span>
+          </div>
         </template>
 
         <template #cell-created_at="{ row }">

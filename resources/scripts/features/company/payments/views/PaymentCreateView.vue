@@ -1,77 +1,34 @@
 <template>
   <BasePage class="relative payment-create">
-    <form action="" @submit.prevent="submitPaymentData">
+    <form @submit.prevent="submitPaymentData">
       <BasePageHeader :title="pageTitle" class="mb-5">
         <BaseBreadcrumb>
-          <BaseBreadcrumbItem
-            :title="$t('general.home')"
-            to="/admin/dashboard"
-          />
-          <BaseBreadcrumbItem
-            :title="$t('payments.payment', 2)"
-            to="/admin/payments"
-          />
+          <BaseBreadcrumbItem :title="$t('general.home')" to="/admin/dashboard" />
+          <BaseBreadcrumbItem :title="$t('payments.payment', 2)" to="/admin/payments" />
           <BaseBreadcrumbItem :title="pageTitle" to="#" active />
         </BaseBreadcrumb>
 
         <template #actions>
-          <BaseButton
-            :loading="isSaving"
-            :disabled="isSaving"
-            variant="primary"
-            type="submit"
-            class="hidden sm:flex"
-          >
+          <BaseButton :loading="isSaving" :disabled="isSaving" variant="primary" type="submit" class="hidden sm:flex">
             <template #left="slotProps">
-              <BaseIcon
-                v-if="!isSaving"
-                name="ArrowDownOnSquareIcon"
-                :class="slotProps.class"
-              />
+              <BaseIcon v-if="!isSaving" name="ArrowDownOnSquareIcon" :class="slotProps.class" />
             </template>
-            {{
-              isEdit
-                ? $t('payments.update_payment')
-                : $t('payments.save_payment')
-            }}
+            {{ isEdit ? $t('payments.update_payment') : $t('payments.save_payment') }}
           </BaseButton>
         </template>
       </BasePageHeader>
 
       <BaseCard>
         <BaseInputGrid>
-          <!-- Payment Date -->
-          <BaseInputGroup
-            :label="$t('payments.date')"
-            :content-loading="isLoadingContent"
-            required
-          >
-            <BaseDatePicker
-              v-model="paymentStore.currentPayment.payment_date"
-              :content-loading="isLoadingContent"
-              :calendar-button="true"
-              calendar-button-icon="calendar"
-            />
+          <BaseInputGroup :label="$t('payments.date')" :content-loading="isLoadingContent" required>
+            <BaseDatePicker v-model="paymentStore.currentPayment.payment_date" :content-loading="isLoadingContent" :calendar-button="true" calendar-button-icon="calendar" />
           </BaseInputGroup>
 
-          <!-- Payment Number -->
-          <BaseInputGroup
-            :label="$t('payments.payment_number')"
-            :content-loading="isLoadingContent"
-            required
-          >
-            <BaseInput
-              v-model="paymentStore.currentPayment.payment_number"
-              :content-loading="isLoadingContent"
-            />
+          <BaseInputGroup :label="$t('payments.payment_number')" :content-loading="isLoadingContent" required>
+            <BaseInput v-model="paymentStore.currentPayment.payment_number" :content-loading="isLoadingContent" />
           </BaseInputGroup>
 
-          <!-- Customer -->
-          <BaseInputGroup
-            :label="$t('payments.customer')"
-            :content-loading="isLoadingContent"
-            required
-          >
+          <BaseInputGroup :label="$t('payments.customer')" :content-loading="isLoadingContent" required>
             <BaseCustomerSelectInput
               v-if="!isLoadingContent"
               v-model="paymentStore.currentPayment.customer_id"
@@ -82,43 +39,17 @@
             />
           </BaseInputGroup>
 
-          <!-- Invoice -->
-          <BaseInputGroup
-            :content-loading="isLoadingContent"
-            :label="$t('payments.invoice')"
-          >
-            <BaseMultiselect
-              v-model="paymentStore.currentPayment.invoice_id"
+          <BaseInputGroup :label="$t('payments.amount')" :content-loading="isLoadingContent" required>
+            <BaseMoney
+              :key="String(paymentStore.currentPayment.currency)"
+              v-model="amount"
+              :currency="paymentStore.currentPayment.currency"
               :content-loading="isLoadingContent"
-              value-prop="id"
-              track-by="invoice_number"
-              label="invoice_number"
-              :options="invoiceList"
-              :loading="isLoadingInvoices"
-              :placeholder="$t('invoices.select_invoice')"
-              @select="onSelectInvoice"
             />
           </BaseInputGroup>
 
-          <!-- Amount -->
-          <BaseInputGroup
-            :label="$t('payments.amount')"
-            :content-loading="isLoadingContent"
-            required
-          >
-            <div class="relative w-full">
-              <BaseMoney
-                :key="String(paymentStore.currentPayment.currency)"
-                v-model="amount"
-                :currency="paymentStore.currentPayment.currency"
-                :content-loading="isLoadingContent"
-              />
-            </div>
-          </BaseInputGroup>
-
-          <!-- Exchange Rate -->
           <ExchangeRateConverter
-            :store="paymentStore"
+            :store="exchangeRateStore"
             store-prop="currentPayment"
             :v="{ exchange_rate: { $error: false, $errors: [], $touch: () => {} } }"
             :is-loading="isLoadingContent"
@@ -126,11 +57,7 @@
             :customer-currency="paymentStore.currentPayment.currency_id"
           />
 
-          <!-- Payment Mode -->
-          <BaseInputGroup
-            :content-loading="isLoadingContent"
-            :label="$t('payments.payment_mode')"
-          >
+          <BaseInputGroup :content-loading="isLoadingContent" :label="$t('payments.payment_mode')">
             <BaseMultiselect
               v-model="paymentStore.currentPayment.payment_method_id"
               :content-loading="isLoadingContent"
@@ -144,40 +71,68 @@
           </BaseInputGroup>
         </BaseInputGrid>
 
-        <!-- Notes -->
-        <div class="relative mt-6">
-          <label class="mb-4 text-sm font-medium text-heading">
-            {{ $t('estimates.notes') }}
-          </label>
+        <section class="pt-6 mt-6 border-t border-line-default">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <div>
+              <h2 class="text-base font-semibold text-heading">{{ $t('payments.allocations') }}</h2>
+              <p class="mt-1 text-sm text-muted">{{ $t('payments.allocations_description') }}</p>
+            </div>
+            <div class="flex gap-2">
+              <BaseButton type="button" size="sm" variant="primary-outline" :disabled="!invoiceList.length || !amount" @click="allocateOldestFirst">
+                {{ $t('payments.allocate_oldest_first') }}
+              </BaseButton>
+              <BaseButton type="button" size="sm" variant="primary-outline" :disabled="!paymentStore.currentPayment.customer_id" @click="addAllocation">
+                <template #left="slotProps"><BaseIcon name="PlusIcon" :class="slotProps.class" /></template>
+                {{ $t('payments.add_allocation') }}
+              </BaseButton>
+            </div>
+          </div>
 
-          <BaseCustomInput
-            v-model="paymentStore.currentPayment.notes"
-            :content-loading="isLoadingContent"
-            :fields="paymentFields"
-            class="mt-1"
-          />
+          <div v-if="!paymentStore.currentPayment.customer_id" class="p-4 text-sm rounded-lg bg-surface-secondary text-muted">
+            {{ $t('payments.select_customer_to_allocate') }}
+          </div>
+
+          <div v-else-if="!paymentStore.currentPayment.allocations.length" class="p-4 text-sm rounded-lg bg-surface-secondary text-muted">
+            {{ $t('payments.no_allocations') }}
+          </div>
+
+          <div v-else class="space-y-3">
+            <div v-for="(allocation, index) in paymentStore.currentPayment.allocations" :key="`${allocation.invoice_id}-${index}`" class="grid items-end gap-3 p-3 rounded-lg bg-surface-secondary md:grid-cols-[minmax(0,1fr)_12rem_auto]">
+              <BaseInputGroup :label="$t('payments.invoice')">
+                <BaseMultiselect
+                  v-model="allocation.invoice_id"
+                  value-prop="id"
+                  track-by="invoice_number"
+                  label="invoice_number"
+                  :options="availableInvoices(allocation.invoice_id)"
+                  :loading="isLoadingInvoices"
+                  :placeholder="$t('invoices.select_invoice')"
+                />
+              </BaseInputGroup>
+              <BaseInputGroup :label="$t('payments.amount')">
+                <BaseMoney :model-value="allocation.amount / 100" :currency="paymentStore.currentPayment.currency" @update:model-value="setAllocationAmount(index, $event)" />
+              </BaseInputGroup>
+              <div class="justify-self-end">
+                <BaseButton type="button" size="sm" variant="gray" :aria-label="$t('payments.remove_allocation')" @click="removeAllocation(index)">
+                  <BaseIcon name="TrashIcon" />
+                </BaseButton>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap justify-end gap-x-8 gap-y-2 pt-4 mt-4 text-sm border-t border-line-default">
+            <span class="text-muted">{{ $t('payments.allocated') }}: <BaseFormatMoney :amount="allocatedAmount" :currency="paymentStore.currentPayment.currency" /></span>
+            <span :class="unallocatedAmount < 0 ? 'text-status-red' : 'text-heading'">{{ $t('payments.unapplied_credit') }}: <BaseFormatMoney :amount="Math.max(unallocatedAmount, 0)" :currency="paymentStore.currentPayment.currency" /></span>
+          </div>
+        </section>
+
+        <div class="relative mt-6">
+          <label class="mb-4 text-sm font-medium text-heading">{{ $t('estimates.notes') }}</label>
+          <BaseCustomInput v-model="paymentStore.currentPayment.notes" :content-loading="isLoadingContent" :fields="paymentFields" class="mt-1" />
         </div>
 
-        <!-- Mobile Save Button -->
-        <BaseButton
-          :loading="isSaving"
-          :content-loading="isLoadingContent"
-          variant="primary"
-          type="submit"
-          class="flex justify-center w-full mt-4 sm:hidden md:hidden"
-        >
-          <template #left="slotProps">
-            <BaseIcon
-              v-if="!isSaving"
-              name="ArrowDownOnSquareIcon"
-              :class="slotProps.class"
-            />
-          </template>
-          {{
-            isEdit
-              ? $t('payments.update_payment')
-              : $t('payments.save_payment')
-          }}
+        <BaseButton :loading="isSaving" :content-loading="isLoadingContent" variant="primary" type="submit" class="flex justify-center w-full mt-4 sm:hidden">
+          {{ isEdit ? $t('payments.update_payment') : $t('payments.save_payment') }}
         </BaseButton>
       </BaseCard>
     </form>
@@ -185,17 +140,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watchEffect, onBeforeUnmount } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import cloneDeep from 'lodash/cloneDeep'
 import { usePaymentStore } from '../store'
 import { useCompanyStore } from '../../../../stores/company.store'
 import { useNotificationStore } from '../../../../stores/notification.store'
-import {
-  handleApiError,
-  getErrorTranslationKey,
-} from '../../../../utils/error-handling'
+import { handleApiError, getErrorTranslationKey } from '../../../../utils/error-handling'
 import { invoiceService } from '../../../../api/services/invoice.service'
 import { customerService } from '../../../../api/services/customer.service'
 import { ExchangeRateConverter } from '../../../shared/document-form'
@@ -205,126 +156,73 @@ const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
 const paymentStore = usePaymentStore()
+const exchangeRateStore = paymentStore as unknown as Record<string, unknown> & { showExchangeRate: boolean }
 const companyStore = useCompanyStore()
 const notificationStore = useNotificationStore()
 
-const isSaving = ref<boolean>(false)
-const isLoadingInvoices = ref<boolean>(false)
+const isSaving = ref(false)
+const isLoadingInvoices = ref(false)
 const invoiceList = ref<Invoice[]>([])
-const selectedInvoice = ref<Invoice | null>(null)
-
-const paymentFields = ref<string[]>([
-  'customer',
-  'company',
-  'customerCustom',
-  'payment',
-  'paymentCustom',
-])
+const paymentFields = ref(['customer', 'company', 'customerCustom', 'payment', 'paymentCustom'])
 
 const amount = computed<number>({
   get: () => paymentStore.currentPayment.amount / 100,
-  set: (value: number) => {
-    paymentStore.currentPayment.amount = Math.round(value * 100)
-  },
+  set: (value) => { paymentStore.currentPayment.amount = Math.round(value * 100) },
 })
 
-const isLoadingContent = computed<boolean>(
-  () => paymentStore.isFetchingInitialData,
-)
+const allocatedAmount = computed(() => paymentStore.currentPayment.allocations.reduce((total, allocation) => total + allocation.amount, 0))
+const unallocatedAmount = computed(() => paymentStore.currentPayment.amount - allocatedAmount.value)
+const isLoadingContent = computed(() => paymentStore.isFetchingInitialData)
+const isEdit = computed(() => route.name === 'payments.edit')
+const pageTitle = computed(() => isEdit.value ? t('payments.edit_payment') : t('payments.new_payment'))
 
-const isEdit = computed<boolean>(() => route.name === 'payments.edit')
-
-const pageTitle = computed<string>(() => {
-  return isEdit.value ? t('payments.edit_payment') : t('payments.new_payment')
-})
-
-// Reset state on create
 paymentStore.resetCurrentPayment()
 
-if (route.query.customer) {
-  paymentStore.currentPayment.customer_id = Number(route.query.customer)
-}
+if (route.query.customer) paymentStore.currentPayment.customer_id = Number(route.query.customer)
 
 paymentStore.fetchPaymentInitialData(
   isEdit.value,
-  { id: isEdit.value ? (route.params.id as string) : undefined },
+  { id: isEdit.value ? String(route.params.id) : undefined },
   companyStore.selectedCompanyCurrency ?? undefined,
 )
 
-// Create-from-invoice: pre-select the invoice and its customer
-if (route.params.id && !isEdit.value) {
-  setInvoiceFromUrl()
-}
+if (route.params.id && !isEdit.value) void setInvoiceFromUrl()
+
+watch(
+  () => paymentStore.currentPayment.customer_id,
+  (customerId, previousCustomerId) => {
+    if (!customerId) return
+    if (previousCustomerId && customerId !== previousCustomerId) paymentStore.currentPayment.allocations = []
+    void onCustomerChange(customerId)
+  },
+  { immediate: true },
+)
 
 async function setInvoiceFromUrl(): Promise<void> {
   try {
-    const response = await invoiceService.get(Number(route.params.id))
-    const invoice = response.data
-    paymentStore.currentPayment.customer_id = invoice.customer_id ?? (invoice.customer as Record<string, unknown>)?.id as number
-    paymentStore.currentPayment.invoice_id = invoice.id
+    const invoice = (await invoiceService.get(Number(route.params.id))).data
+    paymentStore.currentPayment.customer_id = invoice.customer_id
+    paymentStore.currentPayment.allocations = [{ invoice_id: invoice.id, amount: invoice.due_amount }]
+    if (paymentStore.currentPayment.amount === 0) paymentStore.currentPayment.amount = invoice.due_amount
   } catch {
-    // Invoice not found
+    // The normal form remains usable if the originating invoice no longer exists.
   }
 }
 
-// Reactively fetch invoices whenever customer_id changes
-// Handles: edit data load, manual selection, create-from-invoice
-watchEffect(() => {
-  if (paymentStore.currentPayment.customer_id) {
-    onCustomerChange(paymentStore.currentPayment.customer_id)
-  }
-})
-
 async function onCustomerChange(customerId: number): Promise<void> {
-  const params: Record<string, unknown> = {
-    customer_id: customerId,
-    status: isEdit.value ? '' : 'DUE',
-    limit: 'all',
-  }
-
   isLoadingInvoices.value = true
   try {
     const [invoiceResponse, customerResponse] = await Promise.all([
-      invoiceService.list(params as never),
+      invoiceService.list({ customer_id: customerId, limit: 'all' } as never),
       customerService.get(customerId),
     ])
-
     invoiceList.value = [...(invoiceResponse.data as unknown as Invoice[])]
-
-    // Set currency from customer
-    if (customerResponse.data) {
-      const customer = customerResponse.data
-      paymentStore.currentPayment.customer = customer
-      paymentStore.currentPayment.selectedCustomer = customer
-      if (customer.currency) {
-        paymentStore.currentPayment.currency = customer.currency
-        paymentStore.currentPayment.currency_id = customer.currency.id
-      }
-    }
-
-    if (paymentStore.currentPayment.invoice_id) {
-      selectedInvoice.value =
-        invoiceList.value.find(
-          (inv) => inv.id === paymentStore.currentPayment.invoice_id,
-        ) ?? null
-
-      if (selectedInvoice.value) {
-        paymentStore.currentPayment.maxPayableAmount =
-          selectedInvoice.value.due_amount +
-          paymentStore.currentPayment.amount
-
-        if (amount.value === 0) {
-          amount.value = selectedInvoice.value.due_amount / 100
-        }
-      }
-    }
-
-    if (isEdit.value) {
-      invoiceList.value = invoiceList.value.filter(
-        (v) =>
-          v.due_amount > 0 ||
-          v.id === paymentStore.currentPayment.invoice_id,
-      )
+    const customer = customerResponse.data
+    paymentStore.currentPayment.customer = customer
+    paymentStore.currentPayment.selectedCustomer = customer
+    if (customer.currency) {
+      paymentStore.currentPayment.currency = customer.currency
+      paymentStore.currentPayment.currency_id = customer.currency.id
     }
   } catch {
     invoiceList.value = []
@@ -333,59 +231,87 @@ async function onCustomerChange(customerId: number): Promise<void> {
   }
 }
 
-function onManualCustomerSelect(): void {
-  const params: Record<string, unknown> = {
-    userId: paymentStore.currentPayment.customer_id,
-  }
-  if (route.params.id) {
-    params.model_id = route.params.id
-  }
-
-  paymentStore.currentPayment.invoice_id = null
-  selectedInvoice.value = null
-  paymentStore.currentPayment.amount = 0
-  paymentStore.getNextNumber(params, true)
+function availableInvoices(selectedInvoiceId: number): Invoice[] {
+  const chosenInvoiceIds = paymentStore.currentPayment.allocations
+    .map(({ invoice_id }) => invoice_id)
+    .filter((id) => id !== selectedInvoiceId)
+  return invoiceList.value
+    .filter((invoice) => isEligibleInvoice(invoice) || invoice.id === selectedInvoiceId)
+    .filter((invoice) => !chosenInvoiceIds.includes(invoice.id))
 }
 
-function onSelectInvoice(id: number): void {
-  if (id) {
-    selectedInvoice.value =
-      invoiceList.value.find((inv) => inv.id === id) ?? null
-    if (selectedInvoice.value) {
-      amount.value = selectedInvoice.value.due_amount / 100
-      paymentStore.currentPayment.maxPayableAmount =
-        selectedInvoice.value.due_amount
-    }
+function isEligibleInvoice(invoice: Invoice): boolean {
+  return invoice.type === 'INVOICE' && invoice.status !== 'DRAFT' && invoice.due_amount > 0
+}
+
+function onManualCustomerSelect(): void {
+  paymentStore.currentPayment.allocations = []
+  paymentStore.currentPayment.amount = 0
+  const params: Record<string, unknown> = { userId: paymentStore.currentPayment.customer_id }
+  if (route.params.id) params.model_id = route.params.id
+  void paymentStore.getNextNumber(params, true)
+}
+
+function addAllocation(): void {
+  const firstInvoice = availableInvoices(0)[0]
+  if (firstInvoice) paymentStore.currentPayment.allocations.push({ invoice_id: firstInvoice.id, amount: 0 })
+}
+
+function removeAllocation(index: number): void {
+  paymentStore.currentPayment.allocations.splice(index, 1)
+}
+
+function setAllocationAmount(index: number, value: number): void {
+  const allocation = paymentStore.currentPayment.allocations[index]
+  if (allocation) allocation.amount = Math.round(value * 100)
+}
+
+function allocateOldestFirst(): void {
+  let remaining = paymentStore.currentPayment.amount
+  const allocations: Array<{ invoice_id: number; amount: number }> = []
+  for (const invoice of [...invoiceList.value]
+    .filter(isEligibleInvoice)
+    .sort((a, b) => (a.due_date ?? '9999-12-31').localeCompare(b.due_date ?? '9999-12-31') || a.id - b.id)) {
+    if (remaining <= 0) break
+    const allocated = Math.min(remaining, invoice.due_amount)
+    allocations.push({ invoice_id: invoice.id, amount: allocated })
+    remaining -= allocated
   }
+  paymentStore.currentPayment.allocations = allocations
 }
 
 async function submitPaymentData(): Promise<void> {
-  isSaving.value = true
+  if (unallocatedAmount.value < 0) {
+    notificationStore.showNotification({ type: 'error', message: t('payments.allocation_exceeds_amount') })
+    return
+  }
 
+  isSaving.value = true
+  const current = paymentStore.currentPayment
   const data = {
-    ...cloneDeep(paymentStore.currentPayment),
+    ...(isEdit.value ? { id: current.id } : {}),
+    payment_date: current.payment_date,
+    payment_number: current.payment_number,
+    customer_id: current.customer_id,
+    amount: current.amount,
+    payment_method_id: current.payment_method_id,
+    notes: current.notes,
+    currency_id: current.currency_id,
+    exchange_rate: current.exchange_rate,
+    customFields: current.customFields,
+    fields: current.fields,
+    allocations: current.allocations.filter(({ invoice_id, amount }) => invoice_id && amount > 0),
   }
 
   try {
-    const action = isEdit.value
-      ? paymentStore.updatePayment
-      : paymentStore.addPayment
-
-    const response = await action(data)
-    router.push(`/admin/payments/${response.data.data.id}/view`)
-  } catch (err) {
-    // Surface the failure instead of stalling silently. The server now caps
-    // the amount at the invoice's remaining balance, so a rejected save has
-    // a message worth showing.
-    isSaving.value = false
-
-    const normalized = handleApiError(err)
+    const response = await (isEdit.value ? paymentStore.updatePayment(data) : paymentStore.addPayment(data))
+    await router.push(`/admin/payments/${response.data.data.id}/view`)
+  } catch (error) {
+    const normalized = handleApiError(error)
     const translationKey = getErrorTranslationKey(normalized.message)
-
-    notificationStore.showNotification({
-      type: 'error',
-      message: translationKey ? t(translationKey) : normalized.message,
-    })
+    notificationStore.showNotification({ type: 'error', message: translationKey ? t(translationKey) : normalized.message })
+  } finally {
+    isSaving.value = false
   }
 }
 

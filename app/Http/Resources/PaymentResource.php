@@ -14,6 +14,15 @@ class PaymentResource extends JsonResource
      */
     public function toArray($request): array
     {
+        $allocations = $this->relationLoaded('allocations')
+            ? $this->allocations
+            : $this->allocations()->with('invoice')->get();
+        $allocatedAmount = (int) $allocations->sum('amount');
+        $baseAllocatedAmount = (int) $allocations->sum('base_amount');
+        $baseAmount = $this->base_amount === null
+            ? (int) round($this->amount * ($this->exchange_rate ?: 1))
+            : (int) $this->base_amount;
+
         return [
             'id' => $this->id,
             'payment_number' => $this->payment_number,
@@ -21,13 +30,23 @@ class PaymentResource extends JsonResource
             'notes' => $this->getNotes(),
             'amount' => $this->amount,
             'unique_hash' => $this->unique_hash,
-            'invoice_id' => $this->invoice_id,
             'company_id' => $this->company_id,
             'payment_method_id' => $this->payment_method_id,
             'creator_id' => $this->creator_id,
             'customer_id' => $this->customer_id,
             'exchange_rate' => $this->exchange_rate,
-            'base_amount' => $this->base_amount,
+            'base_amount' => $baseAmount,
+            'allocations' => $allocations->map(fn ($allocation) => [
+                'id' => $allocation->id,
+                'invoice_id' => $allocation->invoice_id,
+                'amount' => $allocation->amount,
+                'base_amount' => $allocation->base_amount,
+                'invoice' => $allocation->invoice ? new InvoiceResource($allocation->invoice) : null,
+            ]),
+            'allocated_amount' => $allocatedAmount,
+            'unallocated_amount' => (int) ((int) $this->amount - $allocatedAmount),
+            'base_allocated_amount' => $baseAllocatedAmount,
+            'base_unallocated_amount' => (int) ($baseAmount - $baseAllocatedAmount),
             'currency_id' => $this->currency_id,
             'transaction_id' => $this->transaction_id,
             'sequence_number' => $this->sequence_number,
@@ -36,9 +55,6 @@ class PaymentResource extends JsonResource
             'payment_pdf_url' => $this->paymentPdfUrl,
             'customer' => $this->when($this->customer()->exists(), function () {
                 return new CustomerResource($this->customer);
-            }),
-            'invoice' => $this->when($this->invoice()->exists(), function () {
-                return new InvoiceResource($this->invoice);
             }),
             'payment_method' => $this->when($this->paymentMethod()->exists(), function () {
                 return new PaymentMethodResource($this->paymentMethod);

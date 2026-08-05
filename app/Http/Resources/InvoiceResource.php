@@ -120,6 +120,24 @@ class InvoiceResource extends JsonResource
                     return (object) $quantities;
                 }
             ),
+            // Allocation rows explain how this invoice was settled without
+            // reintroducing the removed singular payment.invoice relation.
+            // They are loaded for the detail response only, so index listings
+            // remain free of per-row payment queries.
+            'payment_allocations' => $this->when(
+                $this->relationLoaded('allocations'),
+                fn () => $this->allocations->map(fn ($allocation) => [
+                    'id' => $allocation->id,
+                    'payment_id' => $allocation->payment_id,
+                    'amount' => $allocation->amount,
+                    'base_amount' => $allocation->base_amount,
+                    'payment' => $allocation->relationLoaded('payment') && $allocation->payment ? [
+                        'id' => $allocation->payment->id,
+                        'payment_number' => $allocation->payment->payment_number,
+                        'formatted_payment_date' => $allocation->payment->formattedPaymentDate,
+                    ] : null,
+                ])->values()
+            ),
             'items' => $this->when($this->items()->exists(), function () {
                 return InvoiceItemResource::collection($this->items);
             }),

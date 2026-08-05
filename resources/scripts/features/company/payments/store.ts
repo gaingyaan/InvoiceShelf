@@ -27,14 +27,13 @@ export interface PaymentFormData {
   customer_id: number | null
   customer: Customer | null
   selectedCustomer: Customer | null
-  invoice_id: number | null
+  allocations: Array<{ invoice_id: number; amount: number }>
   amount: number
   payment_method_id: number | null
   notes: string | null
   currency: Currency | Record<string, unknown> | null
   currency_id: number | null
   exchange_rate: number | null
-  maxPayableAmount: number
   selectedNote: Note | null
   customFields: CustomFieldValue[]
   fields: CustomFieldValue[]
@@ -49,14 +48,13 @@ function createPaymentStub(): PaymentFormData {
     customer_id: null,
     customer: null,
     selectedCustomer: null,
-    invoice_id: null,
+    allocations: [],
     amount: 0,
     payment_method_id: null,
     notes: '',
     currency: null,
     currency_id: null,
     exchange_rate: null,
-    maxPayableAmount: Number.MAX_SAFE_INTEGER,
     selectedNote: null,
     customFields: [],
     fields: [],
@@ -298,11 +296,9 @@ export const usePaymentStore = defineStore('payment', {
 
         if (isEdit) {
           const paymentRes = editRes as { data: { data: Payment } } | undefined
-          if (paymentRes?.data?.data?.invoice) {
-            this.currentPayment.maxPayableAmount = parseInt(
-              String(paymentRes.data.data.invoice.due_amount),
-            )
-          }
+          this.currentPayment.allocations = paymentRes?.data?.data?.allocations?.map(
+            ({ invoice_id, amount }) => ({ invoice_id, amount }),
+          ) ?? []
         } else if (!isEdit && nextNumRes) {
           const now = new Date()
           this.currentPayment.payment_date = formatDate(now)

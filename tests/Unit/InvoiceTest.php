@@ -3,6 +3,7 @@
 use App\Http\Requests\InvoicesRequest;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
+use App\Models\Payment;
 use App\Models\Tax;
 use App\Services\Document\DocumentItemService;
 use App\Services\Document\InvoiceService;
@@ -30,9 +31,21 @@ test('invoice has many taxes', function () {
 });
 
 test('invoice has many payments', function () {
-    $invoice = Invoice::factory()->hasPayments(5)->create();
+    $invoice = Invoice::factory()->create();
+    $payments = Payment::factory()->count(5)->create([
+        'company_id' => $invoice->company_id,
+        'customer_id' => $invoice->customer_id,
+        'currency_id' => $invoice->currency_id,
+    ]);
 
-    $this->assertCount(5, $invoice->payments);
+    foreach ($payments as $payment) {
+        $invoice->payments()->attach($payment->id, [
+            'amount' => $payment->amount,
+            'base_amount' => $payment->base_amount,
+        ]);
+    }
+
+    $this->assertCount(5, $invoice->fresh()->payments);
 
     $this->assertTrue($invoice->payments()->exists());
 });

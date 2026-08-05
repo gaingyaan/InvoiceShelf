@@ -24,7 +24,9 @@ use App\Http\Controllers\Company\Auth\ForgotPasswordController;
 use App\Http\Controllers\Company\Auth\InvitationRegistrationController;
 use App\Http\Controllers\Company\Auth\ResetPasswordController;
 use App\Http\Controllers\Company\Customer\CustomersController;
+use App\Http\Controllers\Company\Customer\CustomerStatementController;
 use App\Http\Controllers\Company\Customer\CustomerStatsController;
+use App\Http\Controllers\Company\Customer\SendCustomerStatementController;
 use App\Http\Controllers\Company\CustomField\CustomFieldsController;
 use App\Http\Controllers\Company\Dashboard\DashboardController;
 use App\Http\Controllers\Company\Estimate\EstimatesController;
@@ -46,6 +48,7 @@ use App\Http\Controllers\Company\Item\UnitsController;
 use App\Http\Controllers\Company\Members\MembersController;
 use App\Http\Controllers\Company\Modules\CompanyModulesController;
 use App\Http\Controllers\Company\Modules\ModuleSettingsController;
+use App\Http\Controllers\Company\Payment\CreditAllocationsController;
 use App\Http\Controllers\Company\Payment\PaymentMethodsController;
 use App\Http\Controllers\Company\Payment\PaymentsController;
 use App\Http\Controllers\Company\RecurringInvoice\RecurringInvoiceController;
@@ -259,6 +262,10 @@ Route::prefix('/v1')->group(function () {
 
             Route::get('customers/{customer}/stats', CustomerStatsController::class);
 
+            Route::get('customers/{customer}/statement', CustomerStatementController::class);
+            Route::post('customers/{customer}/statement/send', SendCustomerStatementController::class);
+            Route::post('customers/{customer}/credit-allocations', [CreditAllocationsController::class, 'store']);
+
             Route::resource('customers', CustomersController::class);
 
             // Items
@@ -338,6 +345,8 @@ Route::prefix('/v1')->group(function () {
             Route::get('/payments/{payment}/send/preview', [PaymentsController::class, 'sendPreview']);
 
             Route::post('/payments/{payment}/send', [PaymentsController::class, 'send']);
+
+            Route::put('/payments/{payment}/allocations', [PaymentsController::class, 'replaceAllocations']);
 
             Route::post('/payments/delete', [PaymentsController::class, 'delete']);
 
