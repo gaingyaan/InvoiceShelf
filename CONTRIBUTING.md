@@ -4,7 +4,7 @@ Thank you for your interest in contributing to InvoiceShelf! We welcome contribu
 
 ## How to Contribute
 
-1. **Fork the repository** and create a new branch from `master`
+1. **Fork the repository** and create a new branch from `3.x`
 2. **Make your changes** — follow the existing code style and conventions
 3. **Write tests** if applicable
 4. **Run the test suite** to ensure nothing is broken

@@ -37,7 +37,7 @@ dist-gen: clean composer npm-build
 	@cp -r composer.json                    InvoiceShelf
 	@cp -r composer.lock                    InvoiceShelf
 	@cp -r LICENSE                          InvoiceShelf
-	@cp -r readme.md                        InvoiceShelf
+	@cp -r README.md                        InvoiceShelf
 	@cp -r SECURITY.md                      InvoiceShelf
 	@touch InvoiceShelf/storage/logs/laravel.log
 
