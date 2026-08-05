@@ -16,13 +16,13 @@
     <meta name="theme-color" content="#ffffff">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <!-- Module Styles -->
+    @vite('resources/scripts/main.ts')
+
+    <!-- Module Styles (after the host bundle so Tailwind's layer order is established first) -->
     @foreach(\InvoiceShelf\Modules\Registry::allStyles() as $name => $path)
         @php($version = \App\Platform\Modules\Runtime\ModuleAssetVersion::forPath($path))
         <link rel="stylesheet" href="/modules/styles/{{ $name }}@if($version)?v={{ $version }}@endif">
     @endforeach
-
-    @vite('resources/scripts/main.ts')
 
     <script>
         (function() {

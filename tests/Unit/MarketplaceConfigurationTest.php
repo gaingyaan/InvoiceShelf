@@ -3,6 +3,10 @@
 const OFFICIAL_MARKETPLACE_KEY_ID = 'official-modules-2026-01';
 const OFFICIAL_MARKETPLACE_PUBLIC_KEY = 'sIDGuOAaMVzPv9I/GPbWp9ci5aUI5HcM5rZ0tKxW6dc=';
 
+test('marketplace configuration advertises module API 1.2 by default', function () {
+    expect(marketplaceConfigFor(null)['module_api_version'])->toBe('1.2.0');
+});
+
 test('marketplace configuration includes the official signing key by default', function () {
     expect(marketplacePublicKeysConfigFor(null))
         ->toBe([OFFICIAL_MARKETPLACE_KEY_ID => OFFICIAL_MARKETPLACE_PUBLIC_KEY]);
@@ -21,6 +25,11 @@ test('marketplace public-key configuration adds and rotates trusted keys', funct
 });
 
 function marketplacePublicKeysConfigFor(?string $override): array
+{
+    return marketplaceConfigFor($override)['public_keys'];
+}
+
+function marketplaceConfigFor(?string $override): array
 {
     $previous = getenv('MARKETPLACE_PUBLIC_KEYS');
 
@@ -44,5 +53,5 @@ function marketplacePublicKeysConfigFor(?string $override): array
         $_SERVER['MARKETPLACE_PUBLIC_KEYS'] = $previous;
     }
 
-    return $configuration['marketplace']['public_keys'];
+    return $configuration['marketplace'];
 }

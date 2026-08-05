@@ -81,7 +81,12 @@ test('the application shell content-versions local module asset URLs', function 
     Registry::registerStyle('layout-probe', $stylePath);
 
     $html = view('app')->render();
+    $layout = File::get(resource_path('views/app.blade.php'));
+    $hostAssetPosition = strpos($layout, "@vite('resources/scripts/main.ts')");
+    $moduleStylePosition = strpos($layout, 'Registry::allStyles()');
 
     expect($html)->toContain('/modules/scripts/layout-probe?v='.ModuleAssetVersion::forPath($scriptPath))
-        ->toContain('/modules/styles/layout-probe?v='.ModuleAssetVersion::forPath($stylePath));
+        ->toContain('/modules/styles/layout-probe?v='.ModuleAssetVersion::forPath($stylePath))
+        ->and($hostAssetPosition)->not->toBeFalse()
+        ->and($moduleStylePosition)->toBeGreaterThan($hostAssetPosition);
 });

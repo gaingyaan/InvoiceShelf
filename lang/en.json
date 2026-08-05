@@ -1000,57 +1000,13 @@
       "address_information": "Address Information",
       "pdf_generation": "PDF Generation",
       "appearance": "Appearance",
-      "module_configuration": "Module Configuration",
-      "ai_configuration": "AI Configuration"
+      "module_configuration": "Module Configuration"
     },
     "appearance": {
       "title": "Appearance",
       "description": "Customize how the application looks and feels.",
       "sidebar_group_labels": "Show sidebar group labels",
       "sidebar_group_labels_desc": "Display section headers like Documents, Administration, and Modules in the sidebar navigation."
-    },
-    "ai": {
-      "title": "AI Configuration",
-      "description": "Configure the AI provider used for chat assistance and text generation. AI is opt-in — leave disabled if you don't want these features.",
-      "openrouter": "OpenRouter",
-      "enable": "Enable AI features",
-      "enable_help": "When disabled, the AI chat drawer and WYSIWYG text-generation button are hidden everywhere in the app.",
-      "driver": "AI Provider",
-      "api_key": "API Key",
-      "api_key_help": "Your API key is encrypted before being stored.",
-      "base_url": "Base URL",
-      "base_url_help": "Leave blank to use the provider's default endpoint.",
-      "roles": "AI Roles",
-      "roles_help": "Pick which AI capabilities are available. Each role uses a specific model.",
-      "chat": "Chat Assistant",
-      "chat_help": "Natural-language Q&A over your company's data via tool-calling.",
-      "chat_model": "Chat model",
-      "text_generation": "Text Generation",
-      "text_generation_help": "One-shot text generation for invoice notes and email bodies.",
-      "text_generation_model": "Text generation model",
-      "suggested_models": "Suggested models",
-      "test_connection": "Test Connection",
-      "test_success": "Connection successful.",
-      "test_failed": "Connection test failed: {error}",
-      "saved": "AI configuration saved successfully.",
-      "use_custom_ai_config": "Use custom AI configuration",
-      "use_custom_ai_config_desc": "Enable this to override the global AI configuration for this company.",
-      "using_global_ai_config": "This company is using the global AI configuration. Enable the toggle above to configure a custom provider.",
-      "company_enabled": "AI enabled for this company",
-      "company_enabled_desc": "Turn off to disable all AI features for this company regardless of the global setting.",
-      "installer_title": "AI Assistant",
-      "installer_description": "Optionally enable AI chat and text generation now. You can change this later in Admin → Settings → AI Configuration.",
-      "errors": {
-        "invalid_key": "The API key is invalid.",
-        "rate_limited": "The provider rate limit was hit. Please try again shortly.",
-        "server_error": "The AI provider returned an error. Check your configuration and try again.",
-        "model_not_found": "The requested model is not available on this provider.",
-        "missing_api_key": "An API key is required to test the connection.",
-        "ai_disabled": "AI is not enabled for this company.",
-        "chat_disabled": "The chat assistant is not enabled for this company.",
-        "text_generation_disabled": "Text generation is not enabled for this company.",
-        "missing_model": "No model is configured."
-      }
     },
     "address_information": {
       "section_description": "  You can update Your Address information using form below."
@@ -2038,31 +1994,6 @@
       "impersonate_confirm": "You are about to impersonate {name}. You will be logged in as this user with a temporary session that expires in 2 hours. This action is logged.",
       "impersonating_banner": "You are currently impersonating a user. All actions are logged.",
       "stop_impersonating": "Stop Impersonating"
-    }
-  },
-  "ai": {
-    "chat": {
-      "title": "AI Assistant",
-      "new_conversation": "New conversation",
-      "no_conversations": "No conversations yet.",
-      "untitled": "Untitled",
-      "empty_state": "Ask me anything about your invoices, customers, payments, or expenses.",
-      "thinking": "Thinking…",
-      "send": "Send",
-      "sending": "Sending…",
-      "input_placeholder": "Ask about your invoices, customers, or payments…"
-    },
-    "generate": {
-      "title": "AI Text Generation",
-      "prompt_label": "What should the AI write?",
-      "prompt_placeholder": "e.g. a polite late-payment reminder for an invoice that's 10 days overdue",
-      "use_current_as_context": "Use current content as context",
-      "use_context_help": "When enabled, the AI will see the editor's current text and can rewrite or extend it.",
-      "preview": "Preview",
-      "generate": "Generate",
-      "regenerate": "Regenerate",
-      "insert": "Insert",
-      "replace": "Replace"
     }
   }
 }

@@ -9,7 +9,6 @@ use App\Domains\Accounts\Models\Company;
 use App\Domains\Accounts\Models\CompanyInvitation;
 use App\Domains\Accounts\Models\CompanySetting;
 use App\Domains\Money\Models\Currency;
-use App\Platform\Ai\Application\AiConfigurationService;
 use App\Platform\Http\Controller;
 use App\Platform\Modules\Models\Module;
 use App\Platform\Operations\Http\Concerns\GeneratesMenu;
@@ -121,8 +120,6 @@ class BootstrapController extends Controller
 
         BouncerFacade::refreshFor($current_user);
 
-        $aiResolved = app(AiConfigurationService::class)->resolveForCompany($current_company->id);
-
         return response()->json([
             'current_user' => new UserResource($current_user),
             'current_user_settings' => $current_user_settings,
@@ -133,11 +130,6 @@ class BootstrapController extends Controller
             'current_company_currency' => $current_company_currency,
             'config' => config('invoiceshelf'),
             'global_settings' => $global_settings,
-            'ai' => [
-                'enabled' => $aiResolved !== null,
-                'chat_enabled' => (bool) ($aiResolved['chat_enabled'] ?? false),
-                'text_generation_enabled' => (bool) ($aiResolved['text_generation_enabled'] ?? false),
-            ],
             'main_menu' => $main_menu,
             'setting_menu' => $setting_menu,
             'modules' => Module::where('enabled', true)->pluck('name'),

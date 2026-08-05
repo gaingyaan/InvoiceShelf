@@ -9,7 +9,6 @@ const AdminUsersView = () => import('./views/AdminUsersView.vue')
 const AdminUserEditView = () => import('./views/AdminUserEditView.vue')
 const AdminSettingsView = () => import('./views/AdminSettingsView.vue')
 const AdminMailConfigView = () => import('./views/settings/AdminMailConfigView.vue')
-const AdminAiConfigView = () => import('./views/settings/AdminAiConfigView.vue')
 const AdminPdfGenerationView = () => import('./views/settings/AdminPdfGenerationView.vue')
 const AdminBackupView = () => import('./views/settings/AdminBackupView.vue')
 const AdminFileDiskView = () => import('./views/settings/AdminFileDiskView.vue')
@@ -87,14 +86,6 @@ export const adminRoutes: RouteRecordRaw[] = [
               isSuperAdmin: true,
             },
             component: AdminMailConfigView,
-          },
-          {
-            path: 'ai-configuration',
-            name: 'admin.settings.ai',
-            meta: {
-              isSuperAdmin: true,
-            },
-            component: AdminAiConfigView,
           },
           {
             path: 'pdf-generation',

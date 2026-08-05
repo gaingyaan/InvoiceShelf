@@ -34,8 +34,6 @@ use App\Domains\Sales\Models\InvoiceItem;
 use App\Domains\Sales\Models\RecurringInvoice;
 use App\Domains\Taxation\Models\Tax;
 use App\Domains\Taxation\Models\TaxType;
-use App\Platform\Ai\Models\AiConversation;
-use App\Platform\Ai\Models\AiMessage;
 use App\Platform\Mail\Models\EmailLog;
 use App\Platform\Modules\Models\MarketplaceCredential;
 use App\Platform\Modules\Models\MarketplaceOperation;
@@ -70,8 +68,6 @@ final class ModelIdentityMap
     {
         return [
             'address' => Address::class,
-            'ai_conversation' => AiConversation::class,
-            'ai_message' => AiMessage::class,
             'company' => Company::class,
             'company_invitation' => CompanyInvitation::class,
             'company_setting' => CompanySetting::class,

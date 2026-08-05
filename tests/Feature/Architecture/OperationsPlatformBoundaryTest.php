@@ -115,10 +115,8 @@ test('the operations platform preserves its public routes and middleware', funct
 
 test('the operations platform owns installation routes and middleware', function () {
     $routes = collect(Route::getRoutes()->getRoutes())
-        ->filter(fn ($route): bool => (
-            str_starts_with($route->uri(), 'api/v1/installation/')
-            && ! str_starts_with($route->uri(), 'api/v1/installation/ai/')
-        ) || str_starts_with($route->uri(), 'installation'))
+        ->filter(fn ($route): bool => str_starts_with($route->uri(), 'api/v1/installation/')
+            || str_starts_with($route->uri(), 'installation'))
         ->keyBy(fn ($route): string => implode('|', $route->methods()).' '.$route->uri());
 
     expect($routes->keys()->sort()->values()->all())->toBe(collect([

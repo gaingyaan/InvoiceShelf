@@ -29,11 +29,6 @@ export interface BootstrapResponse {
   config: Record<string, unknown>
   global_settings: Record<string, string>
   modules: string[]
-  ai?: {
-    enabled: boolean
-    chat_enabled: boolean
-    text_generation_enabled: boolean
-  }
   user_menu?: Array<{ title: string; link: string; icon: string; priority: number; name: string }>
   admin_mode?: boolean
   pending_invitations?: Array<{

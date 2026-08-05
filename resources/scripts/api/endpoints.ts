@@ -116,25 +116,6 @@ export const API = {
   COMPANY_MAIL_CONFIG: '/api/v1/company/mail/company-config',
   COMPANY_MAIL_TEST: '/api/v1/company/mail/company-test',
 
-  // AI Configuration (global)
-  AI_DRIVERS: '/api/v1/ai/drivers',
-  AI_CONFIG: '/api/v1/ai/config',
-  AI_TEST: '/api/v1/ai/test',
-
-  // Company AI Configuration
-  COMPANY_AI_CONFIG: '/api/v1/company/ai/config',
-  COMPANY_AI_TEST: '/api/v1/company/ai/test',
-
-  // Installer AI Configuration
-  INSTALLATION_AI_CONFIG: '/api/v1/installation/ai/config',
-
-  // AI Chat (Phase 2)
-  AI_CHAT: '/api/v1/ai/chat',
-  AI_CONVERSATIONS: '/api/v1/ai/conversations',
-
-  // AI Text Generation (Phase 3)
-  AI_GENERATE: '/api/v1/ai/generate',
-
   // PDF Configuration
   PDF_DRIVERS: '/api/v1/pdf/drivers',
   PDF_CONFIG: '/api/v1/pdf/config',

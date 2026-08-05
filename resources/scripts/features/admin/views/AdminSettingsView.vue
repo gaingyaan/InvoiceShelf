@@ -54,6 +54,7 @@
 import { ref, computed, watchEffect } from 'vue'
 import { useRoute, useRouter, RouterView } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { extensionItems, extensionRegistry } from '@/scripts/extensions/runtime'
 
 interface SettingsMenuItem {
   title: string
@@ -72,11 +73,6 @@ const menuItems = computed<SettingsMenuItem[]>(() => [
     title: t('settings.mail.mail_config'),
     link: '/admin/administration/settings/mail-configuration',
     icon: 'EnvelopeIcon',
-  },
-  {
-    title: t('settings.menu_title.ai_configuration'),
-    link: '/admin/administration/settings/ai-configuration',
-    icon: 'SparklesIcon',
   },
   {
     title: t('settings.menu_title.pdf_generation'),
@@ -108,6 +104,11 @@ const menuItems = computed<SettingsMenuItem[]>(() => [
     link: '/admin/administration/settings/appearance',
     icon: 'PaintBrushIcon',
   },
+  ...extensionItems(extensionRegistry.adminSettingsNavigation.value).map((item) => ({
+    title: t(item.title),
+    link: router.resolve(item.to).fullPath,
+    icon: item.icon,
+  })),
 ])
 
 watchEffect(() => {

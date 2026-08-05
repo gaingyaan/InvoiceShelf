@@ -17,6 +17,48 @@ const loadedLanguages = new Set<string>(['en'])
 /** In-memory cache of loaded message objects keyed by locale. */
 const languageCache = new Map<string, Record<string, unknown>>()
 
+/** Messages registered by compiled modules. Kept separate from the lazy locale
+ * cache so a later locale import cannot overwrite module translations. */
+const additionalMessages = new Map<string, Record<string, unknown>>()
+
+let activeI18n: AppI18n | null = null
+
+function isMessageObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+/** Recursively merge locale trees so one module's `settings.*` keys never
+ * replace the host's complete `settings` namespace. */
+export function mergeMessageObjects(
+  base: Record<string, unknown>,
+  incoming: Record<string, unknown>,
+): Record<string, unknown> {
+  const merged = { ...base }
+
+  for (const [key, value] of Object.entries(incoming)) {
+    merged[key] = isMessageObject(value) && isMessageObject(merged[key])
+      ? mergeMessageObjects(merged[key], value)
+      : value
+  }
+
+  return merged
+}
+
+export function registerAdditionalMessages(
+  messages: Record<string, Record<string, unknown>>,
+): void {
+  for (const [locale, bundle] of Object.entries(messages)) {
+    additionalMessages.set(
+      locale,
+      mergeMessageObjects(additionalMessages.get(locale) ?? {}, bundle),
+    )
+
+    if (activeI18n) {
+      activeI18n.global.mergeLocaleMessage(locale, bundle)
+    }
+  }
+}
+
 /**
  * Dynamically import a language JSON file for a given locale.
  */
@@ -40,7 +82,10 @@ async function loadLanguageMessages(
     const mod: { default: Record<string, unknown> } = await import(
       `../../../lang/${fileName}.json`
     )
-    const messages = mod.default ?? mod
+    const messages = mergeMessageObjects(
+      mod.default ?? mod,
+      additionalMessages.get(locale) ?? {},
+    )
     languageCache.set(locale, messages)
     loadedLanguages.add(locale)
     return messages
@@ -106,18 +151,29 @@ export type AppI18n = I18n<
 export function createAppI18n(
   extraMessages?: Record<string, Record<string, unknown>>
 ): AppI18n {
-  const messages: Record<string, Record<string, unknown>> = {
-    en: en as unknown as Record<string, unknown>,
-    ...extraMessages,
+  const messages: Record<string, Record<string, unknown>> = {}
+
+  for (const [locale, bundle] of additionalMessages) {
+    messages[locale] = mergeMessageObjects(messages[locale] ?? {}, bundle)
   }
+
+  for (const [locale, bundle] of Object.entries(extraMessages ?? {})) {
+    messages[locale] = mergeMessageObjects(messages[locale] ?? {}, bundle)
+  }
+
+  messages.en = mergeMessageObjects(
+    en as unknown as Record<string, unknown>,
+    messages.en ?? {},
+  )
 
   const options: I18nOptions = {
     legacy: false,
     locale: 'en',
     fallbackLocale: 'en',
     globalInjection: true,
-    messages,
+    messages: messages as I18nOptions['messages'],
   }
 
-  return createI18n(options) as AppI18n
+  activeI18n = createI18n(options) as AppI18n
+  return activeI18n
 }

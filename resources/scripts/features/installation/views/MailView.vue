@@ -51,7 +51,7 @@ async function saveMailConfig(value: MailConfig): Promise<void> {
       ...value,
     }
 
-    await router.push({ name: 'installation.ai' })
+    await router.push({ name: 'installation.account' })
   } catch (error: unknown) {
     showRequestError(error)
   } finally {

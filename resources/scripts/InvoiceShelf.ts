@@ -3,18 +3,37 @@ import type { App } from 'vue'
 import type { Router } from 'vue-router'
 import App_ from './App.vue'
 import router from './router'
-import { createAppI18n, setI18nLanguage } from './plugins/i18n'
+import { createAppI18n, mergeMessageObjects, setI18nLanguage } from './plugins/i18n'
 import type { AppI18n } from './plugins/i18n'
 import { createAppPinia } from './plugins/pinia'
 import { installTooltipDirective } from './plugins/tooltip'
 import { defineGlobalComponents } from './global-components'
+import { createExtensionApi } from './extensions/runtime'
+import type { InvoiceShelfExtensionApi } from './extensions/types'
+
+export type {
+  BootstrapCompletedEvent,
+  CompanyChangeEvent,
+  ComponentExtensionContribution,
+  ExtensionContribution,
+  ExtensionVisibilityPredicate,
+  InvoiceShelfExtensionApi,
+  InvoiceShelfExtensionEvents,
+  RichEditorContext,
+  SettingsNavigationContribution,
+  SettingsPageContribution,
+} from './extensions/types'
 
 /**
  * Callback signature for the `booting` hook.
  * Receives the Vue app instance and the router so that modules /
  * plugins can register additional routes, components, or providers.
  */
-type BootCallback = (app: App, router: Router) => void
+export type BootCallback = (
+  app: App,
+  router: Router,
+  extensions: InvoiceShelfExtensionApi,
+) => void
 
 /**
  * Bootstrap class for InvoiceShelf.
@@ -31,9 +50,12 @@ export default class InvoiceShelf {
   private messages: Record<string, Record<string, unknown>> = {}
   private i18n: AppI18n | null = null
   private app: App
+  private readonly extensions: InvoiceShelfExtensionApi
 
   constructor() {
     this.app = createApp(App_)
+    this.extensions = createExtensionApi(router)
+    window.addEventListener('pagehide', () => this.extensions.reset(), { once: true })
   }
 
   /**
@@ -47,11 +69,9 @@ export default class InvoiceShelf {
    * Merge additional i18n message bundles (typically from modules).
    */
   addMessages(moduleMessages: Record<string, Record<string, unknown>>): void {
+    this.extensions.addMessages(moduleMessages)
     for (const [locale, msgs] of Object.entries(moduleMessages)) {
-      this.messages[locale] = {
-        ...this.messages[locale],
-        ...msgs,
-      }
+      this.messages[locale] = mergeMessageObjects(this.messages[locale] ?? {}, msgs)
     }
   }
 
@@ -106,7 +126,7 @@ export default class InvoiceShelf {
 
   private executeCallbacks(): void {
     for (const callback of this.bootingCallbacks) {
-      callback(this.app, router)
+      callback(this.app, router, this.extensions)
     }
   }
 

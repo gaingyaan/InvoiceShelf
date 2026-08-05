@@ -12,6 +12,7 @@ import * as localStore from '../utils/local-storage'
 import type { Company } from '@/scripts/types/domain/company'
 import type { Currency } from '@/scripts/types/domain/currency'
 import type { ApiResponse } from '@/scripts/types/api'
+import { emitCompanyChanged, emitCompanyChanging } from '@/scripts/extensions/runtime'
 
 export const useCompanyStore = defineStore('company', () => {
   // State
@@ -24,6 +25,14 @@ export const useCompanyStore = defineStore('company', () => {
 
   // Actions
   function setSelectedCompany(data: Company | null): void {
+    const previousCompanyId = selectedCompany.value?.id ?? null
+    const companyId = data?.id ?? null
+    const hasChanged = previousCompanyId !== companyId
+
+    if (hasChanged) {
+      emitCompanyChanging({ previousCompanyId, companyId })
+    }
+
     if (data) {
       localStore.set('selectedCompany', data.id)
       localStore.remove('isAdminMode')
@@ -32,14 +41,26 @@ export const useCompanyStore = defineStore('company', () => {
       localStore.remove('selectedCompany')
     }
     selectedCompany.value = data
+
+    if (hasChanged) {
+      emitCompanyChanged({ previousCompanyId, companyId })
+    }
   }
 
   function setAdminMode(enabled: boolean): void {
+    const previousCompanyId = selectedCompany.value?.id ?? null
+    if (enabled && previousCompanyId !== null) {
+      emitCompanyChanging({ previousCompanyId, companyId: null })
+    }
+
     isAdminMode.value = enabled
     if (enabled) {
       localStore.set('isAdminMode', true)
       localStore.remove('selectedCompany')
       selectedCompany.value = null
+      if (previousCompanyId !== null) {
+        emitCompanyChanged({ previousCompanyId, companyId: null })
+      }
     } else {
       localStore.remove('isAdminMode')
     }

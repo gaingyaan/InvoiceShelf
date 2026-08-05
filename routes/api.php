@@ -46,7 +46,6 @@ Route::prefix('/v1')->group(function () {
 
     Route::middleware(['redirect-if-installed'])->prefix('installation')->group(function () {
         require app_path('Platform/Operations/Installation/routes/api.php');
-        require app_path('Platform/Ai/routes/installer.php');
     });
 
     // Super Admin
@@ -119,8 +118,6 @@ Route::prefix('/v1')->group(function () {
             // ----------------------------------
 
             require app_path('Platform/Mail/routes/company.php');
-
-            require app_path('Platform/Ai/routes/company.php');
 
             // Tax Types
             // ----------------------------------

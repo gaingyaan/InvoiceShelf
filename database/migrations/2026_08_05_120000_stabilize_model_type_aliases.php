@@ -31,8 +31,6 @@ return new class extends Migration
      */
     public const FIRST_PARTY_ALIASES = [
         'address' => 'Address',
-        'ai_conversation' => 'AiConversation',
-        'ai_message' => 'AiMessage',
         'company' => 'Company',
         'company_invitation' => 'CompanyInvitation',
         'company_setting' => 'CompanySetting',

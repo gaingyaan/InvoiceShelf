@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useGlobalStore } from '../../../../stores/global.store'
 import { useUserStore } from '../../../../stores/user.store'
+import { extensionItems, extensionRegistry } from '@/scripts/extensions/runtime'
 
 interface SettingMenuItem {
   title: string
@@ -33,6 +34,14 @@ const dropdownMenuItems = computed<DropdownMenuItem[]>(() => {
     title: t(item.title),
   }))
 
+  items.push(
+    ...extensionItems(extensionRegistry.companySettingsNavigation.value).map((item) => ({
+      title: t(item.title),
+      link: router.resolve(item.to).fullPath,
+      icon: item.icon,
+    })),
+  )
+
   if (showDangerZone.value) {
     items.push({
       title: t('settings.company_info.danger_zone'),
@@ -43,6 +52,12 @@ const dropdownMenuItems = computed<DropdownMenuItem[]>(() => {
 
   return items
 })
+
+const sidebarMenuItems = computed<DropdownMenuItem[]>(() =>
+  dropdownMenuItems.value.filter(
+    (item) => item.link !== '/admin/settings/danger-zone',
+  ),
+)
 
 watchEffect(() => {
   if (route.path === '/admin/settings') {
@@ -95,9 +110,9 @@ function navigateToSetting(setting: DropdownMenuItem): void {
       <div class="hidden mt-1 xl:block min-w-[240px] sticky top-20 self-start">
         <BaseList>
           <BaseListItem
-            v-for="(menuItem, index) in globalStore.settingMenu"
+            v-for="(menuItem, index) in sidebarMenuItems"
             :key="index"
-            :title="$t(menuItem.title)"
+            :title="menuItem.title"
             :to="menuItem.link"
             :active="hasActiveUrl(menuItem.link)"
             :index="index"

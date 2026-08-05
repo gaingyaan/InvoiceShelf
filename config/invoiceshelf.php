@@ -67,7 +67,7 @@ return [
     */
     'marketplace' => [
         'channel' => env('MARKETPLACE_CHANNEL', 'stable'),
-        'module_api_version' => (string) env('MARKETPLACE_MODULE_API_VERSION', '1.1.0'),
+        'module_api_version' => (string) env('MARKETPLACE_MODULE_API_VERSION', '1.2.0'),
         // JSON object: {"key-id":"base64-ed25519-public-key"}. Keys add to
         // (or replace values in) the built-in pinned map. Key identity is part
         // of the signed release and must match this trusted map.
@@ -313,16 +313,6 @@ return [
             'name' => 'Mail Configuration',
             'link' => '/admin/settings/mail-config',
             'icon' => 'EnvelopeIcon',
-            'owner_only' => true,
-            'ability' => '',
-            'model' => '',
-        ],
-        [
-            'title' => 'settings.menu_title.ai_configuration',
-            'group' => '',
-            'name' => 'AI Configuration',
-            'link' => '/admin/settings/ai-config',
-            'icon' => 'SparklesIcon',
             'owner_only' => true,
             'ability' => '',
             'model' => '',

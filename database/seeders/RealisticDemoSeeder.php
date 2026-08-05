@@ -29,7 +29,6 @@ use App\Domains\Sales\Models\RecurringInvoice;
 use App\Domains\Taxation\Models\Tax;
 use App\Domains\Taxation\Models\TaxType;
 use App\Facades\Hashids;
-use App\Platform\Ai\Models\AiConversation;
 use App\Support\Hashids\HashidConnection;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
@@ -42,8 +41,7 @@ use RuntimeException;
  * Populates the demo company with ~100 realistic records (8 customers, 12
  * catalog items, 6 expense categories, 35 invoices, ~20 payments, 8 estimates,
  * 15 expenses, 2 tax types, a notes library and a recurring invoice) so the app
- * looks like a real install during local development, and so the AI chat
- * assistant has meaningful data to query.
+ * looks like a real install during local development.
  *
  * This seeder is intentionally NOT wired into DatabaseSeeder and is NOT used
  * by the test suite (the minimal DemoSeeder remains in the test path to keep
@@ -67,9 +65,8 @@ use RuntimeException;
  *   - Item prices and all monetary columns are stored in **cents**. A $250
  *     item has `price = 25000`. The frontend divides by 100 for display.
  *
- *   - Dates are deliberately distributed over the last 6 months so that
- *     AI tool queries like `get_company_stats(period=this_month)` vs
- *     `get_company_stats(period=last_month)` return different numbers.
+ *   - Dates are deliberately distributed over the last 6 months to make the
+ *     reporting views useful during local development.
  *
  *   - Invoice totals are computed from line items, not random. Tax is applied
  *     at document level (tax_per_item = 'NO') to most but not all documents,
@@ -241,7 +238,6 @@ class RealisticDemoSeeder extends Seeder
      */
     private function cleanupExistingDemoData(): void
     {
-        AiConversation::where('company_id', $this->companyId)->delete(); // cascades to ai_messages
         $paymentIds = Payment::where('company_id', $this->companyId)->pluck('id');
         PaymentAllocation::whereIn('payment_id', $paymentIds)->delete();
         Payment::whereIn('id', $paymentIds)->delete();
