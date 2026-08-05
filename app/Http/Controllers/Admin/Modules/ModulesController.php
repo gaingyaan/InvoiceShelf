@@ -7,9 +7,9 @@ use App\Events\ModuleEnabledEvent;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ModuleResource;
 use App\Models\Module as ModelsModule;
+use App\Services\Marketplace\DatabaseActivator;
 use App\Services\Marketplace\MarketplaceClient;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Nwidart\Modules\Facades\Module;
 
 class ModulesController extends Controller
@@ -52,31 +52,63 @@ class ModulesController extends Controller
             ]]);
     }
 
-    public function enable(Request $request, string $module): JsonResponse
+    public function enable(string $module): JsonResponse
     {
         $this->authorize('manage modules');
 
-        $module = ModelsModule::where('name', $module)->first();
-        $module->update(['enabled' => true]);
+        $module = ModelsModule::query()
+            ->where('name', $module)
+            ->where('installed', true)
+            ->firstOrFail();
         $installedModule = Module::find($module->name);
+
+        if ($installedModule === null) {
+            $this->markRuntimeMissing($module);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'module_runtime_missing',
+            ], 409);
+        }
+
         $installedModule->enable();
+        $module->refresh();
 
         ModuleEnabledEvent::dispatch($module);
 
         return response()->json(['success' => true]);
     }
 
-    public function disable(Request $request, string $module): JsonResponse
+    public function disable(string $module, DatabaseActivator $activator): JsonResponse
     {
         $this->authorize('manage modules');
 
-        $module = ModelsModule::where('name', $module)->first();
-        $module->update(['enabled' => false]);
-        $installedModule = Module::find($module->name);
-        $installedModule->disable();
+        $module = ModelsModule::query()
+            ->where('name', $module)
+            ->where('installed', true)
+            ->firstOrFail();
+
+        $activator->setActiveByName($module->name, false);
+
+        if (Module::find($module->name) === null) {
+            $this->markRuntimeMissing($module);
+        } else {
+            $module->refresh();
+        }
 
         ModuleDisabledEvent::dispatch($module);
 
         return response()->json(['success' => true]);
+    }
+
+    private function markRuntimeMissing(ModelsModule $module): void
+    {
+        $module->update([
+            'installed' => false,
+            'enabled' => false,
+            'state' => 'failed',
+            'last_error' => 'module_runtime_missing',
+            'last_failed_at' => now(),
+        ]);
     }
 }

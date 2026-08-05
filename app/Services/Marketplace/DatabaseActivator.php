@@ -85,7 +85,7 @@ class DatabaseActivator implements ActivatorInterface
             return;
         }
 
-        DB::table('modules')->where('name', $module->getName())->update(['enabled' => false, 'updated_at' => now()]);
+        throw new \LogicException('Direct module deletion is disabled. Use module:uninstall instead.');
     }
 
     public function reset(): void

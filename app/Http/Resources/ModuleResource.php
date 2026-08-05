@@ -6,6 +6,7 @@ use App\Models\Module as ModelsModule;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\File;
 
 class ModuleResource extends JsonResource
 {
@@ -64,6 +65,7 @@ class ModuleResource extends JsonResource
             'author_avatar' => data_get($this->resource, 'author_avatar') ?? data_get($this->resource, 'author.avatar'),
             'installed' => $this->moduleInstalled($installedModule),
             'enabled' => $this->moduleEnabled($installedModule),
+            'supports_data_cleanup' => $this->supportsDataCleanup($installedModule),
             'update_available' => $this->updateAvailable($installedModule, $latestVersion),
             'video_link' => data_get($this->resource, 'video_link') ?? data_get($this->resource, 'video.url'),
             'video_thumbnail' => data_get($this->resource, 'video_thumbnail') ?? data_get($this->resource, 'video.thumbnail'),
@@ -110,5 +112,41 @@ class ModuleResource extends JsonResource
         }
 
         return version_compare($installedModule->version, $latestVersion, '<');
+    }
+
+    public function supportsDataCleanup(?ModelsModule $installedModule): bool
+    {
+        if (! $installedModule?->installed) {
+            return false;
+        }
+
+        $path = base_path('Modules/'.$installedModule->name.'/module.json');
+        $metadata = File::isFile($path) ? json_decode((string) File::get($path), true) : null;
+        $uninstall = is_array($metadata) ? ($metadata['uninstall'] ?? null) : null;
+        $cleanup = is_array($uninstall) ? ($uninstall['data_cleanup'] ?? null) : null;
+        $contract = 'InvoiceShelf\\Modules\\Contracts\\DataCleanup';
+
+        if (! (is_array($metadata)
+            && ($metadata['schema_version'] ?? null) === 2
+            && ($metadata['migration_policy'] ?? null) === 'reversible'
+            && is_array($uninstall)
+            && array_keys($uninstall) === ['data_cleanup']
+            && is_string($cleanup)
+            && interface_exists($contract))) {
+            return false;
+        }
+
+        try {
+            $reflection = new \ReflectionClass($cleanup);
+
+            return ! $reflection->isAbstract()
+                && $reflection->isInstantiable()
+                && is_a($cleanup, $contract, true)
+                && $reflection->hasMethod('cleanup')
+                && $reflection->getMethod('cleanup')->isPublic()
+                && ! $reflection->getMethod('cleanup')->isStatic();
+        } catch (\Throwable) {
+            return false;
+        }
     }
 }

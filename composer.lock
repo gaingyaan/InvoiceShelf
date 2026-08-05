@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "0330848b7c96620b5ee47fcb585f719c",
+    "content-hash": "39311493e2ff6efae8c6be98b23a5687",
     "packages": [
         {
             "name": "aws/aws-crt-php",
@@ -1735,27 +1735,31 @@
         },
         {
             "name": "invoiceshelf/modules",
-            "version": "3.0.3",
+            "version": "3.2.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/InvoiceShelf/modules.git",
-                "reference": "9e508914ca64839ef1a1c7d749cc677342dae648"
+                "reference": "bd6ae29a25bdbe3f395572b95c59843dcc52ac50"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/InvoiceShelf/modules/zipball/9e508914ca64839ef1a1c7d749cc677342dae648",
-                "reference": "9e508914ca64839ef1a1c7d749cc677342dae648",
+                "url": "https://api.github.com/repos/InvoiceShelf/modules/zipball/bd6ae29a25bdbe3f395572b95c59843dcc52ac50",
+                "reference": "bd6ae29a25bdbe3f395572b95c59843dcc52ac50",
                 "shasum": ""
             },
             "require": {
+                "nikic/php-parser": "^5.0",
                 "nwidart/laravel-modules": "^13.0",
                 "php": "^8.3"
             },
             "require-dev": {
                 "laravel/pint": "^1.16",
-                "orchestra/testbench": "^10.0",
+                "orchestra/testbench": "^11.0",
                 "phpunit/phpunit": "^12.0"
             },
+            "bin": [
+                "bin/invoiceshelf-module"
+            ],
             "type": "library",
             "extra": {
                 "laravel": {
@@ -1779,7 +1783,7 @@
                     "vendor/bin/phpunit"
                 ],
                 "lint": [
-                    "vendor/bin/pint"
+                    "vendor/bin/pint --test"
                 ]
             },
             "license": [
@@ -1792,10 +1796,10 @@
                 "modules"
             ],
             "support": {
-                "source": "https://github.com/InvoiceShelf/modules/tree/3.0.3",
+                "source": "https://github.com/InvoiceShelf/modules/tree/3.2.0",
                 "issues": "https://github.com/InvoiceShelf/modules/issues"
             },
-            "time": "2026-06-05T00:06:47+00:00"
+            "time": "2026-08-05T09:35:08+00:00"
         },
         {
             "name": "laravel/framework",

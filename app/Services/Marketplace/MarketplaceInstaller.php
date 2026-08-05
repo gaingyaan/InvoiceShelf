@@ -4,7 +4,6 @@ namespace App\Services\Marketplace;
 
 use App\Events\ModuleEnabledEvent;
 use App\Events\ModuleInstalledEvent;
-use App\Models\MarketplaceOperation;
 use App\Models\Module as InstalledModule;
 use App\Models\Setting;
 use Composer\Semver\Semver;
@@ -18,14 +17,17 @@ use ZipArchive;
 
 class MarketplaceInstaller
 {
-    public function __construct(private MarketplaceClient $client) {}
+    public function __construct(
+        private MarketplaceClient $client,
+        private MarketplaceOperationLease $operations,
+    ) {}
 
     /**
      * @return array{success: bool, operation_id?: int, error?: string}
      */
     public function install(string $slug, string $version, string $channel): array
     {
-        $operation = $this->acquireLease($slug, $version, $channel);
+        $operation = $this->operations->acquire($slug, $version, $channel);
         if ($operation === null) {
             return ['success' => false, 'error' => 'Another marketplace installation is in progress.'];
         }
@@ -89,7 +91,7 @@ class MarketplaceInstaller
                 Artisan::call('queue:restart --no-interaction');
                 ModuleInstalledEvent::dispatch($record);
                 ModuleEnabledEvent::dispatch($record);
-                $this->finish($operation, 'completed');
+                $this->operations->finish($operation, 'completed');
                 $this->clean($workspace, $backup);
 
                 return ['success' => true, 'operation_id' => $operation->id];
@@ -103,7 +105,7 @@ class MarketplaceInstaller
             if (is_string($workspace) && File::isDirectory($workspace)) {
                 File::deleteDirectory($workspace);
             }
-            $this->finish($operation, 'failed', $exception->getMessage());
+            $this->operations->finish($operation, 'failed', $exception->getMessage());
 
             return ['success' => false, 'operation_id' => $operation->id, 'error' => $exception->getMessage()];
         }
@@ -395,7 +397,7 @@ class MarketplaceInstaller
 
         $moduleJson = $destination.'/'.$moduleName.'/module.json';
         $metadata = json_decode((string) File::get($moduleJson), true);
-        if (! is_array($metadata) || ($metadata['schema_version'] ?? null) !== 1 || ($metadata['name'] ?? null) !== $moduleName || ! is_array($metadata['providers'] ?? null)
+        if (! is_array($metadata) || ! in_array($metadata['schema_version'] ?? null, [1, 2], true) || ($metadata['name'] ?? null) !== $moduleName || ! is_array($metadata['providers'] ?? null)
             || ($manifest['slug'] ?? null) !== $slug || ($manifest['module_name'] ?? null) !== $moduleName || ($manifest['version'] ?? null) !== $version) {
             throw new RuntimeException('Module metadata does not match the signed release manifest.');
         }
@@ -406,6 +408,9 @@ class MarketplaceInstaller
         }
 
         $this->assertModuleManifest($metadata, $moduleName, $slug);
+        if (($metadata['schema_version'] ?? null) === 2) {
+            $this->assertSchemaV2WithSdk($destination.'/'.$moduleName);
+        }
 
         foreach ($metadata['providers'] as $provider) {
             if (! is_string($provider) || ! str_starts_with($provider, "Modules\\{$moduleName}\\")
@@ -457,6 +462,10 @@ class MarketplaceInstaller
     private function assertModuleManifest(array $metadata, string $moduleName, string $slug): void
     {
         $expected = ['name', 'alias', 'description', 'keywords', 'priority', 'providers', 'aliases', 'files', 'requires', 'schema_version', 'slug', 'version', 'license', 'compatibility', 'module_dependencies', 'migration_policy', 'dependency_policy', 'assets'];
+        if (($metadata['schema_version'] ?? null) === 2) {
+            $expected[] = 'uninstall';
+        }
+
         if (array_diff(array_keys($metadata), $expected) !== [] || array_diff($expected, array_keys($metadata)) !== []
             || ! is_string($metadata['alias'] ?? null) || preg_match('/^[a-z][a-z0-9_]*$/', $metadata['alias']) !== 1
             || ! is_string($metadata['description'] ?? null) || ! is_int($metadata['priority'] ?? null) || $metadata['priority'] < 0
@@ -467,8 +476,19 @@ class MarketplaceInstaller
             || ! is_array($metadata['requires'] ?? null) || (! empty($metadata['requires']) && array_is_list($metadata['requires']))
             || ! is_array($metadata['files'] ?? null) || ! array_is_list($metadata['files'])
             || ! is_array($metadata['assets'] ?? null) || ! array_is_list($metadata['assets'])
-            || ($metadata['migration_policy'] ?? null) !== 'forward-only' || ($metadata['dependency_policy'] ?? null) !== 'host-provided-only') {
+            || ! in_array($metadata['schema_version'] ?? null, [1, 2], true)
+            || ($metadata['migration_policy'] ?? null) !== (($metadata['schema_version'] ?? null) === 2 ? 'reversible' : 'forward-only')
+            || ($metadata['dependency_policy'] ?? null) !== 'host-provided-only') {
             throw new RuntimeException('Module package manifest has an invalid schema.');
+        }
+
+        if (($metadata['schema_version'] ?? null) === 2) {
+            $uninstall = $metadata['uninstall'] ?? null;
+            $cleanup = is_array($uninstall) ? ($uninstall['data_cleanup'] ?? null) : null;
+            if (! is_array($uninstall) || array_keys($uninstall) !== ['data_cleanup'] || ! is_string($cleanup)
+                || preg_match('/^Modules\\\\'.preg_quote($moduleName, '/').'\\\\[A-Za-z][A-Za-z0-9]*(?:\\\\[A-Za-z][A-Za-z0-9]*)*$/', $cleanup) !== 1) {
+                throw new RuntimeException('Module uninstall metadata has an invalid schema.');
+            }
         }
 
         foreach ($metadata['keywords'] as $keyword) {
@@ -500,7 +520,11 @@ class MarketplaceInstaller
     private function assertSafeMigrations(string $modulePath): void
     {
         $metadata = json_decode((string) File::get($modulePath.'/module.json'), true);
-        if (($metadata['migration_policy'] ?? null) !== 'forward-only') {
+        if (($metadata['schema_version'] ?? null) === 2 && ($metadata['migration_policy'] ?? null) === 'reversible') {
+            return;
+        }
+
+        if (($metadata['schema_version'] ?? null) !== 1 || ($metadata['migration_policy'] ?? null) !== 'forward-only') {
             throw new RuntimeException('Module migrations must declare the forward-only policy.');
         }
         foreach (File::glob($modulePath.'/database/migrations/*.php') as $migration) {
@@ -508,6 +532,20 @@ class MarketplaceInstaller
             if (preg_match('/\b(drop|rename|truncate|delete|update)\w*\s*\(/i', $source) === 1) {
                 throw new RuntimeException('Module migrations must be forward-only additive migrations.');
             }
+        }
+    }
+
+    private function assertSchemaV2WithSdk(string $modulePath): void
+    {
+        $validator = 'InvoiceShelf\\Modules\\Manifest\\ManifestValidator';
+        if (! class_exists($validator) || ! method_exists($validator, 'package')) {
+            throw new RuntimeException('Schema-v2 modules require invoiceshelf/modules ^3.2.');
+        }
+
+        try {
+            $validator::package($modulePath);
+        } catch (Throwable $exception) {
+            throw new RuntimeException('Module schema-v2 validation failed: '.$exception->getMessage(), previous: $exception);
         }
     }
 
@@ -597,30 +635,6 @@ class MarketplaceInstaller
             ...$previous,
             'state' => 'failed', 'last_error' => Str::limit($exception->getMessage(), 65000), 'last_failed_at' => now(),
         ]);
-    }
-
-    private function acquireLease(string $slug, string $version, string $channel): ?MarketplaceOperation
-    {
-        $lock = 'marketplace-install';
-        MarketplaceOperation::query()->where('lock_name', $lock)->where('expires_at', '<', now())->update([
-            'lock_name' => null,
-            'status' => 'failed',
-            'error' => 'Marketplace operation lease expired.',
-            'finished_at' => now(),
-        ]);
-        try {
-            return MarketplaceOperation::query()->create([
-                'lock_name' => $lock, 'slug' => $slug, 'version' => $version, 'channel' => $channel,
-                'status' => 'running', 'started_at' => now(), 'expires_at' => now()->addSeconds((int) config('invoiceshelf.marketplace.lease_seconds')),
-            ]);
-        } catch (Throwable) {
-            return null;
-        }
-    }
-
-    private function finish(MarketplaceOperation $operation, string $status, ?string $error = null): void
-    {
-        $operation->update(['lock_name' => null, 'status' => $status, 'error' => $error, 'finished_at' => now(), 'expires_at' => now()]);
     }
 
     private function clean(string $workspace, ?string $backup): void

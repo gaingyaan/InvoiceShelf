@@ -1,7 +1,9 @@
 <?php
 
+use App\Console\Commands\UninstallModuleCommand;
 use App\Services\Marketplace\DatabaseActivator;
 use Nwidart\Modules\Activators\FileActivator;
+use Nwidart\Modules\Commands\Actions\ModuleDeleteCommand;
 use Nwidart\Modules\Providers\ConsoleServiceProvider;
 
 return [
@@ -169,8 +171,9 @@ return [
     |
     */
     'commands' => ConsoleServiceProvider::defaultCommands()
+        ->reject(fn (string $command): bool => $command === ModuleDeleteCommand::class)
         ->merge([
-            // InvoiceShelf-specific module commands go here
+            UninstallModuleCommand::class,
         ])->toArray(),
 
     /*

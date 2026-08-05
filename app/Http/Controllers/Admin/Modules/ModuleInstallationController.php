@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Admin\Modules;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\InstallMarketplaceModuleRequest;
+use App\Http\Requests\UninstallMarketplaceModuleRequest;
 use App\Services\Marketplace\MarketplaceInstaller;
+use App\Services\Marketplace\MarketplaceUninstaller;
 use Illuminate\Http\JsonResponse;
 
 class ModuleInstallationController extends Controller
@@ -20,5 +22,24 @@ class ModuleInstallationController extends Controller
         );
 
         return response()->json($response, $response['success'] ? 200 : 422);
+    }
+
+    public function uninstall(string $module, UninstallMarketplaceModuleRequest $request, MarketplaceUninstaller $uninstaller): JsonResponse
+    {
+        $this->authorize('manage modules');
+
+        $response = $uninstaller->uninstall(
+            $module,
+            $request->boolean('remove_data'),
+            $request->string('confirmation')->toString() ?: null,
+        );
+
+        $status = match ($response['error'] ?? null) {
+            'module_not_installed' => 404,
+            'operation_in_progress', 'module_runtime_missing', 'dependent_modules_installed' => 409,
+            default => $response['success'] ? 200 : 422,
+        };
+
+        return response()->json($response, $status);
     }
 }

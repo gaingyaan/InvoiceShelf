@@ -136,6 +136,15 @@
                 {{ $t('modules.enable') }}
               </BaseButton>
             </div>
+
+            <BaseButton
+              variant="primary-outline"
+              class="mt-3 w-full flex items-center justify-center"
+              @click="showUninstallModal = true"
+            >
+              <BaseIcon name="TrashIcon" class="mr-1.5 h-4 w-4" />
+              {{ $t('modules.uninstall') }}
+            </BaseButton>
           </template>
 
           <!-- Installation Steps -->
@@ -326,6 +335,59 @@
     </div>
 
     <div class="p-6" />
+
+    <BaseModal :show="showUninstallModal" @close="closeUninstallModal">
+      <template #header>
+        <div class="flex w-full items-center justify-between">
+          {{ $t('modules.uninstall') }} {{ moduleData.name }}
+          <BaseIcon name="XMarkIcon" class="h-5 w-5 cursor-pointer text-muted" @click="closeUninstallModal" />
+        </div>
+      </template>
+
+      <div class="space-y-4 p-6">
+        <p class="text-sm text-muted">{{ $t('modules.uninstall_warning') }}</p>
+
+        <template v-if="moduleData.supports_data_cleanup">
+          <label class="flex items-start gap-3 text-sm text-heading">
+            <input v-model="removeModuleData" type="checkbox" class="mt-1 h-4 w-4" />
+            <span>
+              <span class="font-medium">{{ $t('modules.remove_data') }}</span>
+              <span class="block text-muted">{{ $t('modules.remove_data_warning') }}</span>
+            </span>
+          </label>
+
+          <label v-if="removeModuleData" class="block text-sm font-medium text-heading">
+            {{ $t('modules.confirm_module_name', { name: moduleData.module_name }) }}
+            <input
+              v-model="uninstallConfirmation"
+              type="text"
+              class="mt-2 w-full rounded-md border border-line-default bg-surface px-3 py-2 text-heading"
+              :placeholder="moduleData.module_name"
+            />
+          </label>
+        </template>
+
+        <p v-else class="rounded-md bg-surface-tertiary p-3 text-sm text-muted">
+          {{ $t('modules.legacy_uninstall_notice') }}
+        </p>
+      </div>
+
+      <template #footer>
+        <div class="flex justify-end gap-3 border-t border-line-default px-6 py-4">
+          <BaseButton variant="primary-outline" @click="closeUninstallModal">
+            {{ $t('general.cancel') }}
+          </BaseButton>
+          <BaseButton
+            variant="danger"
+            :loading="isUninstalling"
+            :disabled="isUninstalling || (removeModuleData && uninstallConfirmation !== moduleData.module_name)"
+            @click="handleUninstall"
+          >
+            {{ $t('modules.uninstall') }}
+          </BaseButton>
+        </div>
+      </template>
+    </BaseModal>
   </BasePage>
 </template>
 
@@ -337,7 +399,9 @@ import { useModuleStore } from '../store'
 import type { InstallationStep } from '../store'
 import ModuleCard from '../components/ModuleCard.vue'
 import { useDialogStore } from '../../../../stores/dialog.store'
+import { useNotificationStore } from '../../../../stores/notification.store'
 import type { Module, ModuleLink } from '../../../../types/domain/module'
+import { getErrorTranslationKey, handleApiError } from '../../../../utils/error-handling'
 
 interface ModuleLinkItem {
   icon: string
@@ -352,6 +416,7 @@ interface TabItem {
 
 const moduleStore = useModuleStore()
 const dialogStore = useDialogStore()
+const notificationStore = useNotificationStore()
 const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
@@ -360,6 +425,10 @@ const isFetchingInitialData = ref<boolean>(true)
 const isInstalling = ref<boolean>(false)
 const isEnabling = ref<boolean>(false)
 const isDisabling = ref<boolean>(false)
+const isUninstalling = ref<boolean>(false)
+const showUninstallModal = ref<boolean>(false)
+const removeModuleData = ref<boolean>(false)
+const uninstallConfirmation = ref<string>('')
 const displayVideo = ref<boolean>(false)
 const expandedImage = ref<string | null>(null)
 const thumbnail = ref<string | null>(null)
@@ -469,42 +538,90 @@ async function handleInstall(): Promise<void> {
   }
 }
 
-function handleDisable(): void {
+async function handleDisable(): Promise<void> {
   if (!moduleData.value) return
 
-  dialogStore
-    .openDialog({
-      title: t('general.are_you_sure'),
-      message: t('modules.disable_warning'),
-      yesLabel: t('general.ok'),
-      noLabel: t('general.cancel'),
-      variant: 'danger',
-      hideNoButton: false,
-      size: 'lg',
-    })
-    .then(async (res: boolean) => {
-      if (res) {
-        isDisabling.value = true
-        const response = await moduleStore.disableModule(moduleData.value!.module_name)
-        isDisabling.value = false
+  const confirmed = await dialogStore.openDialog({
+    title: t('general.are_you_sure'),
+    message: t('modules.disable_warning'),
+    yesLabel: t('general.ok'),
+    noLabel: t('general.cancel'),
+    variant: 'danger',
+    hideNoButton: false,
+    size: 'lg',
+  })
 
-        if (response.success) {
-          setTimeout(() => location.reload(), 1500)
-        }
-      }
-    })
+  if (!confirmed) return
+
+  isDisabling.value = true
+  try {
+    const response = await moduleStore.disableModule(moduleData.value.module_name)
+    if (response.success) {
+      setTimeout(() => location.reload(), 1500)
+    }
+  } catch (error: unknown) {
+    showModuleActionError(error)
+  } finally {
+    isDisabling.value = false
+  }
 }
 
 async function handleEnable(): Promise<void> {
   if (!moduleData.value) return
 
   isEnabling.value = true
-  const res = await moduleStore.enableModule(moduleData.value.module_name)
-  isEnabling.value = false
-
-  if (res.success) {
-    setTimeout(() => location.reload(), 1500)
+  try {
+    const res = await moduleStore.enableModule(moduleData.value.module_name)
+    if (res.success) {
+      setTimeout(() => location.reload(), 1500)
+    }
+  } catch (error: unknown) {
+    showModuleActionError(error)
+  } finally {
+    isEnabling.value = false
   }
+}
+
+function closeUninstallModal(): void {
+  showUninstallModal.value = false
+  removeModuleData.value = false
+  uninstallConfirmation.value = ''
+}
+
+async function handleUninstall(): Promise<void> {
+  if (!moduleData.value) return
+
+  isUninstalling.value = true
+  try {
+    const response = await moduleStore.uninstallModule(moduleData.value.module_name, {
+      remove_data: removeModuleData.value,
+      confirmation: removeModuleData.value ? uninstallConfirmation.value : undefined,
+    })
+
+    if (response.success) {
+      closeUninstallModal()
+      setTimeout(() => location.reload(), 500)
+    }
+  } catch (error: unknown) {
+    showModuleActionError(error)
+  } finally {
+    isUninstalling.value = false
+  }
+}
+
+function showModuleActionError(error: unknown): void {
+  const normalizedError = handleApiError(error)
+  const translationKey = getErrorTranslationKey(normalizedError.message)
+
+  if (normalizedError.message === 'module_runtime_missing' && moduleData.value) {
+    moduleData.value.installed = false
+    moduleData.value.enabled = false
+  }
+
+  notificationStore.showNotification({
+    type: 'error',
+    message: translationKey ?? normalizedError.message,
+  })
 }
 
 function setDisplayImage(url: string): void {

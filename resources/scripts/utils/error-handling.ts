@@ -100,6 +100,7 @@ const ERROR_TRANSLATION_MAP: Record<string, string> = {
   'invalid_format': 'errors.invalid_format',
   'api_error': 'errors.api_error',
   'feature_not_enabled': 'errors.feature_not_enabled',
+  'module_runtime_missing': 'modules.runtime_missing',
   'request_limit_met': 'errors.request_limit_met',
   'address_incomplete': 'errors.address_incomplete',
   'invalid_address': 'errors.invalid_address',

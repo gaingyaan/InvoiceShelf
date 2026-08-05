@@ -529,6 +529,7 @@ Route::prefix('/v1')->group(function () {
             Route::get('/{module}', [ModulesController::class, 'show']);
             Route::post('/{module}/enable', [ModulesController::class, 'enable']);
             Route::post('/{module}/disable', [ModulesController::class, 'disable']);
+            Route::post('/{module}/uninstall', [ModuleInstallationController::class, 'uninstall']);
 
             Route::post('/install', [ModuleInstallationController::class, 'install']);
 

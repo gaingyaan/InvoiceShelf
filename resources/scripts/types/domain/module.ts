@@ -75,6 +75,7 @@ export interface Module {
   author_avatar: string
   installed: boolean
   enabled: boolean
+  supports_data_cleanup: boolean
   update_available: boolean
   video_link: string | null
   video_thumbnail: string | null

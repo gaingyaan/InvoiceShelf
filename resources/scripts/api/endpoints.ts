@@ -170,6 +170,7 @@ export const API = {
   // Modules
   MODULES: '/api/v1/modules',
   MODULES_INSTALL: '/api/v1/modules/install',
+  MODULES_UNINSTALL: '/api/v1/modules',
   MODULES_PAIRING: '/api/v1/modules/pairing',
 
   // Self Update

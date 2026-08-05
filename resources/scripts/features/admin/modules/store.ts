@@ -6,6 +6,7 @@ import type {
   MarketplacePairingStatus,
   ModuleDetailResponse,
   ModuleInstallPayload,
+  ModuleUninstallPayload,
 } from '../../../api/services/module.service'
 
 export type { ModuleDetailResponse, ModuleDetailMeta } from '../../../api/services/module.service'
@@ -107,6 +108,13 @@ export const useModuleStore = defineStore('modules', {
         })
         return false
       }
+    },
+
+    async uninstallModule(
+      moduleName: string,
+      payload: ModuleUninstallPayload,
+    ): Promise<{ success: boolean; error?: string }> {
+      return moduleService.uninstall(moduleName, payload)
     },
   },
 })

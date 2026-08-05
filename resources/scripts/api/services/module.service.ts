@@ -30,6 +30,11 @@ export interface ModuleInstallPayload {
   channel?: 'stable' | 'insider'
 }
 
+export interface ModuleUninstallPayload {
+  remove_data: boolean
+  confirmation?: string
+}
+
 export interface ModuleDetailResponse {
   data: Module
   meta: ModuleDetailMeta
@@ -78,6 +83,11 @@ export const moduleService = {
 
   async install(payload: ModuleInstallPayload): Promise<{ success: boolean; error?: string }> {
     const { data } = await client.post(API.MODULES_INSTALL, payload)
+    return data
+  },
+
+  async uninstall(module: string, payload: ModuleUninstallPayload): Promise<{ success: boolean; error?: string }> {
+    const { data } = await client.post(`${API.MODULES_UNINSTALL}/${module}/uninstall`, payload)
     return data
   },
 }

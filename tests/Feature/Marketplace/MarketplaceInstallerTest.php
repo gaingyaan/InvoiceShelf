@@ -23,6 +23,43 @@ it('installs an exact signed marketplace archive', function () {
         ->and(Module::query()->where('name', 'SecureProbe')->value('version'))->toBe('1.0.0');
 });
 
+it('reinstalls the same version after a code-only uninstall record', function () {
+    Module::query()->create([
+        'name' => 'SecureProbe',
+        'slug' => 'secure-probe',
+        'version' => '1.0.0',
+        'installed' => false,
+        'enabled' => false,
+        'state' => 'uninstalled',
+    ]);
+    [$archive, $manifest, $keypair] = marketplaceRelease();
+    fakeMarketplaceRelease($archive, $manifest, $keypair);
+
+    $result = app(MarketplaceInstaller::class)->install('secure-probe', '1.0.0', 'stable');
+
+    expect($result['success'])->toBeTrue()
+        ->and(Module::query()->where('name', 'SecureProbe')->value('installed'))->toBeTrue()
+        ->and(Module::query()->where('name', 'SecureProbe')->value('version'))->toBe('1.0.0');
+});
+
+it('rejects reinstalling the same version while it remains installed', function () {
+    Module::query()->create([
+        'name' => 'SecureProbe',
+        'slug' => 'secure-probe',
+        'version' => '1.0.0',
+        'installed' => true,
+        'enabled' => false,
+        'state' => 'installed',
+    ]);
+    [$archive, $manifest, $keypair] = marketplaceRelease();
+    fakeMarketplaceRelease($archive, $manifest, $keypair);
+
+    $result = app(MarketplaceInstaller::class)->install('secure-probe', '1.0.0', 'stable');
+
+    expect($result['success'])->toBeFalse()
+        ->and($result['error'])->toContain('reinstalling the same release');
+});
+
 it('rejects a release signed by an unknown key before downloading an artifact', function () {
     [$archive, $manifest, $keypair] = marketplaceRelease();
     fakeMarketplaceRelease($archive, $manifest, $keypair);
