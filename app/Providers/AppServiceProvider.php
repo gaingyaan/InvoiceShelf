@@ -2,39 +2,15 @@
 
 namespace App\Providers;
 
-use App\Models\AiConversation;
-use App\Models\User;
-use App\Policies\AiConversationPolicy;
-use App\Policies\CompanyPolicy;
-use App\Policies\CreditNotePolicy;
-use App\Policies\CustomerPolicy;
-use App\Policies\DashboardPolicy;
-use App\Policies\EstimatePolicy;
-use App\Policies\ExpensePolicy;
-use App\Policies\InvoicePolicy;
-use App\Policies\ItemPolicy;
-use App\Policies\ModulesPolicy;
-use App\Policies\NotePolicy;
-use App\Policies\OwnerPolicy;
-use App\Policies\PaymentPolicy;
-use App\Policies\RecurringInvoicePolicy;
-use App\Policies\ReportPolicy;
-use App\Policies\RolePolicy;
-use App\Policies\SettingsPolicy;
-use App\Policies\UserPolicy;
+use App\Platform\Operations\Installation\Application\InstallationState;
+use App\Platform\Persistence\ModelIdentityMap;
 use App\Support\Bouncer\BouncerDefaultScope;
-use App\Support\Setup\InstallUtils;
-use App\Support\Setup\InstallWizardAuth;
-use Gate;
-use Illuminate\Http\Request;
+use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\ServiceProvider;
-use Laravel\Sanctum\Sanctum;
 use Silber\Bouncer\Database\Models as BouncerModels;
-use Silber\Bouncer\Database\Role;
-use View;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -61,19 +37,15 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        $this->configureInstallWizardTokenAuth();
+        ModelIdentityMap::enforce();
+        Factory::guessFactoryNamesUsing(
+            fn (string $modelName): string => 'Database\\Factories\\'.class_basename($modelName).'Factory'
+        );
 
-        if (InstallUtils::isDbCreated()) {
+        if (InstallationState::isDbCreated()) {
             $this->addMenus();
         }
 
-        Gate::policy(Role::class, RolePolicy::class);
-        Gate::policy(AiConversation::class, AiConversationPolicy::class);
-        Gate::define('manage module settings', fn (User $user): bool => $user->isSuperAdmin() || $user->isOwner());
-
-        View::addNamespace('pdf_templates', storage_path('app/templates/pdf'));
-
-        $this->bootAuth();
         $this->bootBroadcast();
 
         // In demo mode, prevent all outgoing emails and notifications
@@ -135,66 +107,8 @@ class AppServiceProvider extends ServiceProvider
             ->data('priority', $data['priority'] ?? 100);
     }
 
-    public function bootAuth()
-    {
-
-        Gate::define('create company', [CompanyPolicy::class, 'create']);
-        Gate::define('transfer company ownership', [CompanyPolicy::class, 'transferOwnership']);
-        Gate::define('delete company', [CompanyPolicy::class, 'delete']);
-
-        Gate::define('manage modules', [ModulesPolicy::class, 'manageModules']);
-
-        Gate::define('manage settings', [SettingsPolicy::class, 'manageSettings']);
-        Gate::define('manage company', [SettingsPolicy::class, 'manageCompany']);
-        Gate::define('manage backups', [SettingsPolicy::class, 'manageBackups']);
-        Gate::define('manage file disk', [SettingsPolicy::class, 'manageFileDisk']);
-        Gate::define('manage email config', [SettingsPolicy::class, 'manageEmailConfig']);
-        Gate::define('manage ai config', [SettingsPolicy::class, 'manageAiConfig']);
-        Gate::define('use ai', [SettingsPolicy::class, 'useAi']);
-        Gate::define('manage pdf config', [SettingsPolicy::class, 'managePDFConfig']);
-        Gate::define('manage notes', [NotePolicy::class, 'manageNotes']);
-        Gate::define('view notes', [NotePolicy::class, 'viewNotes']);
-
-        Gate::define('send invoice', [InvoicePolicy::class, 'send']);
-        Gate::define('create credit note', [CreditNotePolicy::class, 'create']);
-        Gate::define('send estimate', [EstimatePolicy::class, 'send']);
-        Gate::define('send payment', [PaymentPolicy::class, 'send']);
-
-        Gate::define('delete multiple items', [ItemPolicy::class, 'deleteMultiple']);
-        Gate::define('delete multiple customers', [CustomerPolicy::class, 'deleteMultiple']);
-        Gate::define('delete multiple users', [UserPolicy::class, 'deleteMultiple']);
-        Gate::define('delete multiple invoices', [InvoicePolicy::class, 'deleteMultiple']);
-        Gate::define('delete multiple estimates', [EstimatePolicy::class, 'deleteMultiple']);
-        Gate::define('delete multiple expenses', [ExpensePolicy::class, 'deleteMultiple']);
-        Gate::define('delete multiple payments', [PaymentPolicy::class, 'deleteMultiple']);
-        Gate::define('delete multiple recurring invoices', [RecurringInvoicePolicy::class, 'deleteMultiple']);
-
-        Gate::define('view dashboard', [DashboardPolicy::class, 'view']);
-
-        Gate::define('view report', [ReportPolicy::class, 'viewReport']);
-
-        Gate::define('owner only', [OwnerPolicy::class, 'managedByOwner']);
-    }
-
     public function bootBroadcast()
     {
         Broadcast::routes(['middleware' => 'api.auth']);
-    }
-
-    private function configureInstallWizardTokenAuth(): void
-    {
-        Sanctum::authenticateAccessTokensUsing(function ($accessToken, bool $isValid): bool {
-            if (! $isValid) {
-                return false;
-            }
-
-            $request = request();
-
-            if (! $request instanceof Request || ! $request->attributes->get('install_wizard', false)) {
-                return $isValid;
-            }
-
-            return $accessToken->can(InstallWizardAuth::TOKEN_ABILITY);
-        });
     }
 }

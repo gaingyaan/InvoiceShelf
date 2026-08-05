@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
-use App\Models\TaxType;
-use App\Models\User;
+use App\Domains\Accounts\Models\User;
+use App\Domains\Taxation\Models\TaxType;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class TaxTypeFactory extends Factory

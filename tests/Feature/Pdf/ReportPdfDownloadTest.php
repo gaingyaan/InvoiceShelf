@@ -1,9 +1,9 @@
 <?php
 
-use App\Facades\Pdf;
-use App\Models\User;
-use App\Support\Pdf\PdfPageSetup;
-use App\Support\Pdf\ResponseStream;
+use App\Domains\Accounts\Models\User;
+use App\Platform\Pdf\Facades\Pdf;
+use App\Platform\Pdf\Rendering\PdfPageSetup;
+use App\Platform\Pdf\Rendering\ResponseStream;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Artisan;
 use Laravel\Sanctum\Sanctum;

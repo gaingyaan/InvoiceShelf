@@ -2,7 +2,7 @@
 
 namespace App\Rules;
 
-use App\Models\Invoice;
+use App\Domains\Sales\Models\Invoice;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 

@@ -1,10 +1,10 @@
 <?php
 
-use App\Models\CompanySetting;
-use App\Models\Setting;
-use App\Models\User;
-use App\Services\AiConfigurationService;
-use App\Support\Ai\OpenRouterDriver;
+use App\Domains\Accounts\Models\CompanySetting;
+use App\Domains\Accounts\Models\User;
+use App\Platform\Ai\Application\AiConfigurationService;
+use App\Platform\Ai\Drivers\OpenRouterDriver;
+use App\Platform\Operations\Models\Setting;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Crypt;
 

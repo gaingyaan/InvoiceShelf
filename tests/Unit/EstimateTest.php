@@ -1,11 +1,11 @@
 <?php
 
-use App\Http\Requests\EstimatesRequest;
-use App\Models\Estimate;
-use App\Models\EstimateItem;
-use App\Models\Tax;
-use App\Services\Document\DocumentItemService;
-use App\Services\Document\EstimateService;
+use App\Domains\Sales\Application\DocumentItemService;
+use App\Domains\Sales\Application\EstimateService;
+use App\Domains\Sales\Http\Requests\EstimatesRequest;
+use App\Domains\Sales\Models\Estimate;
+use App\Domains\Sales\Models\EstimateItem;
+use App\Domains\Taxation\Models\Tax;
 use Illuminate\Support\Facades\Artisan;
 
 beforeEach(function () {
@@ -52,7 +52,11 @@ test('create estimate', function () {
 
     $request->replace($estimate);
 
-    $response = app(EstimateService::class)->create($request);
+    $response = app(EstimateService::class)->create(
+        attributes: $request->getEstimatePayload(),
+        items: $request->input('items'),
+        taxes: $request->input('taxes'),
+    );
 
     $this->assertDatabaseHas('estimate_items', [
         'estimate_id' => $response->id,
@@ -97,7 +101,12 @@ test('update estimate', function () {
 
     $number_attributes['estimate_number'] = $estimate_number[0].'-'.sprintf('%06d', intval($estimate_number[1]));
 
-    app(EstimateService::class)->update($estimate, $request);
+    app(EstimateService::class)->update(
+        estimate: $estimate,
+        attributes: $request->getEstimatePayload(),
+        items: $request->input('items'),
+        taxes: $request->input('taxes'),
+    );
 
     $this->assertDatabaseHas('estimate_items', [
         'estimate_id' => $estimate->id,

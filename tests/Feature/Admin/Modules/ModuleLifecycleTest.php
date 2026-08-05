@@ -1,9 +1,9 @@
 <?php
 
-use App\Events\ModuleDisabledEvent;
-use App\Events\ModuleEnabledEvent;
-use App\Models\Module;
-use App\Models\User;
+use App\Domains\Accounts\Models\User;
+use App\Platform\Modules\Events\ModuleDisabledEvent;
+use App\Platform\Modules\Events\ModuleEnabledEvent;
+use App\Platform\Modules\Models\Module;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Event;
 use Laravel\Sanctum\Sanctum;

@@ -11,7 +11,7 @@
     Every style is inline: a body-included partial cannot add rules to <head>,
     and inline styles are the one thing dompdf and Chromium honour identically.
 --}}
-@if (isset($invoice) && $invoice instanceof \App\Models\Invoice)
+@if (isset($invoice) && $invoice instanceof \App\Domains\Sales\Models\Invoice)
     @php
         $bannerRelatedInvoice = $invoice->relationLoaded('relatedInvoice') ? $invoice->getRelation('relatedInvoice') : null;
         $bannerCreditNotes = $invoice->relationLoaded('creditNotes') ? $invoice->getRelation('creditNotes') : null;

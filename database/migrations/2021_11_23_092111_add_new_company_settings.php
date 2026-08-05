@@ -1,7 +1,7 @@
 <?php
 
-use App\Models\Company;
-use App\Models\CompanySetting;
+use App\Domains\Accounts\Models\Company;
+use App\Domains\Accounts\Models\CompanySetting;
 use Illuminate\Database\Migrations\Migration;
 
 return new class extends Migration

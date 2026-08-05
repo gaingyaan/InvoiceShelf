@@ -1,10 +1,10 @@
 <?php
 
-use App\Models\Company;
-use App\Models\Customer;
-use App\Models\Invoice;
-use App\Models\Payment;
-use App\Services\Ai\Tools\RankTopCustomersTool;
+use App\Domains\Accounts\Models\Company;
+use App\Domains\Contacts\Models\Customer;
+use App\Domains\Receivables\Models\Payment;
+use App\Domains\Sales\Models\Invoice;
+use App\Platform\Ai\Application\Tools\RankTopCustomersTool;
 use Illuminate\Support\Facades\Artisan;
 
 beforeEach(function () {

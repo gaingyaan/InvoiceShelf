@@ -2,34 +2,35 @@
 
 namespace Database\Seeders;
 
+use App\Domains\Accounts\Models\Company;
+use App\Domains\Accounts\Models\CompanySetting;
+use App\Domains\Accounts\Models\User;
+use App\Domains\Catalog\Models\Item;
+use App\Domains\Catalog\Models\Unit;
+use App\Domains\Contacts\Models\Address;
+use App\Domains\Contacts\Models\Country;
+use App\Domains\Contacts\Models\Customer;
+use App\Domains\Metadata\Models\CustomField;
+use App\Domains\Metadata\Models\Note;
+use App\Domains\Money\Models\Currency;
+use App\Domains\Purchases\Models\Expense;
+use App\Domains\Purchases\Models\ExpenseCategory;
+use App\Domains\Receivables\Application\PaymentAllocationService;
+use App\Domains\Receivables\Jobs\GeneratePaymentPdfJob;
+use App\Domains\Receivables\Models\Payment;
+use App\Domains\Receivables\Models\PaymentAllocation;
+use App\Domains\Receivables\Models\PaymentMethod;
+use App\Domains\Sales\Application\SerialNumberService;
+use App\Domains\Sales\Models\Estimate;
+use App\Domains\Sales\Models\EstimateItem;
+use App\Domains\Sales\Models\Invoice;
+use App\Domains\Sales\Models\InvoiceItem;
+use App\Domains\Sales\Models\RecurringInvoice;
+use App\Domains\Taxation\Models\Tax;
+use App\Domains\Taxation\Models\TaxType;
 use App\Facades\Hashids;
-use App\Jobs\GeneratePaymentPdfJob;
-use App\Models\Address;
-use App\Models\AiConversation;
-use App\Models\Company;
-use App\Models\CompanySetting;
-use App\Models\Country;
-use App\Models\Currency;
-use App\Models\Customer;
-use App\Models\CustomField;
-use App\Models\Estimate;
-use App\Models\EstimateItem;
-use App\Models\Expense;
-use App\Models\ExpenseCategory;
-use App\Models\Invoice;
-use App\Models\InvoiceItem;
-use App\Models\Item;
-use App\Models\Note;
-use App\Models\Payment;
-use App\Models\PaymentAllocation;
-use App\Models\PaymentMethod;
-use App\Models\RecurringInvoice;
-use App\Models\Tax;
-use App\Models\TaxType;
-use App\Models\Unit;
-use App\Models\User;
-use App\Services\Document\PaymentAllocationService;
-use App\Services\Document\SerialNumberService;
+use App\Platform\Ai\Models\AiConversation;
+use App\Support\Hashids\HashidConnection;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Artisan;
@@ -522,7 +523,7 @@ class RealisticDemoSeeder extends Seeder
 
         $invoice->sequence_number = $serial->nextSequenceNumber;
         $invoice->customer_sequence_number = $serial->nextCustomerSequenceNumber;
-        $invoice->unique_hash = Hashids::connection(Invoice::class)->encode($invoice->id);
+        $invoice->unique_hash = Hashids::connection(HashidConnection::Invoice->value)->encode($invoice->id);
         $invoice->created_at = $invoiceDate;
         $invoice->updated_at = $invoiceDate;
         $invoice->save();
@@ -599,7 +600,7 @@ class RealisticDemoSeeder extends Seeder
 
         $payment->sequence_number = $serial->nextSequenceNumber;
         $payment->customer_sequence_number = $serial->nextCustomerSequenceNumber;
-        $payment->unique_hash = Hashids::connection(Payment::class)->encode($payment->id);
+        $payment->unique_hash = Hashids::connection(HashidConnection::Payment->value)->encode($payment->id);
         $payment->created_at = $paymentDate;
         $payment->updated_at = $paymentDate;
         Payment::withoutEvents(fn () => $payment->save());
@@ -699,7 +700,7 @@ class RealisticDemoSeeder extends Seeder
 
         $estimate->sequence_number = $serial->nextSequenceNumber;
         $estimate->customer_sequence_number = $serial->nextCustomerSequenceNumber;
-        $estimate->unique_hash = Hashids::connection(Estimate::class)->encode($estimate->id);
+        $estimate->unique_hash = Hashids::connection(HashidConnection::Estimate->value)->encode($estimate->id);
         $estimate->created_at = $estimateDate;
         $estimate->updated_at = $estimateDate;
         $estimate->save();

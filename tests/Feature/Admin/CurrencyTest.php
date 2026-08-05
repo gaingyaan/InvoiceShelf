@@ -1,7 +1,7 @@
 <?php
 
-use App\Models\Currency;
-use App\Models\User;
+use App\Domains\Accounts\Models\User;
+use App\Domains\Money\Models\Currency;
 use Illuminate\Support\Facades\Artisan;
 use Laravel\Sanctum\Sanctum;
 

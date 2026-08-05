@@ -1,6 +1,6 @@
 <?php
 
-use App\Support\Ai\PromptLoader;
+use App\Platform\Ai\Prompting\PromptLoader;
 
 test('load substitutes placeholders in the chat-system template', function () {
     $prompt = PromptLoader::load('chat-system', [

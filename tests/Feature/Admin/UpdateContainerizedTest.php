@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\User;
+use App\Domains\Accounts\Models\User;
 use Laravel\Sanctum\Sanctum;
 
 use function Pest\Laravel\getJson;

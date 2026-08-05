@@ -1,9 +1,9 @@
 <?php
 
-use App\Models\CompanySetting;
-use App\Models\RecurringInvoice;
-use App\Services\Document\RecurringInvoiceService;
-use App\Support\Setup\InstallUtils;
+use App\Domains\Accounts\Models\CompanySetting;
+use App\Domains\Sales\Application\RecurringInvoiceService;
+use App\Domains\Sales\Models\RecurringInvoice;
+use App\Platform\Operations\Installation\Application\InstallationState;
 use Illuminate\Support\Facades\Schedule;
 
 // Only run in demo environment
@@ -14,7 +14,7 @@ if (config('app.env') === 'demo') {
         ->withoutOverlapping();
 }
 
-if (InstallUtils::isDbCreated()) {
+if (InstallationState::isDbCreated()) {
     Schedule::command('check:invoices:status')
         ->daily();
 

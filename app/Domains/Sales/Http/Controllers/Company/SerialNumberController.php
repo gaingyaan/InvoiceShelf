@@ -1,0 +1,89 @@
+<?php
+
+namespace App\Domains\Sales\Http\Controllers\Company;
+
+use App\Domains\Receivables\Models\Payment;
+use App\Domains\Sales\Application\SerialNumberService;
+use App\Domains\Sales\Models\Estimate;
+use App\Domains\Sales\Models\Invoice;
+use App\Platform\Http\Controller;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+
+class SerialNumberController extends Controller
+{
+    public function nextNumber(Request $request, Invoice $invoice, Estimate $estimate, Payment $payment): JsonResponse
+    {
+        $key = $request->key;
+        $nextNumber = null;
+        $serial = (new SerialNumberService)
+            ->setCompany($request->header('company'))
+            ->setCustomer($request->userId);
+
+        try {
+            switch ($key) {
+                case 'invoice':
+                    // Scoped exactly like every invoice create path, so the
+                    // settings preview can never count credit-note rows.
+                    $nextNumber = $serial->setModel($invoice)
+                        ->setSequenceScope(['type' => Invoice::TYPE_INVOICE])
+                        ->setModelObject($request->model_id)
+                        ->getNextNumber($request->input('format'));
+
+                    break;
+
+                case 'credit_note':
+                    $nextNumber = $serial->setModel($invoice)
+                        ->setSettingKey('credit_note_number_format')
+                        ->setSequenceScope(['type' => Invoice::TYPE_CREDIT_NOTE])
+                        ->setModelObject($request->model_id)
+                        ->getNextNumber($request->input('format'));
+
+                    break;
+
+                case 'estimate':
+                    $nextNumber = $serial->setModel($estimate)
+                        ->setModelObject($request->model_id)
+                        ->getNextNumber($request->input('format'));
+
+                    break;
+
+                case 'payment':
+                    $nextNumber = $serial->setModel($payment)
+                        ->setModelObject($request->model_id)
+                        ->getNextNumber($request->input('format'));
+
+                    break;
+
+                default:
+                    return response()->json([
+                        'success' => false,
+                    ]);
+            }
+        } catch (\Exception $exception) {
+            return response()->json([
+                'success' => false,
+                'message' => $exception->getMessage(),
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'nextNumber' => $nextNumber,
+        ]);
+    }
+
+    public function placeholders(Request $request): JsonResponse
+    {
+        if ($request->input('format')) {
+            $placeholders = SerialNumberService::getPlaceholders($request->input('format'));
+        } else {
+            $placeholders = [];
+        }
+
+        return response()->json([
+            'success' => true,
+            'placeholders' => $placeholders,
+        ]);
+    }
+}

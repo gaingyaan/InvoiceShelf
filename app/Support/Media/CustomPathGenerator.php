@@ -2,9 +2,7 @@
 
 namespace App\Support\Media;
 
-use App\Models\Estimate;
-use App\Models\Invoice;
-use App\Models\Payment;
+use App\Platform\Persistence\ModelIdentityMap;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Spatie\MediaLibrary\Support\PathGenerator\PathGenerator;
 
@@ -32,11 +30,11 @@ class CustomPathGenerator implements PathGenerator
     {
         $folderName = null;
 
-        if ($media->model_type == Invoice::class) {
+        if ($media->model_type === ModelIdentityMap::INVOICE_ALIAS) {
             $folderName = 'Invoices';
-        } elseif ($media->model_type == Estimate::class) {
+        } elseif ($media->model_type === ModelIdentityMap::ESTIMATE_ALIAS) {
             $folderName = 'Estimates';
-        } elseif ($media->model_type == Payment::class) {
+        } elseif ($media->model_type === ModelIdentityMap::PAYMENT_ALIAS) {
             $folderName = 'Payments';
         } else {
             $folderName = $media->getKey();

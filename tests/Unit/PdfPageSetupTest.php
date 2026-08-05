@@ -1,6 +1,6 @@
 <?php
 
-use App\Support\Pdf\PdfPageSetup;
+use App\Platform\Pdf\Rendering\PdfPageSetup;
 
 /**
  * Page geometry is stored once and translated per driver. Gotenberg takes CSS

@@ -1,7 +1,7 @@
 <?php
 
-use App\Models\Setting;
-use App\Models\User;
+use App\Domains\Accounts\Models\User;
+use App\Platform\Operations\Models\Setting;
 use Illuminate\Support\Facades\Artisan;
 use Laravel\Sanctum\Sanctum;
 

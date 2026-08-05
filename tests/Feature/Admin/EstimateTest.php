@@ -1,15 +1,15 @@
 <?php
 
-use App\Http\Controllers\Company\Estimate\EstimatesController;
-use App\Http\Requests\DeleteEstimatesRequest;
-use App\Http\Requests\EstimatesRequest;
-use App\Http\Requests\SendEstimatesRequest;
-use App\Mail\SendEstimateMail;
-use App\Models\Company;
-use App\Models\Estimate;
-use App\Models\EstimateItem;
-use App\Models\Tax;
-use App\Models\User;
+use App\Domains\Accounts\Models\Company;
+use App\Domains\Accounts\Models\User;
+use App\Domains\Sales\Http\Controllers\Company\EstimatesController;
+use App\Domains\Sales\Http\Requests\DeleteEstimatesRequest;
+use App\Domains\Sales\Http\Requests\EstimatesRequest;
+use App\Domains\Sales\Http\Requests\SendEstimatesRequest;
+use App\Domains\Sales\Mail\SendEstimateMail;
+use App\Domains\Sales\Models\Estimate;
+use App\Domains\Sales\Models\EstimateItem;
+use App\Domains\Taxation\Models\Tax;
 use Illuminate\Support\Facades\Artisan;
 use Laravel\Sanctum\Sanctum;
 

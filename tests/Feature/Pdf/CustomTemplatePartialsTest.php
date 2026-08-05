@@ -1,7 +1,7 @@
 <?php
 
-use App\Models\Invoice;
-use App\Models\User;
+use App\Domains\Accounts\Models\User;
+use App\Domains\Sales\Models\Invoice;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;

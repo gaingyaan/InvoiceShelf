@@ -1,7 +1,7 @@
 <?php
 
-use App\Support\Ai\AiException;
-use App\Support\Ai\OpenRouterDriver;
+use App\Platform\Ai\Drivers\OpenRouterDriver;
+use App\Platform\Ai\Exceptions\AiException;
 
 /**
  * Runtime SSRF backstop: even if a private base URL slips past validation (e.g.

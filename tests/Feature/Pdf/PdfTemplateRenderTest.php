@@ -1,9 +1,9 @@
 <?php
 
-use App\Models\Estimate;
-use App\Models\Invoice;
-use App\Models\Payment;
-use App\Models\User;
+use App\Domains\Accounts\Models\User;
+use App\Domains\Receivables\Models\Payment;
+use App\Domains\Sales\Models\Estimate;
+use App\Domains\Sales\Models\Invoice;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
@@ -41,7 +41,7 @@ function stockPdfTemplates(string $type): array
  *
  * This used to only assert %PDF appeared somewhere in the first kilobyte: the
  * body carried the status line and headers of an inner Response ahead of the
- * payload, because GeneratesPdfTrait wrapped $pdf->stream() — already a Response
+ * payload, because GeneratesPdf wrapped $pdf->stream() — already a Response
  * — in another response()->make(). Readers scan for the header so nobody
  * noticed, but the bytes were malformed. The trait now passes ->output(), so the
  * position can be asserted, and a regression would be caught rather than

@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\Setting;
+use App\Platform\Operations\Models\Setting;
 
 /**
  * Existing installs have paper size stored as one Gotenberg-only string. It has

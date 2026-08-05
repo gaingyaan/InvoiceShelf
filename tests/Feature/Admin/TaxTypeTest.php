@@ -1,9 +1,9 @@
 <?php
 
-use App\Http\Controllers\Company\Settings\TaxTypesController;
-use App\Http\Requests\TaxTypeRequest;
-use App\Models\TaxType;
-use App\Models\User;
+use App\Domains\Accounts\Models\User;
+use App\Domains\Taxation\Http\Controllers\TaxTypesController;
+use App\Domains\Taxation\Http\Requests\TaxTypeRequest;
+use App\Domains\Taxation\Models\TaxType;
 use Illuminate\Support\Facades\Artisan;
 use Laravel\Sanctum\Sanctum;
 

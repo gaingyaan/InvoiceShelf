@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\User;
+use App\Domains\Accounts\Models\User;
 use Illuminate\Support\Facades\Artisan;
 use Laravel\Sanctum\Sanctum;
 use Symfony\Component\HttpClient\HttpClient;
@@ -224,9 +224,8 @@ test('pdf configuration rejects an unknown orientation', function () {
 });
 
 /**
- * A zero margin is a deliberate choice. AppConfigProvider guards its settings
- * with !empty(), and '0mm' is fine there, but a bare '0' would not be -- this
- * pins the behaviour either way.
+ * A zero margin is a deliberate choice. Runtime configuration must not discard
+ * it as empty, so this pins the behavior through the API round trip.
  */
 test('page numbers can be turned on and read back', function () {
     postJson('/api/v1/pdf/config', [

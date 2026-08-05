@@ -1,11 +1,11 @@
 <?php
 
-use App\Http\Controllers\Company\Customer\CustomersController;
-use App\Http\Requests\CustomerRequest;
-use App\Models\Company;
-use App\Models\Customer;
-use App\Models\Invoice;
-use App\Models\User;
+use App\Domains\Accounts\Models\Company;
+use App\Domains\Accounts\Models\User;
+use App\Domains\Contacts\Http\Controllers\Company\CustomersController;
+use App\Domains\Contacts\Http\Requests\CustomerRequest;
+use App\Domains\Contacts\Models\Customer;
+use App\Domains\Sales\Models\Invoice;
 use Illuminate\Support\Facades\Artisan;
 use Laravel\Sanctum\Sanctum;
 

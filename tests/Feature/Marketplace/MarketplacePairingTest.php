@@ -1,7 +1,7 @@
 <?php
 
-use App\Models\MarketplaceCredential;
-use App\Models\User;
+use App\Domains\Accounts\Models\User;
+use App\Platform\Modules\Models\MarketplaceCredential;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Http;

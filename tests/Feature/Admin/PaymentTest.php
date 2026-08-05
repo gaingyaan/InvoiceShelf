@@ -1,13 +1,13 @@
 <?php
 
-use App\Http\Controllers\Company\Payment\PaymentsController;
-use App\Http\Requests\PaymentRequest;
-use App\Mail\SendPaymentMail;
-use App\Models\Invoice;
-use App\Models\Payment;
-use App\Models\User;
-use App\Services\Document\CreditNoteService;
-use App\Services\Document\PaymentAllocationService;
+use App\Domains\Accounts\Models\User;
+use App\Domains\Receivables\Application\PaymentAllocationService;
+use App\Domains\Receivables\Http\Controllers\Company\PaymentsController;
+use App\Domains\Receivables\Http\Requests\PaymentRequest;
+use App\Domains\Receivables\Mail\SendPaymentMail;
+use App\Domains\Receivables\Models\Payment;
+use App\Domains\Sales\Application\CreditNoteService;
+use App\Domains\Sales\Models\Invoice;
 use Illuminate\Support\Facades\Artisan;
 use Laravel\Sanctum\Sanctum;
 

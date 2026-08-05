@@ -1,7 +1,6 @@
 <?php
 
-use App\Console\Commands\UninstallModuleCommand;
-use App\Services\Marketplace\DatabaseActivator;
+use App\Platform\Modules\Runtime\DatabaseActivator;
 use Nwidart\Modules\Activators\FileActivator;
 use Nwidart\Modules\Commands\Actions\ModuleDeleteCommand;
 use Nwidart\Modules\Providers\ConsoleServiceProvider;
@@ -172,9 +171,7 @@ return [
     */
     'commands' => ConsoleServiceProvider::defaultCommands()
         ->reject(fn (string $command): bool => $command === ModuleDeleteCommand::class)
-        ->merge([
-            UninstallModuleCommand::class,
-        ])->toArray(),
+        ->toArray(),
 
     /*
     |--------------------------------------------------------------------------

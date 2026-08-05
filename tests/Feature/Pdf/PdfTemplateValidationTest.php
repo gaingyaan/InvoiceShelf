@@ -1,7 +1,7 @@
 <?php
 
-use App\Models\User;
-use App\Rules\PdfTemplateExists;
+use App\Domains\Accounts\Models\User;
+use App\Platform\Pdf\Rules\PdfTemplateExists;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Validator;
 use Laravel\Sanctum\Sanctum;

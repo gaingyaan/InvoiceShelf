@@ -2,12 +2,13 @@
 
 namespace Database\Seeders;
 
+use App\Domains\Accounts\Application\CompanyService;
+use App\Domains\Accounts\Models\Company;
+use App\Domains\Accounts\Models\User;
 use App\Facades\Hashids;
-use App\Models\Company;
-use App\Models\Setting;
-use App\Models\User;
-use App\Services\Company\CompanyService;
-use App\Support\Setup\InstallUtils;
+use App\Platform\Operations\Installation\Application\InstallationState;
+use App\Platform\Operations\Models\Setting;
+use App\Support\Hashids\HashidConnection;
 use Illuminate\Database\Seeder;
 use Silber\Bouncer\BouncerFacade;
 
@@ -31,7 +32,7 @@ class UsersTableSeeder extends Seeder
             'slug' => 'xyz',
         ]);
 
-        $company->unique_hash = Hashids::connection(Company::class)->encode($company->id);
+        $company->unique_hash = Hashids::connection(HashidConnection::Company->value)->encode($company->id);
         $company->save();
         app(CompanyService::class)->setupDefaults($company);
         $user->companies()->attach($company->id);
@@ -41,6 +42,6 @@ class UsersTableSeeder extends Seeder
 
         Setting::setSetting('profile_complete', 0);
         // Set version.
-        InstallUtils::setCurrentVersion();
+        InstallationState::setCurrentVersion();
     }
 }

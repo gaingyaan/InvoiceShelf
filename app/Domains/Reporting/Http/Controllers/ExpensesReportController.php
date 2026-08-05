@@ -1,0 +1,98 @@
+<?php
+
+namespace App\Domains\Reporting\Http\Controllers;
+
+use App\Domains\Accounts\Models\Company;
+use App\Domains\Accounts\Models\CompanySetting;
+use App\Domains\Money\Models\Currency;
+use App\Domains\Purchases\Models\Expense;
+use App\Platform\Http\Controller;
+use App\Platform\Pdf\Facades\Pdf;
+use App\Platform\Pdf\Rendering\PdfPageSetup;
+use App\Platform\Pdf\Rendering\PdfTemplateUtils;
+use Carbon\Carbon;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\App;
+use Silber\Bouncer\BouncerFacade;
+
+class ExpensesReportController extends Controller
+{
+    /**
+     * Handle the incoming request.
+     *
+     * @param  string  $hash
+     * @return View|Response
+     */
+    public function __invoke(Request $request, $hash)
+    {
+        $company = Company::where('unique_hash', $hash)->firstOrFail();
+
+        // These routes carry no company header, so ScopeBouncer is not in their
+        // middleware stack and the ability scope was never set. 'view-financial-reports'
+        // is stored scoped to a company, so the unscoped check always failed and every
+        // report PDF answered 403. Scope to the company named in the URL: the policy
+        // still checks membership, so this grants nothing new.
+        BouncerFacade::scope()->to($company->id);
+
+        $this->authorize('view report', $company);
+
+        $locale = CompanySetting::getSetting('language', $company->id);
+
+        App::setLocale($locale);
+
+        // Fetch individual expenses (filtered and ordered by date), then group by category
+        $expenses = Expense::with('category')
+            ->whereCompanyId($company->id)
+            ->applyFilters($request->only(['from_date', 'to_date', 'expense_category_id']))
+            ->orderBy('expense_date', 'asc')
+            ->get();
+
+        $totalAmount = $expenses->sum('base_amount');
+
+        $grouped = $expenses->groupBy(function ($item) {
+            return $item->category ? $item->category->name : trans('expenses.uncategorized');
+        });
+
+        $expenseGroups = collect();
+        foreach ($grouped as $categoryName => $group) {
+            $expenseGroups->push([
+                'name' => $categoryName,
+                'expenses' => $group,
+                'total' => $group->sum('base_amount'),
+            ]);
+        }
+
+        $dateFormat = CompanySetting::getSetting('carbon_date_format', $company->id);
+        $from_date = Carbon::createFromFormat('Y-m-d', $request->from_date)->translatedFormat($dateFormat);
+        $to_date = Carbon::createFromFormat('Y-m-d', $request->to_date)->translatedFormat($dateFormat);
+        $currency = Currency::findOrFail(CompanySetting::getSetting('currency', $company->id));
+
+        view()->share([
+            'expenseGroups' => $expenseGroups,
+            'totalExpense' => $totalAmount,
+            'company' => $company,
+            'logo' => $company->logo_path,
+            'from_date' => $from_date,
+            'to_date' => $to_date,
+            'currency' => $currency,
+        ]);
+        // Renders a same-named file from storage/app/templates/pdf/reports/
+        // when one exists, so a report can be overridden without a
+        // template picker it has no concept of.
+        $templatePath = PdfTemplateUtils::resolveView('reports', 'expenses');
+
+        $pdf = Pdf::loadView($templatePath, [], PdfPageSetup::forReports());
+
+        if ($request->has('preview')) {
+            return view($templatePath);
+        }
+
+        if ($request->has('download')) {
+            return $pdf->download();
+        }
+
+        return $pdf->stream();
+    }
+}

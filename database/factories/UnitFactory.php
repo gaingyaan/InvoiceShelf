@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
-use App\Models\Unit;
-use App\Models\User;
+use App\Domains\Accounts\Models\User;
+use App\Domains\Catalog\Models\Unit;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class UnitFactory extends Factory

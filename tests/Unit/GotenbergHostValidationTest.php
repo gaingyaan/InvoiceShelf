@@ -1,8 +1,8 @@
 <?php
 
-use App\Http\Requests\PDFConfigurationRequest;
-use App\Support\Pdf\GotenbergHostPolicy;
-use App\Support\Pdf\GotenbergPdfDriver;
+use App\Platform\Pdf\Http\Requests\PdfConfigurationRequest;
+use App\Platform\Pdf\Rendering\GotenbergHostPolicy;
+use App\Platform\Pdf\Rendering\GotenbergPdfDriver;
 use Illuminate\Support\Facades\Validator;
 
 /**
@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Validator;
  */
 function validateGotenbergHost(string $url): Illuminate\Validation\Validator
 {
-    $rules = PDFConfigurationRequest::create('/', 'POST', [
+    $rules = PdfConfigurationRequest::create('/', 'POST', [
         'pdf_driver' => 'gotenberg',
         'gotenberg_host' => $url,
     ])->rules();

@@ -1,16 +1,16 @@
 <?php
 
-use App\Models\Customer;
-use App\Models\CustomField;
-use App\Models\Estimate;
-use App\Models\ExchangeRateProvider;
-use App\Models\Expense;
-use App\Models\Invoice;
-use App\Models\Item;
-use App\Models\Note;
-use App\Models\Payment;
-use App\Models\RecurringInvoice;
-use App\Models\TaxType;
+use App\Domains\Catalog\Models\Item;
+use App\Domains\Contacts\Models\Customer;
+use App\Domains\Metadata\Models\CustomField;
+use App\Domains\Metadata\Models\Note;
+use App\Domains\Money\Models\ExchangeRateProvider;
+use App\Domains\Purchases\Models\Expense;
+use App\Domains\Receivables\Models\Payment;
+use App\Domains\Sales\Models\Estimate;
+use App\Domains\Sales\Models\Invoice;
+use App\Domains\Sales\Models\RecurringInvoice;
+use App\Domains\Taxation\Models\TaxType;
 
 return [
 

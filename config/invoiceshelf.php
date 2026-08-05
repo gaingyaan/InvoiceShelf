@@ -1,15 +1,15 @@
 <?php
 
-use App\Models\Customer;
-use App\Models\CustomField;
-use App\Models\Estimate;
-use App\Models\ExchangeRateProvider;
-use App\Models\Expense;
-use App\Models\Invoice;
-use App\Models\Item;
-use App\Models\Note;
-use App\Models\Payment;
-use App\Models\TaxType;
+use App\Domains\Catalog\Models\Item;
+use App\Domains\Contacts\Models\Customer;
+use App\Domains\Metadata\Models\CustomField;
+use App\Domains\Metadata\Models\Note;
+use App\Domains\Money\Models\ExchangeRateProvider;
+use App\Domains\Purchases\Models\Expense;
+use App\Domains\Receivables\Models\Payment;
+use App\Domains\Sales\Models\Estimate;
+use App\Domains\Sales\Models\Invoice;
+use App\Domains\Taxation\Models\TaxType;
 
 return [
     /*
@@ -44,10 +44,10 @@ return [
     /*
     * Marketplace and updater base URL.
     *
-    * The marketplace client (App\Services\Marketplace\MarketplaceClient) and
-    * updater (App\Support\Update\Updater) both use this value as their HTTP
-    * base URI (the updater via App\Traits\SiteApi::getRemote()). Override via
-    * INVOICESHELF_BASE_URL in .env to point a self-hosted instance or local
+    * The marketplace client (App\Platform\Modules\Marketplace\MarketplaceClient) and
+    * updater (App\Platform\Operations\Update\Updater) both use this value as
+    * their HTTP base URI (the updater via CallsReleaseServer::getRemote()).
+    * Override via INVOICESHELF_BASE_URL in .env to point a self-hosted instance or local
     * dev environment at a non-production marketplace (e.g. a local checkout
     * of the invoiceshelf/website repo).
     */
@@ -600,7 +600,7 @@ return [
     /*
     * Exchange rate drivers and Currency Converter server options used to live here as
     * static arrays. Both have moved into the module Registry — built-in drivers are
-    * registered by App\Providers\DriverRegistryProvider, and custom drivers can be
+    * registered by App\Domains\Money\MoneyServiceProvider, and custom drivers can be
     * registered by modules via Registry::registerExchangeRateDriver(). The driver
     * list is served to the frontend by ConfigController via the same
     * /api/v1/config?key=exchange_rate_drivers endpoint.

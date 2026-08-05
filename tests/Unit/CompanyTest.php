@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\Company;
+use App\Domains\Accounts\Models\Company;
 use Illuminate\Support\Facades\Artisan;
 
 beforeEach(function () {

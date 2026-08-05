@@ -16,7 +16,7 @@ export const PAGE_SETUP_KEYS = [
   'pdf_margin_left',
 ] as const
 
-/** Mirrors App\Rules\CssLength, so a bad value is caught before the round trip. */
+/** Mirrors App\Platform\Pdf\Rules\CssLength, so a bad value is caught before the round trip. */
 const CSS_LENGTH = /^(0|\d+(\.\d+)?(pt|px|pc|mm|cm|in))$/
 
 export function cssLength(t: (key: string) => string) {

@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\Payment;
+use App\Domains\Receivables\Models\Payment;
 use Illuminate\Database\Migrations\Migration;
 
 return new class extends Migration

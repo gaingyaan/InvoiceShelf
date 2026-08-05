@@ -2,8 +2,8 @@
 
 namespace Tests\Support;
 
-use App\Support\Ai\AiChatResponse;
-use App\Support\Ai\AiDriver;
+use App\Platform\Ai\Contracts\AiDriver;
+use App\Platform\Ai\Data\AiChatResponse;
 
 /**
  * Test double for AiDriver that returns pre-queued responses from an array, so

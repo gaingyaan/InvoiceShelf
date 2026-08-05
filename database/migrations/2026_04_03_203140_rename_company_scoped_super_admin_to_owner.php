@@ -1,7 +1,7 @@
 <?php
 
-use App\Models\Company;
-use App\Models\User;
+use App\Domains\Accounts\Models\Company;
+use App\Domains\Accounts\Models\User;
 use Illuminate\Database\Migrations\Migration;
 use Silber\Bouncer\BouncerFacade;
 use Silber\Bouncer\Database\Role;

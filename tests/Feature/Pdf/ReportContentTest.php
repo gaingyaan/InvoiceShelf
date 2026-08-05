@@ -1,9 +1,9 @@
 <?php
 
-use App\Models\Customer;
-use App\Models\Invoice;
-use App\Models\InvoiceItem;
-use App\Models\User;
+use App\Domains\Accounts\Models\User;
+use App\Domains\Contacts\Models\Customer;
+use App\Domains\Sales\Models\Invoice;
+use App\Domains\Sales\Models\InvoiceItem;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Testing\TestResponse;
 use Laravel\Sanctum\Sanctum;

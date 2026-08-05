@@ -1,10 +1,10 @@
 <?php
 
-use App\Models\Company;
-use App\Models\CompanySetting;
-use App\Models\Currency;
-use App\Models\Invoice;
-use App\Models\User;
+use App\Domains\Accounts\Models\Company;
+use App\Domains\Accounts\Models\CompanySetting;
+use App\Domains\Accounts\Models\User;
+use App\Domains\Money\Models\Currency;
+use App\Domains\Sales\Models\Invoice;
 use Illuminate\Support\Facades\Artisan;
 use Laravel\Sanctum\Sanctum;
 

@@ -28,7 +28,7 @@
         <tr>
             <td>
                 @if (! empty($logo))
-                    <img class="report-logo" style="height:40px" src="{{ \App\Support\Pdf\ImageUtils::toBase64Src($logo) }}" alt="{{ $company->name }}">
+                    <img class="report-logo" style="height:40px" src="{{ \App\Platform\Pdf\Rendering\ImageUtils::toBase64Src($logo) }}" alt="{{ $company->name }}">
                 @else
                     <p class="report-company-name">{{ $company->name }}</p>
                 @endif

@@ -2,9 +2,9 @@
 
 namespace Database\Factories;
 
-use App\Models\Invoice;
-use App\Models\Payment;
-use App\Models\PaymentAllocation;
+use App\Domains\Receivables\Models\Payment;
+use App\Domains\Receivables\Models\PaymentAllocation;
+use App\Domains\Sales\Models\Invoice;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -12,6 +12,13 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class PaymentAllocationFactory extends Factory
 {
+    /**
+     * The name of the factory's corresponding model.
+     *
+     * @var string
+     */
+    protected $model = PaymentAllocation::class;
+
     /**
      * Define the model's default state.
      *

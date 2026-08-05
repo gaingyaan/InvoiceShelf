@@ -1,15 +1,15 @@
 <?php
 
-use App\Models\Address;
-use App\Models\CompanySetting;
-use App\Models\Estimate;
-use App\Models\Expense;
-use App\Models\FileDisk;
-use App\Models\Invoice;
-use App\Models\Item;
-use App\Models\Payment;
-use App\Models\Setting;
-use App\Models\User;
+use App\Domains\Accounts\Models\CompanySetting;
+use App\Domains\Accounts\Models\User;
+use App\Domains\Catalog\Models\Item;
+use App\Domains\Contacts\Models\Address;
+use App\Domains\Purchases\Models\Expense;
+use App\Domains\Receivables\Models\Payment;
+use App\Domains\Sales\Models\Estimate;
+use App\Domains\Sales\Models\Invoice;
+use App\Platform\Operations\Models\Setting;
+use App\Platform\Storage\Models\FileDisk;
 use Illuminate\Database\Migrations\Migration;
 
 return new class extends Migration

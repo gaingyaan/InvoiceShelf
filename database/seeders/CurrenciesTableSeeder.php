@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Models\Currency;
+use App\Domains\Money\Models\Currency;
 use Illuminate\Database\Seeder;
 
 class CurrenciesTableSeeder extends Seeder

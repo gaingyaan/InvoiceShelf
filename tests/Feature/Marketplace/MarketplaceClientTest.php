@@ -1,6 +1,6 @@
 <?php
 
-use App\Services\Marketplace\MarketplaceClient;
+use App\Platform\Modules\Marketplace\MarketplaceClient;
 use Illuminate\Support\Facades\Http;
 
 it('downloads HTTP artifacts from the configured local marketplace origin', function () {

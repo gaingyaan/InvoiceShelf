@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\Currency;
+use App\Domains\Money\Models\Currency;
 
 /**
  * format_money_pdf() renders the amount that lands in a PDF, so the sign has to

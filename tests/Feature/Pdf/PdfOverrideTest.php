@@ -1,8 +1,8 @@
 <?php
 
-use App\Models\Payment;
-use App\Models\User;
-use App\Support\Pdf\PdfTemplateUtils;
+use App\Domains\Accounts\Models\User;
+use App\Domains\Receivables\Models\Payment;
+use App\Platform\Pdf\Rendering\PdfTemplateUtils;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;

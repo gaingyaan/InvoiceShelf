@@ -1,0 +1,38 @@
+<?php
+
+namespace App\Domains\Sales\Http\Requests;
+
+use App\Domains\Sales\Models\Invoice;
+use App\Rules\CreditNoteDeletedTogether;
+use App\Rules\RelationNotExist;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+
+class DeleteInvoiceRequest extends FormRequest
+{
+    /**
+     * Determine if the user is authorized to make this request.
+     */
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    /**
+     * Get the validation rules that apply to the request.
+     */
+    public function rules(): array
+    {
+        return [
+            'ids' => [
+                'required',
+            ],
+            'ids.*' => [
+                'required',
+                Rule::exists('invoices', 'id'),
+                new RelationNotExist(Invoice::class, 'payments'),
+                new CreditNoteDeletedTogether((array) $this->input('ids', [])),
+            ],
+        ];
+    }
+}

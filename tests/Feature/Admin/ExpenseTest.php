@@ -1,12 +1,12 @@
 <?php
 
-use App\Http\Controllers\Company\Expense\ExpensesController;
-use App\Http\Requests\ExpenseRequest;
-use App\Models\Company;
-use App\Models\Expense;
-use App\Models\Tax;
-use App\Models\TaxType;
-use App\Models\User;
+use App\Domains\Accounts\Models\Company;
+use App\Domains\Accounts\Models\User;
+use App\Domains\Purchases\Http\Controllers\Company\ExpensesController;
+use App\Domains\Purchases\Http\Requests\ExpenseRequest;
+use App\Domains\Purchases\Models\Expense;
+use App\Domains\Taxation\Models\Tax;
+use App\Domains\Taxation\Models\TaxType;
 use Illuminate\Support\Facades\Artisan;
 use Laravel\Sanctum\Sanctum;
 

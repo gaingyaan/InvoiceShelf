@@ -1,9 +1,9 @@
 <?php
 
-use App\Models\Estimate;
-use App\Models\Invoice;
-use App\Models\Payment;
-use App\Models\User;
+use App\Domains\Accounts\Models\User;
+use App\Domains\Receivables\Models\Payment;
+use App\Domains\Sales\Models\Estimate;
+use App\Domains\Sales\Models\Invoice;
 use Illuminate\Support\Facades\Artisan;
 use Laravel\Sanctum\Sanctum;
 

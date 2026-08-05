@@ -1,7 +1,7 @@
 <?php
 
-use App\Models\InvoiceItem;
-use App\Models\Tax;
+use App\Domains\Sales\Models\InvoiceItem;
+use App\Domains\Taxation\Models\Tax;
 use Illuminate\Database\Migrations\Migration;
 
 return new class extends Migration

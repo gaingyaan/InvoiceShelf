@@ -1,8 +1,8 @@
 <?php
 
-use App\Models\CompanySetting;
-use App\Models\User;
-use App\Services\AiConfigurationService;
+use App\Domains\Accounts\Models\CompanySetting;
+use App\Domains\Accounts\Models\User;
+use App\Platform\Ai\Application\AiConfigurationService;
 use Illuminate\Support\Facades\Artisan;
 use Laravel\Sanctum\Sanctum;
 

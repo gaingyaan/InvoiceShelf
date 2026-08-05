@@ -1,12 +1,12 @@
 <?php
 
-use App\Models\Company;
-use App\Models\Expense;
-use App\Models\Invoice;
-use App\Models\InvoiceItem;
-use App\Models\Tax;
-use App\Models\TaxType;
-use App\Models\User;
+use App\Domains\Accounts\Models\Company;
+use App\Domains\Accounts\Models\User;
+use App\Domains\Purchases\Models\Expense;
+use App\Domains\Sales\Models\Invoice;
+use App\Domains\Sales\Models\InvoiceItem;
+use App\Domains\Taxation\Models\Tax;
+use App\Domains\Taxation\Models\TaxType;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Testing\TestResponse;
 use Laravel\Sanctum\Sanctum;

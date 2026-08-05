@@ -1,6 +1,6 @@
 <?php
 
-use App\Support\Pdf\PdfHtmlSanitizer;
+use App\Platform\Pdf\Rendering\PdfHtmlSanitizer;
 
 it('removes img tags that could trigger SSRF during PDF rendering', function () {
     $html = "<p>Hi</p><img src='http://example.com/x'>";
@@ -36,7 +36,7 @@ it('normalizes legacy closing-br markup so lines are not collapsed in PDF output
 });
 
 it('strips SSRF vectors injected via address-template placeholders', function () {
-    // Simulates the output of GeneratesPdfTrait::getFormattedString() after a
+    // Simulates the output of GeneratesPdf::getFormattedString() after a
     // malicious customer name like "Acme <img src='http://attacker/probe'>" has
     // been substituted into an address template via {BILLING_ADDRESS_NAME}.
     $html = "Acme <img src='http://attacker.test/probe'><br />123 Main St<br />Springfield";

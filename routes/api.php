@@ -1,89 +1,5 @@
 <?php
 
-use App\Http\Controllers\Admin\AdminDashboardController;
-use App\Http\Controllers\Admin\BackupsController;
-use App\Http\Controllers\Admin\CompaniesController;
-use App\Http\Controllers\Admin\CountriesController;
-use App\Http\Controllers\Admin\CurrenciesController;
-use App\Http\Controllers\Admin\FontController;
-use App\Http\Controllers\Admin\Modules\MarketplacePairingController;
-use App\Http\Controllers\Admin\Modules\ModuleInstallationController;
-use App\Http\Controllers\Admin\Modules\ModulesController;
-use App\Http\Controllers\Admin\Settings\AiConfigurationController;
-use App\Http\Controllers\Admin\Settings\DiskController;
-use App\Http\Controllers\Admin\Settings\MailConfigurationController;
-use App\Http\Controllers\Admin\Settings\PDFConfigurationController;
-use App\Http\Controllers\Admin\Settings\SettingsController;
-use App\Http\Controllers\Admin\UpdateController;
-use App\Http\Controllers\Admin\UsersController;
-use App\Http\Controllers\AppVersionController;
-use App\Http\Controllers\Company\Ai\ChatController as AiChatController;
-use App\Http\Controllers\Company\Ai\ConversationController as AiConversationController;
-use App\Http\Controllers\Company\Ai\GenerationController as AiGenerationController;
-use App\Http\Controllers\Company\Auth\AuthController;
-use App\Http\Controllers\Company\Auth\ForgotPasswordController;
-use App\Http\Controllers\Company\Auth\InvitationRegistrationController;
-use App\Http\Controllers\Company\Auth\ResetPasswordController;
-use App\Http\Controllers\Company\Customer\CustomersController;
-use App\Http\Controllers\Company\Customer\CustomerStatementController;
-use App\Http\Controllers\Company\Customer\CustomerStatsController;
-use App\Http\Controllers\Company\Customer\SendCustomerStatementController;
-use App\Http\Controllers\Company\CustomField\CustomFieldsController;
-use App\Http\Controllers\Company\Dashboard\DashboardController;
-use App\Http\Controllers\Company\Estimate\EstimatesController;
-use App\Http\Controllers\Company\Estimate\EstimateTemplatesController;
-use App\Http\Controllers\Company\ExchangeRate\ExchangeRateProviderController;
-use App\Http\Controllers\Company\Expense\ExpenseCategoriesController;
-use App\Http\Controllers\Company\Expense\ExpensesController;
-use App\Http\Controllers\Company\General\BootstrapController;
-use App\Http\Controllers\Company\General\ConfigController;
-use App\Http\Controllers\Company\General\FormatsController;
-use App\Http\Controllers\Company\General\InvitationResponseController;
-use App\Http\Controllers\Company\General\NotesController;
-use App\Http\Controllers\Company\General\SearchController;
-use App\Http\Controllers\Company\General\SerialNumberController;
-use App\Http\Controllers\Company\Invoice\InvoicesController;
-use App\Http\Controllers\Company\Invoice\InvoiceTemplatesController;
-use App\Http\Controllers\Company\Item\ItemsController;
-use App\Http\Controllers\Company\Item\UnitsController;
-use App\Http\Controllers\Company\Members\MembersController;
-use App\Http\Controllers\Company\Modules\CompanyModulesController;
-use App\Http\Controllers\Company\Modules\ModuleSettingsController;
-use App\Http\Controllers\Company\Payment\CreditAllocationsController;
-use App\Http\Controllers\Company\Payment\PaymentMethodsController;
-use App\Http\Controllers\Company\Payment\PaymentsController;
-use App\Http\Controllers\Company\RecurringInvoice\RecurringInvoiceController;
-use App\Http\Controllers\Company\RecurringInvoice\RecurringInvoiceFrequencyController;
-use App\Http\Controllers\Company\Role\AbilitiesController;
-use App\Http\Controllers\Company\Role\RolesController;
-use App\Http\Controllers\Company\Settings\CompanyAiConfigurationController;
-use App\Http\Controllers\Company\Settings\CompanyController;
-use App\Http\Controllers\Company\Settings\CompanyMailConfigurationController;
-use App\Http\Controllers\Company\Settings\CompanySettingsController;
-use App\Http\Controllers\Company\Settings\InvitationController;
-use App\Http\Controllers\Company\Settings\TaxTypesController;
-use App\Http\Controllers\Company\Settings\UserProfileController;
-use App\Http\Controllers\CustomerPortal\Auth\ForgotPasswordController as AuthForgotPasswordController;
-use App\Http\Controllers\CustomerPortal\Auth\ResetPasswordController as AuthResetPasswordController;
-use App\Http\Controllers\CustomerPortal\Estimate\AcceptEstimateController as CustomerAcceptEstimateController;
-use App\Http\Controllers\CustomerPortal\Estimate\EstimatesController as CustomerEstimatesController;
-use App\Http\Controllers\CustomerPortal\Expense\ExpensesController as CustomerExpensesController;
-use App\Http\Controllers\CustomerPortal\General\BootstrapController as CustomerBootstrapController;
-use App\Http\Controllers\CustomerPortal\General\DashboardController as CustomerDashboardController;
-use App\Http\Controllers\CustomerPortal\General\ProfileController as CustomerProfileController;
-use App\Http\Controllers\CustomerPortal\Invoice\InvoicesController as CustomerInvoicesController;
-use App\Http\Controllers\CustomerPortal\Payment\PaymentMethodController;
-use App\Http\Controllers\CustomerPortal\Payment\PaymentsController as CustomerPaymentsController;
-use App\Http\Controllers\Setup\AiConfigurationController as InstallerAiConfigurationController;
-use App\Http\Controllers\Setup\AppDomainController;
-use App\Http\Controllers\Setup\DatabaseConfigurationController;
-use App\Http\Controllers\Setup\FilePermissionsController;
-use App\Http\Controllers\Setup\FinishController;
-use App\Http\Controllers\Setup\LanguagesController;
-use App\Http\Controllers\Setup\LoginController;
-use App\Http\Controllers\Setup\OnboardingWizardController;
-use App\Http\Controllers\Setup\RequirementsController;
-use App\Http\Controllers\Webhook\CronJobController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -113,374 +29,104 @@ Route::prefix('/v1')->group(function () {
     // App version
     // ----------------------------------
 
-    Route::get('/app/version', AppVersionController::class);
+    require app_path('Platform/Operations/routes/version.php');
 
     // Authentication & Password Reset
     // ----------------------------------
 
-    Route::prefix('auth')->group(function () {
-        Route::post('login', [AuthController::class, 'login']);
-
-        Route::post('logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
-
-        // Send reset password mail
-        Route::post('password/email', [ForgotPasswordController::class, 'sendResetLinkEmail'])->middleware('throttle:10,2');
-
-        // handle reset password form process
-        Route::post('reset/password', [ResetPasswordController::class, 'reset']);
-    });
-
-    // Invitation Registration (public)
-    // ----------------------------------
-
-    Route::get('/invitations/{token}/details', [InvitationRegistrationController::class, 'details']);
-    Route::post('/auth/register-with-invitation', [InvitationRegistrationController::class, 'register']);
+    require app_path('Domains/Accounts/routes/public.php');
 
     // Countries
     // ----------------------------------
 
-    Route::get('/countries', CountriesController::class);
+    require app_path('Domains/Contacts/routes/public.php');
 
     // Onboarding
     // ----------------------------------
 
     Route::middleware(['redirect-if-installed'])->prefix('installation')->group(function () {
-        Route::get('/wizard-step', [OnboardingWizardController::class, 'getStep']);
-
-        Route::post('/wizard-step', [OnboardingWizardController::class, 'updateStep']);
-
-        Route::post('/wizard-language', [OnboardingWizardController::class, 'saveLanguage']);
-
-        Route::get('/languages', [LanguagesController::class, 'languages']);
-
-        Route::get('/requirements', [RequirementsController::class, 'requirements']);
-
-        Route::get('/permissions', [FilePermissionsController::class, 'permissions']);
-
-        Route::post('/database/config', [DatabaseConfigurationController::class, 'saveDatabaseEnvironment']);
-
-        Route::get('/database/config', [DatabaseConfigurationController::class, 'getDatabaseEnvironment']);
-
-        Route::put('/set-domain', AppDomainController::class);
-
-        Route::get('/ai/config', [InstallerAiConfigurationController::class, 'show']);
-        Route::post('/ai/config', [InstallerAiConfigurationController::class, 'save']);
-
-        Route::post('/login', LoginController::class);
-
-        Route::post('/finish', FinishController::class);
+        require app_path('Platform/Operations/Installation/routes/api.php');
+        require app_path('Platform/Ai/routes/installer.php');
     });
 
     // Super Admin
     // ----------------------------------
 
     Route::middleware(['auth:sanctum', 'super-admin'])->prefix('super-admin')->group(function () {
-        Route::get('dashboard', [AdminDashboardController::class, 'index']);
-        Route::get('companies', [CompaniesController::class, 'index']);
-        Route::get('companies/{company}', [CompaniesController::class, 'show']);
-        Route::put('companies/{company}', [CompaniesController::class, 'update']);
-
-        Route::get('users', [UsersController::class, 'index']);
-        Route::get('users/{user}', [UsersController::class, 'show']);
-        Route::put('users/{user}', [UsersController::class, 'update']);
-        Route::post('users/{user}/impersonate', [UsersController::class, 'impersonate']);
+        require app_path('Platform/Operations/routes/admin.php');
+        require app_path('Domains/Accounts/routes/admin.php');
     });
 
     // Stop impersonation - uses auth:sanctum only (the impersonated user's token, not super-admin)
     Route::middleware(['auth:sanctum'])->prefix('super-admin')->group(function () {
-        Route::post('stop-impersonating', [UsersController::class, 'stopImpersonating']);
+        require app_path('Domains/Accounts/routes/impersonation.php');
     });
 
     Route::middleware(['auth:sanctum', 'company'])->group(function () {
         Route::middleware(['bouncer'])->group(function () {
-
-            // Bootstrap
-            // ----------------------------------
-
-            Route::get('/bootstrap', BootstrapController::class);
-
-            // Invitations (user-scoped — respond to invitations)
-            // ----------------------------------
-
-            Route::get('/invitations/pending', [InvitationResponseController::class, 'pending']);
-            Route::post('/invitations/{invitation:token}/accept', [InvitationResponseController::class, 'accept']);
-            Route::post('/invitations/{invitation:token}/decline', [InvitationResponseController::class, 'decline']);
+            require app_path('Domains/Accounts/routes/company.php');
+            require app_path('Platform/Operations/routes/company.php');
 
             // Currencies
             // ----------------------------------
 
-            Route::prefix('/currencies')->group(function () {
-                Route::get('/used', [ExchangeRateProviderController::class, 'usedCurrenciesWithoutRate']);
+            require app_path('Domains/Money/routes/company.php');
 
-                Route::post('/bulk-update-exchange-rate', [ExchangeRateProviderController::class, 'bulkUpdate']);
-            });
-
-            // Dashboard
+            // Reporting and customers
             // ----------------------------------
 
-            Route::get('/dashboard', DashboardController::class);
-
-            // Auth check
-            // ----------------------------------
-
-            Route::get('/auth/check', [AuthController::class, 'check']);
-
-            // Search users
-            // ----------------------------------
-
-            Route::get('/search', SearchController::class);
-
-            Route::get('/search/user', [SearchController::class, 'users']);
-
-            // MISC
-            // ----------------------------------
-
-            Route::get('/config', ConfigController::class);
-
-            Route::get('/currencies', CurrenciesController::class);
-
-            Route::get('/timezones', [FormatsController::class, 'timezones']);
-
-            Route::get('/date/formats', [FormatsController::class, 'dateFormats']);
-
-            Route::get('/time/formats', [FormatsController::class, 'timeFormats']);
-
-            Route::get('/next-number', [SerialNumberController::class, 'nextNumber']);
-
-            Route::get('/number-placeholders', [SerialNumberController::class, 'placeholders']);
-
-            Route::get('/current-company', [BootstrapController::class, 'currentCompany']);
-
-            // Company Invitations (company-scoped — send invitations)
-            // ----------------------------------
-
-            Route::apiResource('company-invitations', InvitationController::class)->only(['index', 'store', 'destroy']);
-
-            // Customers
-            // ----------------------------------
-
-            Route::post('/customers/delete', [CustomersController::class, 'delete']);
-
-            Route::get('customers/{customer}/stats', CustomerStatsController::class);
-
-            Route::get('customers/{customer}/statement', CustomerStatementController::class);
-            Route::post('customers/{customer}/statement/send', SendCustomerStatementController::class);
-            Route::post('customers/{customer}/credit-allocations', [CreditAllocationsController::class, 'store']);
-
-            Route::resource('customers', CustomersController::class);
+            require app_path('Domains/Reporting/routes/company.php');
+            require app_path('Domains/Contacts/routes/company.php');
 
             // Items
             // ----------------------------------
 
-            Route::post('/items/delete', [ItemsController::class, 'delete']);
+            require app_path('Domains/Catalog/routes/company.php');
 
-            Route::resource('items', ItemsController::class);
-
-            Route::resource('units', UnitsController::class);
-
-            // Invoices
+            // Sales documents
             // -------------------------------------------------
 
-            Route::get('/invoices/{invoice}/send/preview', [InvoicesController::class, 'sendPreview']);
-
-            Route::post('/invoices/{invoice}/send', [InvoicesController::class, 'send']);
-
-            Route::post('/invoices/{invoice}/clone', [InvoicesController::class, 'clone']);
-
-            Route::post('/invoices/{invoice}/convert-to-estimate', [InvoicesController::class, 'convertToEstimate']);
-
-            Route::post('/invoices/{invoice}/credit-note', [InvoicesController::class, 'createCreditNote']);
-
-            Route::post('/invoices/{invoice}/status', [InvoicesController::class, 'changeStatus']);
-
-            Route::post('/invoices/delete', [InvoicesController::class, 'delete']);
-
-            Route::get('/invoices/templates', InvoiceTemplatesController::class);
-
-            Route::apiResource('invoices', InvoicesController::class);
-
-            // Recurring Invoice
-            // -------------------------------------------------
-
-            Route::get('/recurring-invoice-frequency', RecurringInvoiceFrequencyController::class);
-
-            Route::post('/recurring-invoices/delete', [RecurringInvoiceController::class, 'delete']);
-
-            Route::apiResource('recurring-invoices', RecurringInvoiceController::class);
-
-            // Estimates
-            // -------------------------------------------------
-
-            Route::get('/estimates/{estimate}/send/preview', [EstimatesController::class, 'sendPreview']);
-
-            Route::post('/estimates/{estimate}/send', [EstimatesController::class, 'send']);
-
-            Route::post('/estimates/{estimate}/clone', [EstimatesController::class, 'clone']);
-
-            Route::post('/estimates/{estimate}/status', [EstimatesController::class, 'changeStatus']);
-
-            Route::post('/estimates/{estimate}/convert-to-invoice', [EstimatesController::class, 'convertToInvoice']);
-
-            Route::get('/estimates/templates', EstimateTemplatesController::class);
-
-            Route::post('/estimates/delete', [EstimatesController::class, 'delete']);
-
-            Route::apiResource('estimates', EstimatesController::class);
+            require app_path('Domains/Sales/routes/company.php');
 
             // Expenses
             // ----------------------------------
 
-            Route::get('/expenses/{expense}/show/receipt', [ExpensesController::class, 'showReceipt']);
-
-            Route::post('/expenses/{expense}/upload/receipts', [ExpensesController::class, 'uploadReceipt']);
-
-            Route::post('/expenses/delete', [ExpensesController::class, 'delete']);
-
-            Route::apiResource('expenses', ExpensesController::class);
-
-            Route::apiResource('categories', ExpenseCategoriesController::class);
+            require app_path('Domains/Purchases/routes/company.php');
 
             // Payments
             // ----------------------------------
 
-            Route::get('/payments/{payment}/send/preview', [PaymentsController::class, 'sendPreview']);
-
-            Route::post('/payments/{payment}/send', [PaymentsController::class, 'send']);
-
-            Route::put('/payments/{payment}/allocations', [PaymentsController::class, 'replaceAllocations']);
-
-            Route::post('/payments/delete', [PaymentsController::class, 'delete']);
-
-            Route::apiResource('payments', PaymentsController::class);
-
-            Route::apiResource('payment-methods', PaymentMethodsController::class);
+            require app_path('Domains/Receivables/routes/company.php');
 
             // Custom fields
             // ----------------------------------
 
-            Route::resource('custom-fields', CustomFieldsController::class);
+            require app_path('Domains/Metadata/routes/company.php');
 
             // Backup & Disk
             // ----------------------------------
 
-            Route::apiResource('backups', BackupsController::class);
+            require app_path('Platform/Storage/routes/company.php');
 
-            Route::apiResource('/disks', DiskController::class);
-
-            Route::get('download-backup', [BackupsController::class, 'download']);
-
-            Route::get('/disk/drivers', [DiskController::class, 'getDiskDrivers']);
-            Route::get('/disk/purposes', [DiskController::class, 'getDiskPurposes']);
-            Route::put('/disk/purposes', [DiskController::class, 'updateDiskPurposes']);
-
-            // Fonts
+            // PDF rendering and fonts
             // ----------------------------------
 
-            Route::get('/fonts/status', [FontController::class, 'status']);
-            Route::post('/fonts/{package}/install', [FontController::class, 'install']);
+            require app_path('Platform/Pdf/routes/admin.php');
 
-            // Exchange Rate
-            // ----------------------------------
-
-            Route::get('/currencies/{currency}/exchange-rate', [ExchangeRateProviderController::class, 'getRate']);
-
-            Route::get('/currencies/{currency}/active-provider', [ExchangeRateProviderController::class, 'activeProvider']);
-
-            Route::get('/used-currencies', [ExchangeRateProviderController::class, 'usedCurrencies']);
-
-            Route::get('/supported-currencies', [ExchangeRateProviderController::class, 'supportedCurrencies']);
-
-            Route::apiResource('exchange-rate-providers', ExchangeRateProviderController::class);
-
-            // Settings
-            // ----------------------------------
-
-            Route::get('/me', [UserProfileController::class, 'show']);
-
-            Route::put('/me', [UserProfileController::class, 'update']);
-
-            Route::get('/me/settings', [UserProfileController::class, 'showSettings']);
-
-            Route::put('/me/settings', [UserProfileController::class, 'updateSettings']);
-
-            Route::post('/me/upload-avatar', [UserProfileController::class, 'uploadAvatar']);
-
-            Route::put('/company', [CompanyController::class, 'updateCompany']);
-
-            Route::post('/company/upload-logo', [CompanyController::class, 'uploadCompanyLogo']);
-
-            Route::get('/company/settings', [CompanySettingsController::class, 'show']);
-
-            Route::post('/company/settings', [CompanySettingsController::class, 'update']);
-
-            Route::get('/settings', [SettingsController::class, 'show']);
-
-            Route::post('/settings', [SettingsController::class, 'update']);
-
-            Route::get('/company/has-transactions', [CompanySettingsController::class, 'checkTransactions']);
+            require app_path('Platform/Operations/routes/settings.php');
 
             // Mails
             // ----------------------------------
 
-            Route::get('/mail/drivers', [MailConfigurationController::class, 'getMailDrivers']);
+            require app_path('Platform/Mail/routes/company.php');
 
-            Route::get('/mail/config', [MailConfigurationController::class, 'getMailEnvironment']);
-
-            Route::post('/mail/config', [MailConfigurationController::class, 'saveMailEnvironment']);
-
-            Route::post('/mail/test', [MailConfigurationController::class, 'testEmailConfig']);
-
-            Route::get('/company/mail/config', [CompanyMailConfigurationController::class, 'getDefaultConfig']);
-
-            Route::get('/company/mail/company-config', [CompanyMailConfigurationController::class, 'getMailConfig']);
-            Route::post('/company/mail/company-config', [CompanyMailConfigurationController::class, 'saveMailConfig']);
-            Route::post('/company/mail/company-test', [CompanyMailConfigurationController::class, 'testMailConfig']);
-
-            // AI Configuration
-            // ----------------------------------
-
-            Route::get('/ai/drivers', [AiConfigurationController::class, 'getDrivers']);
-            Route::get('/ai/config', [AiConfigurationController::class, 'getConfig']);
-            Route::post('/ai/config', [AiConfigurationController::class, 'saveConfig']);
-            Route::post('/ai/test', [AiConfigurationController::class, 'testConnection']);
-
-            Route::get('/company/ai/config', [CompanyAiConfigurationController::class, 'getConfig']);
-            Route::post('/company/ai/config', [CompanyAiConfigurationController::class, 'saveConfig']);
-            Route::post('/company/ai/test', [CompanyAiConfigurationController::class, 'testConnection']);
-
-            // AI Chat + text generation — rate-limited via the 'ai' limiter defined in RouteServiceProvider
-            Route::middleware('throttle:ai')->group(function () {
-                Route::post('/ai/chat', AiChatController::class);
-                Route::get('/ai/conversations', [AiConversationController::class, 'index']);
-                Route::get('/ai/conversations/{id}', [AiConversationController::class, 'show']);
-                Route::patch('/ai/conversations/{id}', [AiConversationController::class, 'update']);
-                Route::delete('/ai/conversations/{id}', [AiConversationController::class, 'destroy']);
-
-                Route::post('/ai/generate', AiGenerationController::class);
-            });
-
-            // PDF Generation
-            // ----------------------------------
-
-            Route::get('/pdf/drivers', [PDFConfigurationController::class, 'getDrivers']);
-
-            Route::get('/pdf/config', [PDFConfigurationController::class, 'getEnvironment']);
-
-            Route::post('/pdf/config', [PDFConfigurationController::class, 'saveEnvironment']);
-
-            Route::apiResource('notes', NotesController::class);
+            require app_path('Platform/Ai/routes/company.php');
 
             // Tax Types
             // ----------------------------------
 
-            Route::apiResource('tax-types', TaxTypesController::class);
+            require app_path('Domains/Taxation/routes/company.php');
 
-            // Roles
-            // ----------------------------------
-
-            Route::get('abilities', AbilitiesController::class);
-
-            Route::apiResource('roles', RolesController::class);
         });
 
         // Self Update
@@ -488,59 +134,10 @@ Route::prefix('/v1')->group(function () {
         // Disabled inside the official Docker image — containers upgrade via
         // `docker compose pull`, not the in-app updater (see EnsureNotContainerized).
 
-        Route::middleware('not-containerized')->group(function () {
-            Route::get('/check/update', [UpdateController::class, 'checkVersion']);
-            Route::post('/update/download', [UpdateController::class, 'download']);
-            Route::post('/update/unzip', [UpdateController::class, 'unzip']);
-            Route::post('/update/copy', [UpdateController::class, 'copy']);
-            Route::post('/update/delete', [UpdateController::class, 'delete']);
-            Route::post('/update/clean', [UpdateController::class, 'clean']);
-            Route::post('/update/migrate', [UpdateController::class, 'migrate']);
-            Route::post('/update/finish', [UpdateController::class, 'finish']);
-        });
+        require app_path('Platform/Operations/routes/updater.php');
 
-        // Companies
-        // -------------------------------------------------
+        require app_path('Domains/Accounts/routes/management.php');
 
-        Route::post('companies', [CompaniesController::class, 'store']);
-
-        Route::post('/transfer/ownership/{user}', [CompanySettingsController::class, 'transferOwnership']);
-
-        Route::post('companies/delete', [CompaniesController::class, 'destroy']);
-
-        Route::get('companies', [CompaniesController::class, 'userCompanies']);
-
-        // Users
-        // ----------------------------------
-
-        Route::post('/members/delete', [MembersController::class, 'delete']);
-
-        Route::apiResource('/members', MembersController::class);
-
-        // Modules
-        // ----------------------------------
-
-        Route::prefix('/modules')->group(function () {
-            Route::get('/', [ModulesController::class, 'index']);
-            Route::get('/pairing', [MarketplacePairingController::class, 'status']);
-            Route::post('/pairing/start', [MarketplacePairingController::class, 'start']);
-            Route::post('/pairing/poll', [MarketplacePairingController::class, 'poll']);
-            Route::delete('/pairing', [MarketplacePairingController::class, 'disconnect']);
-            Route::get('/{module}', [ModulesController::class, 'show']);
-            Route::post('/{module}/enable', [ModulesController::class, 'enable']);
-            Route::post('/{module}/disable', [ModulesController::class, 'disable']);
-            Route::post('/{module}/uninstall', [ModuleInstallationController::class, 'uninstall']);
-
-            Route::post('/install', [ModuleInstallationController::class, 'install']);
-
-            // Per-slug settings (schema-driven, per-company storage)
-            Route::get('/{slug}/settings', [ModuleSettingsController::class, 'show']);
-            Route::put('/{slug}/settings', [ModuleSettingsController::class, 'update']);
-        });
-
-        // Company-context Active Modules index (read-only, lists every
-        // instance-activated module with a has_settings flag)
-        Route::get('/company-modules', [CompanyModulesController::class, 'index']);
     });
 
     Route::prefix('/{company:slug}/customer')->group(function () {
@@ -548,50 +145,22 @@ Route::prefix('/v1')->group(function () {
         // Authentication & Password Reset
         // ----------------------------------
 
-        Route::prefix('auth')->group(function () {
-
-            // Send reset password mail
-            Route::post('password/email', [AuthForgotPasswordController::class, 'sendResetLinkEmail']);
-
-            // handle reset password form process
-            Route::post('reset/password', [AuthResetPasswordController::class, 'reset'])->name('customer.password.reset');
-        });
+        require app_path('Domains/Contacts/routes/customer-public.php');
 
         // Invoices, Estimates, Payments and Expenses endpoints
         // -------------------------------------------------------
 
         Route::middleware(['auth:customer', 'customer-portal'])->group(function () {
-            Route::get('/bootstrap', CustomerBootstrapController::class);
+            require app_path('Domains/Contacts/routes/customer.php');
 
-            Route::get('/dashboard', CustomerDashboardController::class);
+            require app_path('Domains/Sales/routes/customer.php');
 
-            Route::get('invoices', [CustomerInvoicesController::class, 'index']);
+            require app_path('Domains/Receivables/routes/customer.php');
 
-            Route::get('invoices/{id}', [CustomerInvoicesController::class, 'show']);
+            require app_path('Domains/Purchases/routes/customer.php');
 
-            Route::post('/estimate/{estimate}/status', CustomerAcceptEstimateController::class);
-
-            Route::get('estimates', [CustomerEstimatesController::class, 'index']);
-
-            Route::get('estimates/{id}', [CustomerEstimatesController::class, 'show']);
-
-            Route::get('payments', [CustomerPaymentsController::class, 'index']);
-
-            Route::get('payments/{id}', [CustomerPaymentsController::class, 'show']);
-
-            Route::get('/payment-method', PaymentMethodController::class);
-
-            Route::get('expenses', [CustomerExpensesController::class, 'index']);
-
-            Route::get('expenses/{id}', [CustomerExpensesController::class, 'show']);
-
-            Route::post('/profile', [CustomerProfileController::class, 'updateProfile']);
-
-            Route::get('/me', [CustomerProfileController::class, 'getUser']);
-
-            Route::get('/countries', CountriesController::class);
         });
     });
 });
 
-Route::get('/cron', CronJobController::class)->middleware('cron-job');
+require app_path('Platform/Operations/routes/webhooks.php');

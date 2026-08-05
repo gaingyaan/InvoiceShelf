@@ -1,13 +1,13 @@
 <?php
 
-use App\Models\AiConversation;
-use App\Models\AiMessage;
-use App\Models\User;
-use App\Services\AiConfigurationService;
-use App\Support\Ai\AiChatResponse;
-use App\Support\Ai\AiDriver;
-use App\Support\Ai\AiDriverFactory;
-use App\Support\Ai\AiException;
+use App\Domains\Accounts\Models\User;
+use App\Platform\Ai\Application\AiConfigurationService;
+use App\Platform\Ai\Contracts\AiDriver;
+use App\Platform\Ai\Data\AiChatResponse;
+use App\Platform\Ai\Drivers\AiDriverFactory;
+use App\Platform\Ai\Exceptions\AiException;
+use App\Platform\Ai\Models\AiConversation;
+use App\Platform\Ai\Models\AiMessage;
 use Illuminate\Support\Facades\Artisan;
 use Laravel\Sanctum\Sanctum;
 use Tests\Support\ScriptedAiDriver;

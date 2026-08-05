@@ -1,7 +1,7 @@
 <?php
 
-use App\Models\Customer;
-use App\Models\User;
+use App\Domains\Accounts\Models\User;
+use App\Domains\Contacts\Models\Customer;
 
 return [
 

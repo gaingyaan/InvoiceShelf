@@ -1,7 +1,7 @@
 <?php
 
-use App\Models\Customer;
-use App\Models\User;
+use App\Domains\Accounts\Models\User;
+use App\Domains\Contacts\Models\Customer;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;

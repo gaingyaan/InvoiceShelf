@@ -1,7 +1,7 @@
 <?php
 
-use App\Models\CompanySetting;
-use App\Models\User;
+use App\Domains\Accounts\Models\CompanySetting;
+use App\Domains\Accounts\Models\User;
 use Illuminate\Support\Facades\Artisan;
 use InvoiceShelf\Modules\Registry;
 use Laravel\Sanctum\Sanctum;

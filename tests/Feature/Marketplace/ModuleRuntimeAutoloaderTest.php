@@ -1,6 +1,6 @@
 <?php
 
-use App\Services\Marketplace\ModuleRuntimeAutoloader;
+use App\Platform\Modules\Runtime\ModuleRuntimeAutoloader;
 use Illuminate\Support\Facades\File;
 use Modules\AutoloadProbe\Providers\AutoloadProbeServiceProvider;
 

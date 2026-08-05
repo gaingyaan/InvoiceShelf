@@ -2,10 +2,10 @@
 
 namespace Tests\Feature\Customer;
 
-use App\Models\CompanySetting;
-use App\Models\EmailLog;
-use App\Models\Invoice;
-use App\Models\Payment;
+use App\Domains\Accounts\Models\CompanySetting;
+use App\Domains\Receivables\Models\Payment;
+use App\Domains\Sales\Models\Invoice;
+use App\Platform\Mail\Models\EmailLog;
 use Illuminate\Support\Facades\Artisan;
 
 use function Pest\Laravel\get;

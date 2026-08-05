@@ -1,8 +1,8 @@
 <?php
 
-use App\Support\Pdf\DompdfDriver;
-use App\Support\Pdf\GotenbergPdfDriver;
-use App\Support\Pdf\PdfPageSetup;
+use App\Platform\Pdf\Rendering\DompdfDriver;
+use App\Platform\Pdf\Rendering\GotenbergPdfDriver;
+use App\Platform\Pdf\Rendering\PdfPageSetup;
 
 /**
  * The page setup is only worth anything if both drivers land on the same page.

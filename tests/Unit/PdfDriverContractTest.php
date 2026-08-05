@@ -1,12 +1,12 @@
 <?php
 
-use App\Support\Pdf\DompdfDriver;
-use App\Support\Pdf\DompdfResponse;
-use App\Support\Pdf\GotenbergPdfDriver;
-use App\Support\Pdf\GotenbergPdfResponse;
-use App\Support\Pdf\PdfDriver;
-use App\Support\Pdf\PdfDriverFactory;
-use App\Support\Pdf\ResponseStream;
+use App\Platform\Pdf\Rendering\DompdfDriver;
+use App\Platform\Pdf\Rendering\DompdfResponse;
+use App\Platform\Pdf\Rendering\GotenbergPdfDriver;
+use App\Platform\Pdf\Rendering\GotenbergPdfResponse;
+use App\Platform\Pdf\Rendering\PdfDriver;
+use App\Platform\Pdf\Rendering\PdfDriverFactory;
+use App\Platform\Pdf\Rendering\ResponseStream;
 
 /**
  * PdfDriver and ResponseStream existed but nothing implemented them, so the

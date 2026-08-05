@@ -1,7 +1,7 @@
 <?php
 
-use App\Services\FontService;
-use App\Support\Pdf\GotenbergPdfDriver;
+use App\Platform\Pdf\Application\FontService;
+use App\Platform\Pdf\Rendering\GotenbergPdfDriver;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\View;
 

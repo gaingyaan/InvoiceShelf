@@ -1,12 +1,12 @@
 <?php
 
-use App\Events\ModuleUninstalledEvent;
-use App\Http\Resources\ModuleResource;
-use App\Models\Company;
-use App\Models\MarketplaceOperation;
-use App\Models\Module;
-use App\Models\User;
-use App\Services\Marketplace\ModuleRuntimeAutoloader;
+use App\Domains\Accounts\Models\Company;
+use App\Domains\Accounts\Models\User;
+use App\Platform\Modules\Events\ModuleUninstalledEvent;
+use App\Platform\Modules\Http\Resources\ModuleResource;
+use App\Platform\Modules\Models\MarketplaceOperation;
+use App\Platform\Modules\Models\Module;
+use App\Platform\Modules\Runtime\ModuleRuntimeAutoloader;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;

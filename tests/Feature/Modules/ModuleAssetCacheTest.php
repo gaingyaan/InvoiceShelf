@@ -1,6 +1,6 @@
 <?php
 
-use App\Support\Module\ModuleAssetVersion;
+use App\Platform\Modules\Runtime\ModuleAssetVersion;
 use Illuminate\Support\Facades\File;
 use InvoiceShelf\Modules\Registry;
 

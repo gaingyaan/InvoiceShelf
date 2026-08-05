@@ -1,7 +1,7 @@
 <?php
 
-use App\Services\Ai\AiToolRegistry;
-use App\Services\Ai\Tools\AiTool;
+use App\Platform\Ai\Application\AiToolRegistry;
+use App\Platform\Ai\Application\Tools\AiTool;
 
 /**
  * A stub tool for exercising the registry without touching any real DB tables.

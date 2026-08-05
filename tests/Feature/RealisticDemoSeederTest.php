@@ -1,11 +1,11 @@
 <?php
 
-use App\Models\Customer;
-use App\Models\Invoice;
-use App\Models\Payment;
-use App\Models\PaymentAllocation;
-use App\Models\User;
-use App\Services\CustomerStatementService;
+use App\Domains\Accounts\Models\User;
+use App\Domains\Contacts\Models\Customer;
+use App\Domains\Receivables\Models\Payment;
+use App\Domains\Receivables\Models\PaymentAllocation;
+use App\Domains\Reporting\Queries\CustomerStatementQuery;
+use App\Domains\Sales\Models\Invoice;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Queue;
@@ -43,14 +43,14 @@ test('realistic demo provides current-month account activity for every customer'
     $company = User::where('email', 'demo@invoiceshelf.com')->firstOrFail()->companies()->firstOrFail();
     $from = Carbon::now()->startOfMonth();
     $to = Carbon::now();
-    $statementService = app(CustomerStatementService::class);
+    $statementQuery = app(CustomerStatementQuery::class);
 
     Customer::query()
         ->where('company_id', $company->id)
-        ->each(function (Customer $customer) use ($statementService, $from, $to): void {
-            $statement = $statementService->statement(
+        ->each(function (Customer $customer) use ($statementQuery, $from, $to): void {
+            $statement = $statementQuery->statement(
                 $customer,
-                CustomerStatementService::TYPE_ACTIVITY,
+                CustomerStatementQuery::TYPE_ACTIVITY,
                 $from,
                 $to,
             );

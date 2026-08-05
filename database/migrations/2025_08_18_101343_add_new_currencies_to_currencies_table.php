@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\Currency;
+use App\Domains\Money\Models\Currency;
 use Illuminate\Database\Migrations\Migration;
 
 return new class extends Migration

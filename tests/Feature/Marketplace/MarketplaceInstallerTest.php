@@ -1,8 +1,8 @@
 <?php
 
-use App\Models\Module;
-use App\Services\Marketplace\CanonicalJson;
-use App\Services\Marketplace\MarketplaceInstaller;
+use App\Platform\Modules\Marketplace\CanonicalJson;
+use App\Platform\Modules\Marketplace\MarketplaceInstaller;
+use App\Platform\Modules\Models\Module;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 

@@ -18,7 +18,7 @@
 
     <!-- Module Styles -->
     @foreach(\InvoiceShelf\Modules\Registry::allStyles() as $name => $path)
-        @php($version = \App\Support\Module\ModuleAssetVersion::forPath($path))
+        @php($version = \App\Platform\Modules\Runtime\ModuleAssetVersion::forPath($path))
         <link rel="stylesheet" href="/modules/styles/{{ $name }}@if($version)?v={{ $version }}@endif">
     @endforeach
 
@@ -43,7 +43,7 @@
         @if (\Illuminate\Support\Str::startsWith($path, ['http://', 'https://']))
             <script type="module" src="{!! $path !!}"></script>
         @else
-            @php($version = \App\Support\Module\ModuleAssetVersion::forPath($path))
+            @php($version = \App\Platform\Modules\Runtime\ModuleAssetVersion::forPath($path))
             <script type="module" src="/modules/scripts/{{ $name }}@if($version)?v={{ $version }}@endif"></script>
         @endif
     @endforeach

@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\Customer;
+use App\Domains\Contacts\Models\Customer;
 use Illuminate\Support\Facades\Artisan;
 
 use function Pest\Laravel\postJson;

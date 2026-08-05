@@ -1,7 +1,7 @@
 <?php
 
-use App\Models\FileDisk;
-use App\Models\User;
+use App\Domains\Accounts\Models\User;
+use App\Platform\Storage\Models\FileDisk;
 use Illuminate\Support\Facades\Artisan;
 use Laravel\Sanctum\Sanctum;
 

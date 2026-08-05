@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\Invoice;
+use App\Domains\Sales\Models\Invoice;
 use Illuminate\Database\Migrations\Migration;
 
 return new class extends Migration

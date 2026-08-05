@@ -1,7 +1,7 @@
 <?php
 
-use App\Http\Resources\ModuleResource;
-use App\Models\Module as InstalledModule;
+use App\Platform\Modules\Http\Resources\ModuleResource;
+use App\Platform\Modules\Models\Module as InstalledModule;
 use Illuminate\Http\Request;
 
 it('maps the marketplace payload shape expected by the admin modules ui', function () {

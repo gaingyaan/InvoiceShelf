@@ -1,10 +1,9 @@
 <?php
 
-use App\Models\CompanySetting;
-use App\Models\Setting;
-use App\Models\User;
-use App\Services\Mail\CompanyMailConfigService;
-use App\Services\Mail\MailConfigurationService;
+use App\Domains\Accounts\Models\CompanySetting;
+use App\Domains\Accounts\Models\User;
+use App\Platform\Mail\Application\MailConfigurationService;
+use App\Platform\Operations\Models\Setting;
 use Illuminate\Support\Facades\Artisan;
 use Laravel\Sanctum\Sanctum;
 
@@ -101,7 +100,7 @@ test('company mail runtime apply maps postmark settings into laravel config', fu
         'company_from_mail' => 'runtime@example.com',
     ], $this->companyId);
 
-    CompanyMailConfigService::apply($this->companyId);
+    app(MailConfigurationService::class)->applyCompanyConfig($this->companyId);
 
     expect(config('mail.default'))->toBe('postmark');
     expect(config('services.postmark.token'))->toBe('runtime-postmark-token');

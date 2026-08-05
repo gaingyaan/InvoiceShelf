@@ -1,9 +1,9 @@
 <?php
 
-use App\Models\Company;
-use App\Models\Customer;
-use App\Models\Invoice;
-use App\Services\Ai\Tools\SearchInvoicesTool;
+use App\Domains\Accounts\Models\Company;
+use App\Domains\Contacts\Models\Customer;
+use App\Domains\Sales\Models\Invoice;
+use App\Platform\Ai\Application\Tools\SearchInvoicesTool;
 use Illuminate\Support\Facades\Artisan;
 
 beforeEach(function () {

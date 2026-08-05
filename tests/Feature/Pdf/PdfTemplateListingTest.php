@@ -1,6 +1,6 @@
 <?php
 
-use App\Support\Pdf\PdfTemplateUtils;
+use App\Platform\Pdf\Rendering\PdfTemplateUtils;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 

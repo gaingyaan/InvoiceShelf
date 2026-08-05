@@ -1,6 +1,6 @@
 <?php
 
-use App\Services\Marketplace\CanonicalJson;
+use App\Platform\Modules\Marketplace\CanonicalJson;
 
 it('canonicalizes signed manifests recursively without changing list order', function () {
     $manifest = [

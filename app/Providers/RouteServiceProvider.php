@@ -54,14 +54,5 @@ class RouteServiceProvider extends ServiceProvider
             return Limit::perMinute(60);
         });
 
-        // AI endpoints — per user per company, fairly generous for chat use
-        // but low enough to contain runaway clients / loops.
-        RateLimiter::for('ai', function (Request $request) {
-            $user = $request->user();
-            $companyId = $request->header('company') ?? 'noop';
-            $key = $user ? "{$user->id}:{$companyId}" : $request->ip();
-
-            return Limit::perMinute(30)->by($key);
-        });
     }
 }

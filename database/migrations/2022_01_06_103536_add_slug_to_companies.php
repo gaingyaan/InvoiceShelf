@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\Company;
+use App\Domains\Accounts\Models\Company;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Str;
 

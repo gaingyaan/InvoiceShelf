@@ -420,7 +420,7 @@
             <tr>
                 <td class="text-center">
                     @if ($logo)
-                        <img class="header-logo" style="height:50px" src="{{ \App\Support\Pdf\ImageUtils::toBase64Src($logo) }}" alt="Company Logo">
+                        <img class="header-logo" style="height:50px" src="{{ \App\Platform\Pdf\Rendering\ImageUtils::toBase64Src($logo) }}" alt="Company Logo">
                     @else
                         @if ($estimate->customer->company)
                             <h2 class="header-logo"> {{ $estimate->customer->company->name }} </h2>

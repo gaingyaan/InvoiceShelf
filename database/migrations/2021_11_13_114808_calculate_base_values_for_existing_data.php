@@ -1,9 +1,9 @@
 <?php
 
-use App\Models\CompanySetting;
-use App\Models\Customer;
-use App\Models\Item;
-use App\Models\User;
+use App\Domains\Accounts\Models\CompanySetting;
+use App\Domains\Accounts\Models\User;
+use App\Domains\Catalog\Models\Item;
+use App\Domains\Contacts\Models\Customer;
 use Illuminate\Database\Migrations\Migration;
 
 return new class extends Migration

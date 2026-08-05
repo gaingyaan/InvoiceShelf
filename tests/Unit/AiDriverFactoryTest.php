@@ -1,9 +1,9 @@
 <?php
 
-use App\Support\Ai\AiChatResponse;
-use App\Support\Ai\AiDriver;
-use App\Support\Ai\AiDriverFactory;
-use App\Support\Ai\OpenRouterDriver;
+use App\Platform\Ai\Contracts\AiDriver;
+use App\Platform\Ai\Data\AiChatResponse;
+use App\Platform\Ai\Drivers\AiDriverFactory;
+use App\Platform\Ai\Drivers\OpenRouterDriver;
 use InvoiceShelf\Modules\Registry;
 
 test('make resolves the built-in openrouter driver', function () {

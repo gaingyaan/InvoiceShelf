@@ -1,9 +1,9 @@
 <?php
 
-use App\Models\Company;
-use App\Models\Expense;
-use App\Models\ExpenseCategory;
-use App\Services\Ai\Tools\RankExpenseCategoriesTool;
+use App\Domains\Accounts\Models\Company;
+use App\Domains\Purchases\Models\Expense;
+use App\Domains\Purchases\Models\ExpenseCategory;
+use App\Platform\Ai\Application\Tools\RankExpenseCategoriesTool;
 use Illuminate\Support\Facades\Artisan;
 
 beforeEach(function () {

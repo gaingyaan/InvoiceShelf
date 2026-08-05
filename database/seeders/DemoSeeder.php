@@ -2,15 +2,16 @@
 
 namespace Database\Seeders;
 
+use App\Domains\Accounts\Application\CompanyService;
+use App\Domains\Accounts\Models\Company;
+use App\Domains\Accounts\Models\CompanySetting;
+use App\Domains\Accounts\Models\User;
+use App\Domains\Contacts\Models\Country;
+use App\Domains\Contacts\Models\Customer;
+use App\Domains\Money\Models\Currency;
 use App\Facades\Hashids;
-use App\Models\Company;
-use App\Models\CompanySetting;
-use App\Models\Country;
-use App\Models\Currency;
-use App\Models\Customer;
-use App\Models\Setting;
-use App\Models\User;
-use App\Services\Company\CompanyService;
+use App\Platform\Operations\Models\Setting;
+use App\Support\Hashids\HashidConnection;
 use Illuminate\Database\Seeder;
 use Silber\Bouncer\BouncerFacade;
 
@@ -38,7 +39,7 @@ class DemoSeeder extends Seeder
             'tax_id' => '84-1234567',
         ]);
 
-        $company->unique_hash = Hashids::connection(Company::class)->encode($company->id);
+        $company->unique_hash = Hashids::connection(HashidConnection::Company->value)->encode($company->id);
         $company->save();
         app(CompanyService::class)->setupDefaults($company);
 

@@ -1,16 +1,16 @@
 <?php
 
-use App\Models\Company;
-use App\Models\Customer;
-use App\Models\Expense;
-use App\Models\Invoice;
-use App\Models\Payment;
-use App\Models\PaymentAllocation;
-use App\Models\Tax;
-use App\Models\TaxType;
-use App\Models\User;
-use App\Services\Company\CompanyService;
-use App\Services\CustomerService;
+use App\Domains\Accounts\Application\CompanyService;
+use App\Domains\Accounts\Models\Company;
+use App\Domains\Accounts\Models\User;
+use App\Domains\Contacts\Application\CustomerService;
+use App\Domains\Contacts\Models\Customer;
+use App\Domains\Purchases\Models\Expense;
+use App\Domains\Receivables\Models\Payment;
+use App\Domains\Receivables\Models\PaymentAllocation;
+use App\Domains\Sales\Models\Invoice;
+use App\Domains\Taxation\Models\Tax;
+use App\Domains\Taxation\Models\TaxType;
 use Illuminate\Support\Facades\Artisan;
 
 beforeEach(function () {
@@ -73,7 +73,7 @@ test('company deletion removes receipt taxes through expense model events', func
         'tax_type_id' => $taxType->id,
     ]);
 
-    app(CompanyService::class)->delete($company, $user);
+    app(CompanyService::class)->delete($company);
 
     $this->assertDatabaseMissing('taxes', ['id' => $tax->id]);
 });
@@ -116,7 +116,7 @@ test('company deletion removes payment allocations before bulk payment deletion'
         'invoice_id' => $invoice->id,
     ]);
 
-    app(CompanyService::class)->delete($company, $user);
+    app(CompanyService::class)->delete($company);
 
     $this->assertDatabaseMissing('payment_allocations', ['id' => $allocation->id]);
 });

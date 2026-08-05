@@ -1,13 +1,13 @@
 <?php
 
-use App\Mail\SendCustomerStatementMail;
-use App\Models\Company;
-use App\Models\Customer;
-use App\Models\EmailLog;
-use App\Models\Invoice;
-use App\Models\Payment;
-use App\Models\PaymentAllocation;
-use App\Models\User;
+use App\Domains\Accounts\Models\Company;
+use App\Domains\Accounts\Models\User;
+use App\Domains\Contacts\Models\Customer;
+use App\Domains\Receivables\Models\Payment;
+use App\Domains\Receivables\Models\PaymentAllocation;
+use App\Domains\Reporting\Mail\SendCustomerStatementMail;
+use App\Domains\Sales\Models\Invoice;
+use App\Platform\Mail\Models\EmailLog;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Mail;
@@ -192,7 +192,7 @@ test('sending a statement attaches the live PDF and logs it against the customer
     $sent->build();
 
     expect(EmailLog::query()
-        ->where('mailable_type', Customer::class)
+        ->where('mailable_type', $customer->getMorphClass())
         ->where('mailable_id', $customer->id)
         ->where('from', 'configured@example.test')
         ->exists())->toBeTrue();

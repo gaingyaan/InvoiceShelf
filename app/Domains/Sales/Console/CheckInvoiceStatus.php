@@ -1,0 +1,57 @@
+<?php
+
+namespace App\Domains\Sales\Console;
+
+use App\Domains\Sales\Models\Invoice;
+use Carbon\Carbon;
+use Illuminate\Console\Command;
+
+class CheckInvoiceStatus extends Command
+{
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
+    protected $signature = 'check:invoices:status';
+
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
+    protected $description = 'Check invoices status.';
+
+    /**
+     * Create a new command instance.
+     *
+     * @return void
+     */
+    public function __construct()
+    {
+        parent::__construct();
+    }
+
+    /**
+     * Execute the console command.
+     *
+     * @return mixed
+     */
+    public function handle(): void
+    {
+        $date = Carbon::now();
+        // Only real invoices can fall overdue: a credit note is never owed, so
+        // it must never be flagged no matter what date it carries.
+        $invoices = Invoice::where('type', Invoice::TYPE_INVOICE)
+            ->whereNotIn('status', [Invoice::STATUS_COMPLETED, Invoice::STATUS_DRAFT])
+            ->where('overdue', false)
+            ->whereDate('due_date', '<', $date)
+            ->get();
+
+        foreach ($invoices as $invoice) {
+            $invoice->overdue = true;
+            printf("Invoice %s is OVERDUE \n", $invoice->invoice_number);
+            $invoice->save();
+        }
+    }
+}

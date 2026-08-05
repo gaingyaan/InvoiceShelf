@@ -1,8 +1,8 @@
 <?php
 
-use App\Models\Company;
-use App\Models\Note;
-use App\Models\User;
+use App\Domains\Accounts\Models\Company;
+use App\Domains\Accounts\Models\User;
+use App\Domains\Metadata\Models\Note;
 use Illuminate\Support\Facades\Artisan;
 use Laravel\Sanctum\Sanctum;
 

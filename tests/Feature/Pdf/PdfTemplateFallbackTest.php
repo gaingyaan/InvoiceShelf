@@ -1,9 +1,9 @@
 <?php
 
-use App\Models\Estimate;
-use App\Models\Invoice;
-use App\Models\User;
-use App\Support\Pdf\PdfTemplateUtils;
+use App\Domains\Accounts\Models\User;
+use App\Domains\Sales\Models\Estimate;
+use App\Domains\Sales\Models\Invoice;
+use App\Platform\Pdf\Rendering\PdfTemplateUtils;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;

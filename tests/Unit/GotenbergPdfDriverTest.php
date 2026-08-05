@@ -1,6 +1,6 @@
 <?php
 
-use App\Support\Pdf\GotenbergPdfDriver;
+use App\Platform\Pdf\Rendering\GotenbergPdfDriver;
 
 /**
  * These assert against buildRequest(), which assembles the Chromium multipart

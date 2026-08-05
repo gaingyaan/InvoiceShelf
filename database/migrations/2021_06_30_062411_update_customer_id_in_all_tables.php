@@ -1,14 +1,14 @@
 <?php
 
-use App\Models\Address;
-use App\Models\Customer;
-use App\Models\CustomField;
-use App\Models\CustomFieldValue;
-use App\Models\Estimate;
-use App\Models\Expense;
-use App\Models\Invoice;
-use App\Models\Payment;
-use App\Models\User;
+use App\Domains\Accounts\Models\User;
+use App\Domains\Contacts\Models\Address;
+use App\Domains\Contacts\Models\Customer;
+use App\Domains\Metadata\Models\CustomField;
+use App\Domains\Metadata\Models\CustomFieldValue;
+use App\Domains\Purchases\Models\Expense;
+use App\Domains\Receivables\Models\Payment;
+use App\Domains\Sales\Models\Estimate;
+use App\Domains\Sales\Models\Invoice;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;

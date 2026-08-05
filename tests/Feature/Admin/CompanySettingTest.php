@@ -1,13 +1,13 @@
 <?php
 
-use App\Http\Controllers\Company\Settings\CompanyController;
-use App\Http\Controllers\Company\Settings\UserProfileController;
-use App\Http\Requests\CompanyRequest;
-use App\Http\Requests\ProfileRequest;
-use App\Models\Invoice;
-use App\Models\InvoiceItem;
-use App\Models\Tax;
-use App\Models\User;
+use App\Domains\Accounts\Http\Controllers\Company\CompanyController;
+use App\Domains\Accounts\Http\Controllers\Company\UserProfileController;
+use App\Domains\Accounts\Http\Requests\CompanyRequest;
+use App\Domains\Accounts\Http\Requests\ProfileRequest;
+use App\Domains\Accounts\Models\User;
+use App\Domains\Sales\Models\Invoice;
+use App\Domains\Sales\Models\InvoiceItem;
+use App\Domains\Taxation\Models\Tax;
 use Illuminate\Support\Facades\Artisan;
 use Laravel\Sanctum\Sanctum;
 

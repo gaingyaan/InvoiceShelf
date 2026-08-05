@@ -1,9 +1,9 @@
 <?php
 
-use App\Jobs\CreateBackupJob;
-use App\Models\FileDisk;
-use App\Models\User;
-use App\Services\Storage\BackupConfigurationFactory;
+use App\Domains\Accounts\Models\User;
+use App\Platform\Storage\Application\BackupConfigurationFactory;
+use App\Platform\Storage\Jobs\CreateBackupJob;
+use App\Platform\Storage\Models\FileDisk;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Queue;
 use Laravel\Sanctum\Sanctum;

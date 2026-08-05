@@ -2,7 +2,7 @@
 
 namespace Database\Factories;
 
-use App\Models\FileDisk;
+use App\Platform\Storage\Models\FileDisk;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class FileDiskFactory extends Factory

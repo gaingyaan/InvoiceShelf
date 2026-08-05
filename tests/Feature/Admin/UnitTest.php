@@ -1,9 +1,9 @@
 <?php
 
-use App\Http\Controllers\Company\Item\UnitsController;
-use App\Http\Requests\UnitRequest;
-use App\Models\Unit;
-use App\Models\User;
+use App\Domains\Accounts\Models\User;
+use App\Domains\Catalog\Http\Controllers\UnitsController;
+use App\Domains\Catalog\Http\Requests\UnitRequest;
+use App\Domains\Catalog\Models\Unit;
 use Illuminate\Support\Facades\Artisan;
 use Laravel\Sanctum\Sanctum;
 

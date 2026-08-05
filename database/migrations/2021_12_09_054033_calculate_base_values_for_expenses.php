@@ -1,8 +1,8 @@
 <?php
 
-use App\Models\CompanySetting;
-use App\Models\Expense;
-use App\Models\User;
+use App\Domains\Accounts\Models\CompanySetting;
+use App\Domains\Accounts\Models\User;
+use App\Domains\Purchases\Models\Expense;
 use Illuminate\Database\Migrations\Migration;
 
 return new class extends Migration

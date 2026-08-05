@@ -1,9 +1,9 @@
 <?php
 
-use App\Http\Controllers\Company\Members\MembersController;
-use App\Http\Requests\MemberRequest;
-use App\Models\Company;
-use App\Models\User;
+use App\Domains\Accounts\Http\Controllers\Company\MembersController;
+use App\Domains\Accounts\Http\Requests\MemberRequest;
+use App\Domains\Accounts\Models\Company;
+use App\Domains\Accounts\Models\User;
 use Laravel\Sanctum\Sanctum;
 
 use function Pest\Laravel\getJson;

@@ -1,8 +1,8 @@
 <?php
 
-use App\Support\ExchangeRate\CurrencyFreakDriver;
-use App\Support\ExchangeRate\ExchangeRateDriver;
-use App\Support\ExchangeRate\ExchangeRateDriverFactory;
+use App\Domains\Money\ExchangeRates\CurrencyFreakDriver;
+use App\Domains\Money\ExchangeRates\ExchangeRateDriver;
+use App\Domains\Money\ExchangeRates\ExchangeRateDriverFactory;
 use InvoiceShelf\Modules\Registry;
 
 test('make resolves built-in drivers from the factory map', function () {
