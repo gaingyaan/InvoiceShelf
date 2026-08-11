@@ -11,7 +11,7 @@
   ·
   <a href="https://docs.invoiceshelf.com/">Documentation</a>
   ·
-  <a href="https://discord.gg/eHXf4zWhsR">Community</a>
+  <a href="https://discord.gg/eHXf4zWhsR">Join Discord</a>
 </p>
 
 > [!WARNING]
