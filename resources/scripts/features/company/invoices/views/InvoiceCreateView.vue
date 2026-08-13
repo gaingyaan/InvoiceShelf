@@ -65,6 +65,7 @@
           :currency="invoiceStore.newInvoice.selectedCurrency"
           :is-loading="isLoadingContent"
           :item-validation-scope="invoiceValidationScope"
+          :tax-included-setting="companyStore.selectedCompanySettings.tax_included"
           :store="invoiceStore"
           store-prop="newInvoice"
         />

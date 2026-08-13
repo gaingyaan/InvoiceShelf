@@ -162,6 +162,7 @@ class RecurringInvoiceService
         $newInvoice['paid_status'] = Invoice::STATUS_UNPAID;
         $newInvoice['sub_total'] = $recurringInvoice->sub_total;
         $newInvoice['tax_per_item'] = $recurringInvoice->tax_per_item;
+        $newInvoice['tax_included'] = $recurringInvoice->tax_included;
         $newInvoice['discount_per_item'] = $recurringInvoice->discount_per_item;
         $newInvoice['tax'] = $recurringInvoice->tax;
         $newInvoice['total'] = $recurringInvoice->total;
@@ -231,6 +232,10 @@ class RecurringInvoiceService
             $createdItem = $recurringInvoice->items()->create($item);
             if (array_key_exists('taxes', $item) && $item['taxes']) {
                 foreach ($item['taxes'] as $tax) {
+                    if (empty($tax['tax_type_id'])) {
+                        continue;
+                    }
+
                     $tax['company_id'] = $recurringInvoice->company_id;
                     if (gettype($tax['amount']) !== 'NULL') {
                         $createdItem->taxes()->create($tax);

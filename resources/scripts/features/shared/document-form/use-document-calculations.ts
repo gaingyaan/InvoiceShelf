@@ -86,6 +86,14 @@ export function useDocumentCalculations(options: UseDocumentCalculationsOptions)
   })
 
   const totalSimpleTax = computed<number>(() => {
+    if (taxPerItem.value === 'YES') {
+      return items.value.reduce((sum: number, item: DocumentItem) => {
+        return sum + (item.taxes ?? []).reduce((itemSum, tax) => {
+          return tax.compound_tax ? itemSum : itemSum + (tax.amount ?? 0)
+        }, 0)
+      }, 0)
+    }
+
     return taxes.value.reduce((sum: number, tax: DocumentTax) => {
       if (!tax.compound_tax) {
         return sum + (tax.amount ?? 0)
@@ -95,6 +103,14 @@ export function useDocumentCalculations(options: UseDocumentCalculationsOptions)
   })
 
   const totalCompoundTax = computed<number>(() => {
+    if (taxPerItem.value === 'YES') {
+      return items.value.reduce((sum: number, item: DocumentItem) => {
+        return sum + (item.taxes ?? []).reduce((itemSum, tax) => {
+          return tax.compound_tax ? itemSum + (tax.amount ?? 0) : itemSum
+        }, 0)
+      }, 0)
+    }
+
     return taxes.value.reduce((sum: number, tax: DocumentTax) => {
       if (tax.compound_tax) {
         return sum + (tax.amount ?? 0)
@@ -104,12 +120,7 @@ export function useDocumentCalculations(options: UseDocumentCalculationsOptions)
   })
 
   const totalTax = computed<number>(() => {
-    if (taxPerItem.value === 'NO' || taxPerItem.value === null) {
-      return totalSimpleTax.value + totalCompoundTax.value
-    }
-    return items.value.reduce((sum: number, item: DocumentItem) => {
-      return sum + (item.tax ?? 0)
-    }, 0)
+    return totalSimpleTax.value + totalCompoundTax.value
   })
 
   const subtotalWithDiscount = computed<number>(() => {
@@ -117,12 +128,16 @@ export function useDocumentCalculations(options: UseDocumentCalculationsOptions)
   })
 
   const netTotal = computed<number>(() => {
-    return subtotalWithDiscount.value - totalTax.value
+    if (taxIncluded.value) {
+      return subtotalWithDiscount.value - totalSimpleTax.value
+    }
+
+    return subtotalWithDiscount.value
   })
 
   const total = computed<number>(() => {
     if (taxIncluded.value) {
-      return subtotalWithDiscount.value
+      return subtotalWithDiscount.value + totalCompoundTax.value
     }
     return subtotalWithDiscount.value + totalTax.value
   })
@@ -164,8 +179,8 @@ export function calcItemTotal(subtotal: number, discountVal: number): number {
 /**
  * Calculate tax amount for a given total and tax config.
  *
- * A compound tax is charged on the base plus every simple (non-compound) tax
- * already applied, and is never backed out of a tax-inclusive total.
+ * A compound tax is charged on top of an inclusive amount, or on the base plus
+ * every simple (non-compound) tax when the amount is tax-exclusive.
  *
  * @param total Base amount in cents (document subtotal after discount, or an item total after discount)
  * @param percent Percentage rate, when the tax is percentage based
@@ -189,6 +204,10 @@ export function calcTaxAmount(
   }
   if (!total || !percent) return 0
   if (compoundTax) {
+    if (taxIncluded) {
+      return Math.round((total * percent) / 100)
+    }
+
     return Math.round(((total + simpleTaxTotal) * percent) / 100)
   }
   if (taxIncluded) {

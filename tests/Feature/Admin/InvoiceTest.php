@@ -122,6 +122,65 @@ test('server recomputes invoice totals and ignores client-supplied amounts', fun
     ]);
 });
 
+test('persists an inclusive compound tax on top of the entered gross total', function () {
+    $simpleTax = Tax::factory()->raw([
+        'name' => 'VAT 19%',
+        'percent' => 19,
+        'amount' => 1900,
+        'compound_tax' => false,
+    ]);
+    $compoundTax = Tax::factory()->raw([
+        'name' => 'Cash levy 1%',
+        'percent' => 1,
+        'amount' => 119,
+        'compound_tax' => true,
+    ]);
+    $item = InvoiceItem::factory()->raw([
+        'price' => 11900,
+        'quantity' => 1,
+        'discount' => 0,
+        'discount_val' => 0,
+        'tax' => 0,
+        'taxes' => [],
+    ]);
+    $invoice = Invoice::factory()->raw([
+        'items' => [$item],
+        'taxes' => [$simpleTax, $compoundTax],
+        'discount' => 0,
+        'discount_val' => 0,
+        'tax_included' => true,
+        'sub_total' => 1,
+        'tax' => 1,
+        'total' => 1,
+        'due_amount' => 1,
+    ]);
+
+    postJson('api/v1/invoices', $invoice)->assertOk();
+
+    $savedInvoice = Invoice::query()
+        ->where('invoice_number', $invoice['invoice_number'])
+        ->firstOrFail();
+
+    expect($savedInvoice->sub_total)->toBe(11900)
+        ->and($savedInvoice->tax)->toBe(2019)
+        ->and($savedInvoice->total)->toBe(12019)
+        ->and($savedInvoice->due_amount)->toBe(12019)
+        ->and((bool) $savedInvoice->tax_included)->toBeTrue();
+
+    $this->assertDatabaseHas('taxes', [
+        'invoice_id' => $savedInvoice->id,
+        'tax_type_id' => $simpleTax['tax_type_id'],
+        'amount' => 1900,
+        'compound_tax' => 0,
+    ]);
+    $this->assertDatabaseHas('taxes', [
+        'invoice_id' => $savedInvoice->id,
+        'tax_type_id' => $compoundTax['tax_type_id'],
+        'amount' => 119,
+        'compound_tax' => 1,
+    ]);
+});
+
 test('create invoice with negative and zero item quantities', function () {
     $invoice = Invoice::factory()->raw([
         'items' => [
@@ -571,6 +630,23 @@ test('create invoice with tax per item ignores empty placeholder tax row', funct
     $this->assertDatabaseMissing('taxes', [
         'tax_type_id' => 0,
     ]);
+});
+
+test('rejects a nonzero per-item placeholder tax row', function () {
+    $invoice = Invoice::factory()->raw([
+        'items' => [
+            InvoiceItem::factory()->raw([
+                'taxes' => [[
+                    'tax_type_id' => 0,
+                    'amount' => 1,
+                ]],
+            ]),
+        ],
+    ]);
+
+    postJson('api/v1/invoices', $invoice)
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('items.0.taxes.0.amount');
 });
 
 test('create invoice with EUR currency', function () {

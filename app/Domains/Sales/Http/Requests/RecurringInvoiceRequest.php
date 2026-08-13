@@ -7,9 +7,12 @@ use App\Domains\Contacts\Models\Customer;
 use App\Domains\Sales\Models\RecurringInvoice;
 use App\Support\DocumentTotals;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Validator;
 
 class RecurringInvoiceRequest extends FormRequest
 {
+    use Concerns\ValidatesDocumentTaxPlaceholders;
+
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -99,6 +102,11 @@ class RecurringInvoiceRequest extends FormRequest
         }
 
         return $rules;
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $this->validateDocumentTaxPlaceholders($validator);
     }
 
     public function getRecurringInvoicePayload()

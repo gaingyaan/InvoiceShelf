@@ -171,10 +171,22 @@ export const useInvoiceStore = defineStore('invoice', {
     },
 
     getNetTotal(): number {
-      return this.getSubtotalWithDiscount - this.getTotalTax
+      if (this.newInvoice.tax_included) {
+        return this.getSubtotalWithDiscount - this.getTotalSimpleTax
+      }
+
+      return this.getSubtotalWithDiscount
     },
 
     getTotalSimpleTax(state): number {
+      if (state.newInvoice.tax_per_item === 'YES') {
+        return state.newInvoice.items.reduce((sum: number, item: DocumentItem) => {
+          return sum + (item.taxes ?? []).reduce((itemSum, tax) => {
+            return tax.compound_tax ? itemSum : itemSum + (tax.amount ?? 0)
+          }, 0)
+        }, 0)
+      }
+
       return state.newInvoice.taxes.reduce(
         (sum: number, tax: DocumentTax) => {
           if (!tax.compound_tax) return sum + (tax.amount ?? 0)
@@ -185,6 +197,14 @@ export const useInvoiceStore = defineStore('invoice', {
     },
 
     getTotalCompoundTax(state): number {
+      if (state.newInvoice.tax_per_item === 'YES') {
+        return state.newInvoice.items.reduce((sum: number, item: DocumentItem) => {
+          return sum + (item.taxes ?? []).reduce((itemSum, tax) => {
+            return tax.compound_tax ? itemSum + (tax.amount ?? 0) : itemSum
+          }, 0)
+        }, 0)
+      }
+
       return state.newInvoice.taxes.reduce(
         (sum: number, tax: DocumentTax) => {
           if (tax.compound_tax) return sum + (tax.amount ?? 0)
@@ -195,16 +215,7 @@ export const useInvoiceStore = defineStore('invoice', {
     },
 
     getTotalTax(): number {
-      if (
-        this.newInvoice.tax_per_item === 'NO' ||
-        this.newInvoice.tax_per_item === null
-      ) {
-        return this.getTotalSimpleTax + this.getTotalCompoundTax
-      }
-      return this.newInvoice.items.reduce(
-        (sum: number, item: DocumentItem) => sum + (item.tax ?? 0),
-        0,
-      )
+      return this.getTotalSimpleTax + this.getTotalCompoundTax
     },
 
     getSubtotalWithDiscount(): number {
@@ -213,7 +224,7 @@ export const useInvoiceStore = defineStore('invoice', {
 
     getTotal(): number {
       if (this.newInvoice.tax_included) {
-        return this.getSubtotalWithDiscount
+        return this.getSubtotalWithDiscount + this.getTotalCompoundTax
       }
       return this.getSubtotalWithDiscount + this.getTotalTax
     },
@@ -504,6 +515,9 @@ export const useInvoiceStore = defineStore('invoice', {
 
       if (!isEdit && companySettings) {
         this.newInvoice.tax_per_item = companySettings.tax_per_item ?? null
+        this.newInvoice.tax_included =
+          companySettings.tax_included === 'YES' &&
+          companySettings.tax_included_by_default === 'YES'
         this.newInvoice.sales_tax_type = companySettings.sales_tax_type ?? null
         this.newInvoice.sales_tax_address_type =
           companySettings.sales_tax_address_type ?? null

@@ -3,6 +3,7 @@
     <!-- Single shared item-create modal for the whole table (one instance, not one
          per row — stacked HeadlessUI dialogs would otherwise close each other). -->
     <ItemModal />
+    <TaxTypeModal />
 
     <!-- Tax Included Toggle -->
     <div
@@ -96,6 +97,7 @@
             :can-add-tax="canAddTax"
             :store="store"
             :store-prop="storeProp"
+            @tax-type-created="upsertAvailableTaxType"
           />
         </template>
       </draggable>
@@ -116,6 +118,7 @@ import { computed, onMounted, ref } from 'vue'
 import draggable from 'vuedraggable'
 import DocumentItemRow from './DocumentItemRow.vue'
 import ItemModal from '@/scripts/features/company/items/components/ItemModal.vue'
+import TaxTypeModal from '@/scripts/features/company/settings/components/TaxTypeModal.vue'
 import { useUserStore } from '../../../stores/user.store'
 import { taxTypeService } from '../../../api/services/tax-type.service'
 import { ABILITIES } from '../../../config/abilities'
@@ -158,6 +161,17 @@ onMounted(async () => {
     // Silently fail
   }
 })
+
+function upsertAvailableTaxType(taxType: TaxType): void {
+  const index = availableTaxTypes.value.findIndex(({ id }) => id === taxType.id)
+
+  if (index === -1) {
+    availableTaxTypes.value.push(taxType)
+    return
+  }
+
+  availableTaxTypes.value.splice(index, 1, taxType)
+}
 
 const formData = computed<DocumentFormData>(() => {
   return props.store[props.storeProp] as DocumentFormData

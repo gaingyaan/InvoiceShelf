@@ -103,6 +103,7 @@ interface Props {
 interface Emits {
   (e: 'remove', index: number): void
   (e: 'update', payload: { index: number; item: DocumentTax }): void
+  (e: 'taxTypeCreated', taxType: TaxType): void
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -246,7 +247,26 @@ function openTaxModal(): void {
       transaction_type: 'sales',
     },
     size: 'sm',
+    refreshData: (...args: unknown[]) => {
+      const taxType = args[0]
+      if (isTaxType(taxType)) {
+        selectedTax.value = taxType
+        onSelectTax(taxType)
+        emit('taxTypeCreated', taxType)
+      }
+    },
   })
+}
+
+function isTaxType(value: unknown): value is TaxType {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'id' in value &&
+    typeof value.id === 'number' &&
+    'name' in value &&
+    typeof value.name === 'string'
+  )
 }
 
 function removeTax(index: number): void {

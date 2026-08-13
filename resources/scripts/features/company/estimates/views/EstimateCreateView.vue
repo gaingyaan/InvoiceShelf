@@ -62,6 +62,7 @@
           :currency="estimateStore.newEstimate.selectedCurrency"
           :is-loading="isLoadingContent"
           :item-validation-scope="estimateValidationScope"
+          :tax-included-setting="companyStore.selectedCompanySettings.tax_included"
           :store="estimateStore"
           store-prop="newEstimate"
         />
@@ -115,6 +116,7 @@ import {
 } from '@vuelidate/validators'
 import useVuelidate from '@vuelidate/core'
 import { useEstimateStore } from '../store'
+import { useCompanyStore } from '@/scripts/stores/company.store'
 import { useNotificationStore } from '@/scripts/stores/notification.store'
 import {
   handleApiError,
@@ -130,6 +132,7 @@ import {
 } from '../../../shared/document-form'
 
 const estimateStore = useEstimateStore()
+const companyStore = useCompanyStore()
 const notificationStore = useNotificationStore()
 const { t } = useI18n()
 const route = useRoute()

@@ -9,9 +9,12 @@ use App\Platform\Pdf\Rules\PdfTemplateExists;
 use App\Support\DocumentTotals;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class InvoicesRequest extends FormRequest
 {
+    use Concerns\ValidatesDocumentTaxPlaceholders;
+
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -112,6 +115,11 @@ class InvoicesRequest extends FormRequest
         }
 
         return $rules;
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $this->validateDocumentTaxPlaceholders($validator);
     }
 
     public function getInvoicePayload(): array

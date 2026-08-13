@@ -210,6 +210,20 @@ test('creates a non-compound tax type when compound_tax is explicitly false', fu
     ]);
 });
 
+test('creates a non-compound tax type when compound_tax is omitted', function () {
+    $taxType = TaxType::factory()->raw();
+    unset($taxType['compound_tax']);
+
+    postJson('api/v1/tax-types', $taxType)
+        ->assertStatus(201)
+        ->assertJsonPath('data.compound_tax', false);
+
+    $this->assertDatabaseHas('tax_types', [
+        'name' => $taxType['name'],
+        'compound_tax' => 0,
+    ]);
+});
+
 test('updates a tax type to explicitly disable compound tax', function () {
     $taxType = TaxType::factory()->create([
         'compound_tax' => true,
@@ -257,4 +271,101 @@ test('rejects non-boolean compound_tax values', function () {
     postJson('api/v1/tax-types', $taxType)
         ->assertUnprocessable()
         ->assertJsonValidationErrors('compound_tax');
+});
+
+test('rejects null compound_tax values', function () {
+    $taxType = TaxType::factory()->raw([
+        'compound_tax' => null,
+    ]);
+
+    postJson('api/v1/tax-types', $taxType)
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('compound_tax');
+});
+
+test('rejects null compound_tax values on update', function () {
+    $taxType = TaxType::factory()->create([
+        'compound_tax' => true,
+    ]);
+
+    $payload = TaxType::factory()->raw([
+        'compound_tax' => null,
+    ]);
+
+    putJson("api/v1/tax-types/{$taxType->id}", $payload)
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('compound_tax');
+
+    $this->assertDatabaseHas('tax_types', [
+        'id' => $taxType->id,
+        'compound_tax' => 1,
+    ]);
+});
+
+test('rejects compound fixed tax types', function () {
+    $taxType = TaxType::factory()->raw([
+        'calculation_type' => 'fixed',
+        'percent' => null,
+        'fixed_amount' => 500,
+        'compound_tax' => true,
+    ]);
+
+    postJson('api/v1/tax-types', $taxType)
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('compound_tax');
+});
+
+test('rejects compound purchase tax types', function () {
+    $taxType = TaxType::factory()->raw([
+        'transaction_type' => TaxType::TRANSACTION_TYPE_PURCHASES,
+        'compound_tax' => true,
+    ]);
+
+    postJson('api/v1/tax-types', $taxType)
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('compound_tax');
+});
+
+test('rejects a type change that leaves compound tax enabled', function () {
+    $taxType = TaxType::factory()->create([
+        'compound_tax' => true,
+        'calculation_type' => 'percentage',
+        'transaction_type' => TaxType::TRANSACTION_TYPE_SALES,
+    ]);
+
+    $payload = TaxType::factory()->raw([
+        'calculation_type' => 'fixed',
+        'percent' => null,
+        'fixed_amount' => 500,
+    ]);
+    unset($payload['compound_tax']);
+
+    putJson("api/v1/tax-types/{$taxType->id}", $payload)
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('compound_tax');
+});
+
+test('allows clearing compound tax while changing its type', function () {
+    $taxType = TaxType::factory()->create([
+        'compound_tax' => true,
+        'calculation_type' => 'percentage',
+        'transaction_type' => TaxType::TRANSACTION_TYPE_SALES,
+    ]);
+
+    $payload = TaxType::factory()->raw([
+        'calculation_type' => 'fixed',
+        'percent' => null,
+        'fixed_amount' => 500,
+        'compound_tax' => false,
+    ]);
+
+    putJson("api/v1/tax-types/{$taxType->id}", $payload)
+        ->assertOk()
+        ->assertJsonPath('data.compound_tax', false);
+
+    $this->assertDatabaseHas('tax_types', [
+        'id' => $taxType->id,
+        'calculation_type' => 'fixed',
+        'compound_tax' => 0,
+    ]);
 });

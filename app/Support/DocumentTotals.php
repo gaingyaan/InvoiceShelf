@@ -15,8 +15,8 @@ namespace App\Support;
 class DocumentTotals
 {
     /**
-     * @param  array  $items  each item: price, quantity, discount_val?, taxes?[{amount}]
-     * @param  array  $taxes  document-level taxes: [{amount}, ...]
+     * @param  array  $items  each item: price, quantity, discount_val?, taxes?[{tax_type_id, amount, compound_tax?}]
+     * @param  array  $taxes  document-level taxes: [{amount, compound_tax?}, ...]
      * @return array{sub_total:int, tax:int, total:int}
      */
     public static function compute(array $items, array $taxes, $discountVal, $taxPerItem, bool $taxIncluded, $discountPerItem = 'NO'): array
@@ -25,18 +25,28 @@ class DocumentTotals
         $perItemTax = is_string($taxPerItem) && strtoupper(trim($taxPerItem)) === 'YES';
 
         $subTotal = 0;
-        $itemTaxTotal = 0;
+        $itemSimpleTaxTotal = 0;
+        $itemCompoundTaxTotal = 0;
 
         foreach ($items as $item) {
             $subTotal += self::itemTotal($item, $perItemDiscount);
-            $itemTaxTotal += self::sumTaxAmounts($item['taxes'] ?? []);
+            $itemSimpleTaxTotal += self::sumTaxAmounts($item['taxes'] ?? [], false, true);
+            $itemCompoundTaxTotal += self::sumTaxAmounts($item['taxes'] ?? [], true, true);
         }
 
         $subtotalWithDiscount = $subTotal - (int) round((float) $discountVal);
 
-        $totalTax = $perItemTax ? $itemTaxTotal : self::sumTaxAmounts($taxes);
+        $simpleTaxTotal = $perItemTax
+            ? $itemSimpleTaxTotal
+            : self::sumTaxAmounts($taxes, false);
+        $compoundTaxTotal = $perItemTax
+            ? $itemCompoundTaxTotal
+            : self::sumTaxAmounts($taxes, true);
+        $totalTax = $simpleTaxTotal + $compoundTaxTotal;
 
-        $total = $taxIncluded ? $subtotalWithDiscount : $subtotalWithDiscount + $totalTax;
+        $total = $taxIncluded
+            ? $subtotalWithDiscount + $compoundTaxTotal
+            : $subtotalWithDiscount + $totalTax;
 
         return [
             'sub_total' => $subTotal,
@@ -58,13 +68,26 @@ class DocumentTotals
         return (int) round($price * $quantity) - $discount;
     }
 
-    protected static function sumTaxAmounts(array $taxes): int
+    protected static function sumTaxAmounts(array $taxes, bool $compoundTax, bool $ignorePlaceholders = false): int
     {
         $sum = 0;
         foreach ($taxes as $tax) {
+            if ($ignorePlaceholders && empty($tax['tax_type_id'])) {
+                continue;
+            }
+
+            if (self::isCompoundTax($tax) !== $compoundTax) {
+                continue;
+            }
+
             $sum += (int) round((float) ($tax['amount'] ?? 0));
         }
 
         return $sum;
+    }
+
+    protected static function isCompoundTax(array $tax): bool
+    {
+        return filter_var($tax['compound_tax'] ?? false, FILTER_VALIDATE_BOOLEAN);
     }
 }

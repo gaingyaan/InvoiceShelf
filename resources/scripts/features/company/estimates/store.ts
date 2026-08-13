@@ -160,10 +160,22 @@ export const useEstimateStore = defineStore('estimate', {
     },
 
     getNetTotal(): number {
-      return this.getSubtotalWithDiscount - this.getTotalTax
+      if (this.newEstimate.tax_included) {
+        return this.getSubtotalWithDiscount - this.getTotalSimpleTax
+      }
+
+      return this.getSubtotalWithDiscount
     },
 
     getTotalSimpleTax(state): number {
+      if (state.newEstimate.tax_per_item === 'YES') {
+        return state.newEstimate.items.reduce((sum: number, item: DocumentItem) => {
+          return sum + (item.taxes ?? []).reduce((itemSum, tax) => {
+            return tax.compound_tax ? itemSum : itemSum + (tax.amount ?? 0)
+          }, 0)
+        }, 0)
+      }
+
       return state.newEstimate.taxes.reduce(
         (sum: number, tax: DocumentTax) => {
           if (!tax.compound_tax) return sum + (tax.amount ?? 0)
@@ -174,6 +186,14 @@ export const useEstimateStore = defineStore('estimate', {
     },
 
     getTotalCompoundTax(state): number {
+      if (state.newEstimate.tax_per_item === 'YES') {
+        return state.newEstimate.items.reduce((sum: number, item: DocumentItem) => {
+          return sum + (item.taxes ?? []).reduce((itemSum, tax) => {
+            return tax.compound_tax ? itemSum + (tax.amount ?? 0) : itemSum
+          }, 0)
+        }, 0)
+      }
+
       return state.newEstimate.taxes.reduce(
         (sum: number, tax: DocumentTax) => {
           if (tax.compound_tax) return sum + (tax.amount ?? 0)
@@ -184,16 +204,7 @@ export const useEstimateStore = defineStore('estimate', {
     },
 
     getTotalTax(): number {
-      if (
-        this.newEstimate.tax_per_item === 'NO' ||
-        this.newEstimate.tax_per_item === null
-      ) {
-        return this.getTotalSimpleTax + this.getTotalCompoundTax
-      }
-      return this.newEstimate.items.reduce(
-        (sum: number, item: DocumentItem) => sum + (item.tax ?? 0),
-        0,
-      )
+      return this.getTotalSimpleTax + this.getTotalCompoundTax
     },
 
     getSubtotalWithDiscount(): number {
@@ -202,7 +213,7 @@ export const useEstimateStore = defineStore('estimate', {
 
     getTotal(): number {
       if (this.newEstimate.tax_included) {
-        return this.getSubtotalWithDiscount
+        return this.getSubtotalWithDiscount + this.getTotalCompoundTax
       }
       return this.getSubtotalWithDiscount + this.getTotalTax
     },
@@ -508,6 +519,9 @@ export const useEstimateStore = defineStore('estimate', {
 
       if (!isEdit && companySettings) {
         this.newEstimate.tax_per_item = companySettings.tax_per_item ?? null
+        this.newEstimate.tax_included =
+          companySettings.tax_included === 'YES' &&
+          companySettings.tax_included_by_default === 'YES'
         this.newEstimate.sales_tax_type = companySettings.sales_tax_type ?? null
         this.newEstimate.sales_tax_address_type =
           companySettings.sales_tax_address_type ?? null

@@ -442,6 +442,8 @@ function selectPercentage(): void {
 }
 
 function onSelectTax(selectedTax: TaxType): void {
+  upsertAvailableTaxType(selectedTax)
+
   const amount = calcTaxAmount(
     props.store.getSubtotalWithDiscount,
     selectedTax.percent,
@@ -470,6 +472,17 @@ function onSelectTax(selectedTax: TaxType): void {
   // Adding a simple tax widens the base of any compound tax already present,
   // so the insertion order must not matter.
   recalculateGlobalTaxes()
+}
+
+function upsertAvailableTaxType(taxType: TaxType): void {
+  const index = availableTaxTypes.value.findIndex(({ id }) => id === taxType.id)
+
+  if (index === -1) {
+    availableTaxTypes.value.push(taxType)
+    return
+  }
+
+  availableTaxTypes.value.splice(index, 1, taxType)
 }
 
 function updateTax(data: DocumentTax): void {

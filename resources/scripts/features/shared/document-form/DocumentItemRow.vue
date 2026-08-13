@@ -181,6 +181,7 @@
                 :store-prop="storeProp"
                 :discount="discount"
                 @update="updateTax"
+                @tax-type-created="onTaxTypeCreated"
               />
             </td>
           </tr>
@@ -225,6 +226,7 @@ interface Emits {
   (e: 'update', data: Record<string, unknown>): void
   (e: 'remove', index: number): void
   (e: 'itemValidate', valid: boolean): void
+  (e: 'taxTypeCreated', taxType: TaxType): void
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -389,6 +391,10 @@ function updateTax(data: { index: number; item: DocumentTax }): void {
   }
 
   syncItemToStore()
+}
+
+function onTaxTypeCreated(taxType: TaxType): void {
+  emit('taxTypeCreated', taxType)
 }
 
 function setDiscount(): void {
