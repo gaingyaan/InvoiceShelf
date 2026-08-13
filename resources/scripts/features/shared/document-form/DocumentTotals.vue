@@ -241,6 +241,7 @@ import { ABILITIES } from '../../../config/abilities'
 import type { Currency } from '../../../types/domain/currency'
 import type { TaxType } from '../../../types/domain/tax'
 import type { DocumentFormData, DocumentTax, DocumentStore, DocumentItem } from './use-document-calculations'
+import { calcTaxAmount } from './use-document-calculations'
 
 interface Props {
   store: DocumentStore & {
@@ -316,6 +317,13 @@ watch(
   { deep: true },
 )
 
+watch(
+  () => formData.value.tax_included,
+  () => {
+    recalculateGlobalTaxes()
+  },
+)
+
 const totalDiscount = computed<number>({
   get: () => formData.value.discount,
   set: (newValue: number) => {
@@ -341,6 +349,7 @@ interface AggregatedTax {
   name: string
   calculation_type: string | null
   fixed_amount: number
+  compound_tax: boolean
 }
 
 const itemWiseTaxes = computed<AggregatedTax[]>(() => {
@@ -359,6 +368,7 @@ const itemWiseTaxes = computed<AggregatedTax[]>(() => {
             name: tax.name ?? '',
             calculation_type: tax.calculation_type ?? null,
             fixed_amount: tax.fixed_amount ?? 0,
+            compound_tax: tax.compound_tax ?? false,
           })
         }
       })
@@ -382,11 +392,39 @@ function recalculateGlobalTaxes(): void {
   if (formData.value.tax_per_item === 'YES') return
 
   const subtotalWithDiscount = props.store.getSubtotalWithDiscount
+  const taxIncluded = formData.value.tax_included ?? false
+
+  // Pass 1: simple (non-compound) taxes are charged on the discounted subtotal.
+  let simpleTotal = 0
   formData.value.taxes.forEach((tax: DocumentTax) => {
+    if (tax.compound_tax) return
     if (tax.calculation_type === 'percentage' && tax.percent) {
-      tax.amount = Math.round((subtotalWithDiscount * tax.percent) / 100)
+      tax.amount = calcTaxAmount(
+        subtotalWithDiscount,
+        tax.percent,
+        null,
+        'percentage',
+        taxIncluded,
+      )
     }
-    // Fixed taxes keep their amount as-is
+    // Fixed taxes keep their amount as-is, but still count toward the compound base
+    simpleTotal += tax.amount ?? 0
+  })
+
+  // Pass 2: compound taxes are charged on the discounted subtotal plus the simple taxes.
+  formData.value.taxes.forEach((tax: DocumentTax) => {
+    if (!tax.compound_tax) return
+    if (tax.calculation_type === 'percentage' && tax.percent) {
+      tax.amount = calcTaxAmount(
+        subtotalWithDiscount,
+        tax.percent,
+        null,
+        'percentage',
+        taxIncluded,
+        true,
+        simpleTotal,
+      )
+    }
   })
 }
 
@@ -404,18 +442,15 @@ function selectPercentage(): void {
 }
 
 function onSelectTax(selectedTax: TaxType): void {
-  let amount = 0
-  if (
-    selectedTax.calculation_type === 'percentage' &&
-    props.store.getSubtotalWithDiscount &&
-    selectedTax.percent
-  ) {
-    amount = Math.round(
-      (props.store.getSubtotalWithDiscount * selectedTax.percent) / 100,
-    )
-  } else if (selectedTax.calculation_type === 'fixed') {
-    amount = selectedTax.fixed_amount
-  }
+  const amount = calcTaxAmount(
+    props.store.getSubtotalWithDiscount,
+    selectedTax.percent,
+    selectedTax.fixed_amount,
+    selectedTax.calculation_type,
+    formData.value.tax_included ?? false,
+    selectedTax.compound_tax ?? false,
+    props.store.getTotalSimpleTax,
+  )
 
   const data: DocumentTax = {
     id: generateClientId(),
@@ -431,6 +466,10 @@ function onSelectTax(selectedTax: TaxType): void {
   props.store.$patch((state: Record<string, unknown>) => {
     ;(state[props.storeProp] as DocumentFormData).taxes.push({ ...data })
   })
+
+  // Adding a simple tax widens the base of any compound tax already present,
+  // so the insertion order must not matter.
+  recalculateGlobalTaxes()
 }
 
 function updateTax(data: DocumentTax): void {
@@ -445,5 +484,8 @@ function removeTax(id: number | string): void {
   props.store.$patch((state: Record<string, unknown>) => {
     ;(state[props.storeProp] as DocumentFormData).taxes.splice(index, 1)
   })
+
+  // Removing a simple tax shrinks the base of any remaining compound tax.
+  recalculateGlobalTaxes()
 }
 </script>

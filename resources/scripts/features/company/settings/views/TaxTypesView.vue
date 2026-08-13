@@ -195,6 +195,9 @@ function openTaxModal(): void {
     >
       <template #cell-calculation_type="{ row }">
         {{ $t(`settings.tax_types.${row.data.calculation_type}`) }}
+        <BaseBadge v-if="row.data.compound_tax" class="ml-2">
+          {{ $t('tax_types.compound_tax') }}
+        </BaseBadge>
       </template>
 
       <template #cell-amount="{ row }">

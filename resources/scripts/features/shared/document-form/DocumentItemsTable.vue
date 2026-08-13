@@ -92,6 +92,8 @@
             :currency="defaultCurrency"
             :item-validation-scope="itemValidationScope"
             :invoice-items="formData.items"
+            :tax-types="availableTaxTypes"
+            :can-add-tax="canAddTax"
             :store="store"
             :store-prop="storeProp"
           />
@@ -110,11 +112,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import draggable from 'vuedraggable'
 import DocumentItemRow from './DocumentItemRow.vue'
 import ItemModal from '@/scripts/features/company/items/components/ItemModal.vue'
+import { useUserStore } from '../../../stores/user.store'
+import { taxTypeService } from '../../../api/services/tax-type.service'
+import { ABILITIES } from '../../../config/abilities'
 import type { Currency } from '../../../types/domain/currency'
+import type { TaxType } from '../../../types/domain/tax'
 import type { DocumentFormData } from './use-document-calculations'
 
 interface Props {
@@ -132,6 +138,25 @@ const props = withDefaults(defineProps<Props>(), {
   isLoading: false,
   itemValidationScope: '',
   taxIncludedSetting: 'NO',
+})
+
+const userStore = useUserStore()
+const availableTaxTypes = ref<TaxType[]>([])
+
+const canAddTax = computed<boolean>(() => {
+  return userStore.hasAbilities(ABILITIES.CREATE_TAX_TYPE)
+})
+
+onMounted(async () => {
+  try {
+    const response = await taxTypeService.list({
+      limit: 'all',
+      transaction_type: 'sales',
+    })
+    availableTaxTypes.value = response.data
+  } catch {
+    // Silently fail
+  }
 })
 
 const formData = computed<DocumentFormData>(() => {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   required,
@@ -26,6 +26,7 @@ interface TaxTypeForm {
   transaction_type: TaxTypeTransactionType
   percent: number
   fixed_amount: number
+  compound_tax: boolean
   description: string
 }
 
@@ -48,6 +49,7 @@ const currentTaxType = ref<TaxTypeForm>({
   transaction_type: 'sales',
   percent: 0,
   fixed_amount: 0,
+  compound_tax: false,
   description: '',
 })
 
@@ -55,6 +57,12 @@ const defaultCurrency = computed(() => companyStore.selectedCompanyCurrency)
 
 const modalActive = computed<boolean>(
   () => modalStore.active && modalStore.componentName === 'TaxTypeModal'
+)
+
+const showCompoundToggle = computed<boolean>(
+  () =>
+    currentTaxType.value.calculation_type === 'percentage' &&
+    currentTaxType.value.transaction_type === 'sales'
 )
 
 const rules = computed(() => ({
@@ -98,6 +106,18 @@ const fixedAmount = computed<number>({
   },
 })
 
+watch(
+  [
+    () => currentTaxType.value.calculation_type,
+    () => currentTaxType.value.transaction_type,
+  ],
+  () => {
+    if (!showCompoundToggle.value) {
+      currentTaxType.value.compound_tax = false
+    }
+  }
+)
+
 async function setInitialData(): Promise<void> {
   if (modalStore.data && typeof modalStore.data === 'number') {
     isEdit.value = true
@@ -111,6 +131,7 @@ async function setInitialData(): Promise<void> {
         transaction_type: tax.transaction_type,
         percent: tax.percent,
         fixed_amount: tax.fixed_amount,
+        compound_tax: tax.compound_tax ?? false,
         description: tax.description ?? '',
       }
     }
@@ -138,6 +159,7 @@ async function submitTaxTypeData(): Promise<void> {
       fixed_amount: currentTaxType.value.fixed_amount,
       calculation_type: currentTaxType.value.calculation_type,
       transaction_type: currentTaxType.value.transaction_type,
+      compound_tax: currentTaxType.value.compound_tax,
       description: currentTaxType.value.description || null,
     }
 
@@ -176,6 +198,7 @@ function resetForm(): void {
     transaction_type: 'sales',
     percent: 0,
     fixed_amount: 0,
+    compound_tax: false,
     description: '',
   }
 }
@@ -309,6 +332,15 @@ function closeTaxTypeModal(): void {
             required
           >
             <BaseMoney v-model="fixedAmount" :currency="defaultCurrency" />
+          </BaseInputGroup>
+
+          <BaseInputGroup
+            v-if="showCompoundToggle"
+            :label="$t('tax_types.compound_tax')"
+            :help-text="$t('settings.tax_types.compound_tax_description')"
+            variant="horizontal"
+          >
+            <BaseSwitch v-model="currentTaxType.compound_tax" />
           </BaseInputGroup>
 
           <BaseInputGroup

@@ -76,3 +76,14 @@ test('supports negative quantities', function () {
 
     expect($totals['sub_total'])->toBe(-150)->and($totals['total'])->toBe(-150);
 });
+
+test('sums a compound tax line just like any other document-level tax line', function () {
+    $totals = DocumentTotals::compute(
+        [['price' => 10000, 'quantity' => 1]],
+        [['amount' => 1900], ['amount' => 119, 'compound_tax' => true]],
+        0, 'NO', false, 'NO'
+    );
+
+    expect($totals['tax'])->toBe(2019)
+        ->and($totals['total'])->toBe(12019);
+});

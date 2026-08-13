@@ -171,11 +171,12 @@
                 :tax-data="tax"
                 :taxes="itemData.taxes ?? []"
                 :discounted-total="total"
-                :total-tax="totalSimpleTax"
+                :total-simple-tax="totalSimpleTax"
                 :total="subtotal"
                 :currency="currency"
                 :update-items="syncItemToStore"
-                :ability="'create-invoice'"
+                :tax-types="taxTypes"
+                :can-add-tax="canAddTax"
                 :store="store"
                 :store-prop="storeProp"
                 :discount="discount"
@@ -199,6 +200,7 @@ import DocumentItemRowTax from './DocumentItemRowTax.vue'
 import DragIcon from '@/scripts/components/icons/DragIcon.vue'
 import { generateClientId } from '../../../utils'
 import type { Currency } from '../../../types/domain/currency'
+import type { TaxType } from '../../../types/domain/tax'
 import type { DocumentItem, DocumentFormData, DocumentTax } from './use-document-calculations'
 
 interface Props {
@@ -215,6 +217,8 @@ interface Props {
   currency: Currency | Record<string, unknown>
   invoiceItems: DocumentItem[]
   itemValidationScope?: string
+  taxTypes?: TaxType[]
+  canAddTax?: boolean
 }
 
 interface Emits {
@@ -227,6 +231,8 @@ const props = withDefaults(defineProps<Props>(), {
   type: '',
   loading: false,
   itemValidationScope: '',
+  taxTypes: () => [],
+  canAddTax: false,
 })
 
 const emit = defineEmits<Emits>()
@@ -286,16 +292,33 @@ const showRemoveButton = computed<boolean>(() => {
   return formData.value.items.length > 1
 })
 
+// Base handed down to the tax rows: only the non-compound taxes count, so a
+// compound row can never widen its own base through this value.
 const totalSimpleTax = computed<number>(() => {
   const taxes = props.itemData.taxes ?? []
   return Math.round(
     taxes.reduce((sum: number, tax: Partial<DocumentTax>) => {
+      if (tax.compound_tax) {
+        return sum
+      }
       return sum + (tax.amount ?? 0)
     }, 0),
   )
 })
 
-const totalTax = computed<number>(() => totalSimpleTax.value)
+const totalCompoundTax = computed<number>(() => {
+  const taxes = props.itemData.taxes ?? []
+  return Math.round(
+    taxes.reduce((sum: number, tax: Partial<DocumentTax>) => {
+      if (tax.compound_tax) {
+        return sum + (tax.amount ?? 0)
+      }
+      return sum
+    }, 0),
+  )
+})
+
+const totalTax = computed<number>(() => totalSimpleTax.value + totalCompoundTax.value)
 
 const companyCurrency = computed(() => companyStore.selectedCompanyCurrency)
 
@@ -436,6 +459,7 @@ function syncItemToStore(): void {
     total: total.value,
     sub_total: subtotal.value,
     totalSimpleTax: totalSimpleTax.value,
+    totalCompoundTax: totalCompoundTax.value,
     totalTax: totalTax.value,
     tax: totalTax.value,
     taxes: [...itemTaxes],

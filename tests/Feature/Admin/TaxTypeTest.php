@@ -179,3 +179,82 @@ test('rejects unknown transaction types', function () {
         ->assertUnprocessable()
         ->assertJsonValidationErrors('transaction_type');
 });
+
+test('creates a compound tax type', function () {
+    $taxType = TaxType::factory()->raw([
+        'compound_tax' => true,
+    ]);
+
+    postJson('api/v1/tax-types', $taxType)
+        ->assertStatus(201)
+        ->assertJsonPath('data.compound_tax', true);
+
+    $this->assertDatabaseHas('tax_types', [
+        'name' => $taxType['name'],
+        'compound_tax' => 1,
+    ]);
+});
+
+test('creates a non-compound tax type when compound_tax is explicitly false', function () {
+    $taxType = TaxType::factory()->raw([
+        'compound_tax' => false,
+    ]);
+
+    postJson('api/v1/tax-types', $taxType)
+        ->assertStatus(201)
+        ->assertJsonPath('data.compound_tax', false);
+
+    $this->assertDatabaseHas('tax_types', [
+        'name' => $taxType['name'],
+        'compound_tax' => 0,
+    ]);
+});
+
+test('updates a tax type to explicitly disable compound tax', function () {
+    $taxType = TaxType::factory()->create([
+        'compound_tax' => true,
+    ]);
+
+    $payload = TaxType::factory()->raw([
+        'compound_tax' => false,
+    ]);
+
+    putJson("api/v1/tax-types/{$taxType->id}", $payload)
+        ->assertOk()
+        ->assertJsonPath('data.compound_tax', false);
+
+    $this->assertDatabaseHas('tax_types', [
+        'id' => $taxType->id,
+        'compound_tax' => 0,
+    ]);
+});
+
+test('preserves compound tax when updates omit the key', function () {
+    $taxType = TaxType::factory()->create([
+        'compound_tax' => true,
+    ]);
+
+    $payload = TaxType::factory()->raw();
+    // TaxType::factory()->raw() defaults compound_tax to 0 — unset it so the
+    // request omits the key entirely, instead of silently sending false.
+    unset($payload['compound_tax']);
+
+    putJson("api/v1/tax-types/{$taxType->id}", $payload)
+        ->assertOk()
+        ->assertJsonPath('data.compound_tax', true);
+
+    $this->assertDatabaseHas('tax_types', [
+        'id' => $taxType->id,
+        'compound_tax' => 1,
+    ]);
+});
+
+test('rejects non-boolean compound_tax values', function () {
+    $taxType = TaxType::factory()->raw([
+        'compound_tax' => 'not-a-bool',
+    ]);
+
+    postJson('api/v1/tax-types', $taxType)
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('compound_tax');
+});

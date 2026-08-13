@@ -65,6 +65,11 @@ class DocumentItemService
 
             if (array_key_exists('taxes', $item) && $item['taxes']) {
                 foreach ($item['taxes'] as $tax) {
+                    if (empty($tax['tax_type_id'])) {
+                        // UI placeholder row for per-item tax mode; never persist.
+                        continue;
+                    }
+
                     $tax['company_id'] = $document->company_id;
                     $tax['exchange_rate'] = $document->exchange_rate;
                     $tax['currency_id'] = $document->currency_id;

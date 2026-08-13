@@ -528,6 +528,51 @@ test('create invoice with tax per item', function () {
     ]);
 });
 
+test('create invoice with tax per item ignores empty placeholder tax row', function () {
+    // The frontend always keeps one empty placeholder tax row per item in
+    // per-item tax mode. It must be skipped instead of reaching the DB.
+    $stubTax = [
+        'id' => 999,
+        'tax_type_id' => 0,
+        'name' => '',
+        'amount' => 0,
+        'percent' => null,
+        'calculation_type' => null,
+        'fixed_amount' => 0,
+        'compound_tax' => false,
+    ];
+
+    $realTax = Tax::factory()->raw();
+
+    $invoice = Invoice::factory()
+        ->raw([
+            'tax_per_item' => 'YES',
+            'items' => [
+                InvoiceItem::factory()->raw([
+                    'taxes' => [$realTax, $stubTax],
+                ]),
+            ],
+        ]);
+
+    $response = postJson('api/v1/invoices', $invoice);
+
+    $response->assertOk();
+
+    $this->assertDatabaseHas('invoices', [
+        'invoice_number' => $invoice['invoice_number'],
+        'customer_id' => $invoice['customer_id'],
+    ]);
+
+    $this->assertDatabaseHas('taxes', [
+        'tax_type_id' => $realTax['tax_type_id'],
+        'amount' => $realTax['amount'],
+    ]);
+
+    $this->assertDatabaseMissing('taxes', [
+        'tax_type_id' => 0,
+    ]);
+});
+
 test('create invoice with EUR currency', function () {
     $invoice = Invoice::factory()
         ->raw([

@@ -1416,6 +1416,7 @@
       "tax_per_item": "Tax Per Item",
       "tax_name": "Tax Name",
       "compound_tax": "Compound Tax",
+      "compound_tax_description": "Calculated on the subtotal after discount plus all non-compound taxes.",
       "amount": "Amount",
       "percent": "Percent",
       "fixed_amount": "Fixed Amount",

@@ -32,7 +32,7 @@ class TaxFactory extends Factory
             },
             'company_id' => User::find(1)->companies()->first()->id,
             'amount' => $this->faker->randomDigitNotNull(),
-            'compound_tax' => $this->faker->randomDigitNotNull(),
+            'compound_tax' => false,
             'base_amount' => $this->faker->randomDigitNotNull(),
             'currency_id' => Currency::where('name', 'US Dollar')->first()->id,
         ];

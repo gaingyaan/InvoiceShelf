@@ -45,6 +45,7 @@ class TaxTypeRequest extends FormRequest
             ],
             'compound_tax' => [
                 'nullable',
+                'boolean',
             ],
             'collective_tax' => [
                 'nullable',

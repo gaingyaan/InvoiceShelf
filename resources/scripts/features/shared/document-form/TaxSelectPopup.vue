@@ -64,6 +64,9 @@
                         </template>
                         <template v-else>
                           {{ taxType.percent }} %
+                          <BaseBadge v-if="taxType.compound_tax" class="text-xs">
+                            {{ $t('tax_types.compound_tax') }}
+                          </BaseBadge>
                         </template>
                       </label>
                     </div>

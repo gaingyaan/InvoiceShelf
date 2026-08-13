@@ -37,6 +37,9 @@
           <template v-else>
             {{ option.percent }} %
           </template>
+          <BaseBadge v-if="option.compound_tax" class="ml-2 text-xs">
+            {{ $t('tax_types.compound_tax') }}
+          </BaseBadge>
         </template>
 
         <template v-if="canAddTax" #action>
@@ -77,16 +80,9 @@ import { useModalStore } from '../../../stores/modal.store'
 import type { TaxType } from '../../../types/domain/tax'
 import type { Currency } from '../../../types/domain/currency'
 import type { DocumentFormData, DocumentTax } from './use-document-calculations'
-
-declare global {
-  interface Window {
-    __taxTypes?: TaxType[]
-    __userHasAbility?: (ability: string) => boolean
-  }
-}
+import { calcTaxAmount } from './use-document-calculations'
 
 interface Props {
-  ability: string
   store: Record<string, unknown>
   storeProp: string
   itemIndex: number
@@ -94,10 +90,13 @@ interface Props {
   taxData: DocumentTax
   taxes: DocumentTax[]
   total: number
-  totalTax: number
+  /** Sum of the item's non-compound tax amounts, i.e. the compound base widener. */
+  totalSimpleTax: number
   discountedTotal: number
   currency: Currency | Record<string, unknown>
   updateItems: () => void
+  taxTypes?: TaxType[]
+  canAddTax?: boolean
   discount?: number
 }
 
@@ -107,7 +106,8 @@ interface Emits {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  ability: '',
+  taxTypes: () => [],
+  canAddTax: false,
   discount: 0,
 })
 
@@ -116,23 +116,13 @@ const emit = defineEmits<Emits>()
 const { t } = useI18n()
 const modalStore = useModalStore()
 
-const taxTypes = computed<TaxType[]>(() => {
-  return (window.__taxTypes ?? []).filter(
-    (taxType) => taxType.transaction_type === 'sales',
-  )
-})
-
-const canAddTax = computed(() => {
-  return window.__userHasAbility?.(props.ability) ?? false
-})
-
 const selectedTax = ref<TaxType | null>(null)
 const localTax = reactive<DocumentTax>({ ...props.taxData })
 
 const storeData = computed(() => props.store[props.storeProp] as DocumentFormData)
 
 const filteredTypes = computed<(TaxType & { disabled?: boolean })[]>(() => {
-  const clonedTypes = taxTypes.value.map((a) => ({ ...a, disabled: false }))
+  const clonedTypes = props.taxTypes.map((a) => ({ ...a, disabled: false }))
 
   return clonedTypes.map((taxType) => {
     const found = props.taxes.find((tax) => tax.tax_type_id === taxType.id)
@@ -141,27 +131,52 @@ const filteredTypes = computed<(TaxType & { disabled?: boolean })[]>(() => {
   })
 })
 
+/**
+ * The item's taxable base, shared by every tax branch.
+ *
+ * With a per-item discount the item total is already net of it. With a
+ * document-level discount the item carries its proportional share of that
+ * discount instead.
+ */
+const effectiveBase = computed<number>(() => {
+  if (storeData.value.discount_per_item === 'YES') {
+    return props.discountedTotal
+  }
+
+  const modelDiscount = storeData.value.discount ?? 0
+
+  if (modelDiscount <= 0) {
+    return props.discountedTotal
+  }
+
+  const itemsTotal = storeData.value.items.reduce(
+    (sum: number, item) => sum + (item.total ?? 0),
+    0,
+  )
+
+  if (!itemsTotal) {
+    return props.discountedTotal
+  }
+
+  const proportion = parseFloat((props.discountedTotal / itemsTotal).toFixed(2))
+  const discount =
+    storeData.value.discount_type === 'fixed'
+      ? modelDiscount * 100
+      : (itemsTotal * modelDiscount) / 100
+
+  return props.discountedTotal - Math.round(discount * proportion)
+})
+
 const taxAmount = computed<number>(() => {
-  if (localTax.calculation_type === 'fixed') {
-    return localTax.fixed_amount
-  }
-
-  if (props.discountedTotal) {
-    const taxPerItemEnabled = storeData.value.tax_per_item === 'YES'
-    const discountPerItemEnabled = storeData.value.discount_per_item === 'YES'
-
-    if (taxPerItemEnabled && !discountPerItemEnabled) {
-      return getTaxAmount()
-    }
-    if (storeData.value.tax_included) {
-      return Math.round(
-        props.discountedTotal -
-          props.discountedTotal / (1 + (localTax.percent ?? 0) / 100),
-      )
-    }
-    return Math.round((props.discountedTotal * (localTax.percent ?? 0)) / 100)
-  }
-  return 0
+  return calcTaxAmount(
+    effectiveBase.value,
+    localTax.percent,
+    localTax.fixed_amount,
+    localTax.calculation_type,
+    storeData.value.tax_included ?? false,
+    localTax.compound_tax ?? false,
+    props.totalSimpleTax,
+  )
 })
 
 watch(
@@ -169,8 +184,9 @@ watch(
   () => updateRowTax(),
 )
 
+// A sibling simple tax landing later widens this row's base when it is compound.
 watch(
-  () => props.totalTax,
+  () => props.totalSimpleTax,
   () => updateRowTax(),
 )
 
@@ -179,11 +195,18 @@ watch(
   () => updateRowTax(),
 )
 
-// Initialize selected tax if editing
-if (props.taxData.tax_type_id > 0) {
-  selectedTax.value =
-    taxTypes.value.find((_type) => _type.id === props.taxData.tax_type_id) ?? null
-}
+// Resolve the selected tax type when editing. The list is fetched by the parent
+// table, so it usually arrives after this row has been set up.
+watch(
+  () => props.taxTypes,
+  (types) => {
+    if (localTax.tax_type_id > 0) {
+      selectedTax.value =
+        types.find((_type) => _type.id === localTax.tax_type_id) ?? selectedTax.value
+    }
+  },
+  { immediate: true },
+)
 
 updateRowTax()
 
@@ -194,6 +217,7 @@ function onSelectTax(val: TaxType): void {
     val.calculation_type === 'fixed' ? val.fixed_amount : 0
   localTax.tax_type_id = val.id
   localTax.name = val.name
+  localTax.compound_tax = val.compound_tax ?? false
 
   updateRowTax()
 }
@@ -229,43 +253,9 @@ function removeTax(index: number): void {
   const store = props.store as Record<string, Record<string, unknown>>
   const formData = store[props.storeProp] as DocumentFormData
   formData.items[props.itemIndex].taxes?.splice(index, 1)
-  const item = formData.items[props.itemIndex]
-  item.tax = 0
-  item.totalTax = 0
-}
 
-function getTaxAmount(): number {
-  if (localTax.calculation_type === 'fixed') {
-    return localTax.fixed_amount
-  }
-
-  let itemsTotal = 0
-  let discount = 0
-  const itemTotal = props.discountedTotal
-  const modelDiscount = storeData.value.discount ?? 0
-  const type = storeData.value.discount_type
-  let discountedTotal = props.discountedTotal
-
-  if (modelDiscount > 0) {
-    storeData.value.items.forEach((item) => {
-      itemsTotal += item.total ?? 0
-    })
-    const proportion = parseFloat((itemTotal / itemsTotal).toFixed(2))
-    discount =
-      type === 'fixed'
-        ? modelDiscount * 100
-        : (itemsTotal * modelDiscount) / 100
-    const itemDiscount = Math.round(discount * proportion)
-    discountedTotal = itemTotal - itemDiscount
-  }
-
-  if (storeData.value.tax_included) {
-    return Math.round(
-      discountedTotal -
-        discountedTotal / (1 + (localTax.percent ?? 0) / 100),
-    )
-  }
-
-  return Math.round((discountedTotal * (localTax.percent ?? 0)) / 100)
+  // Re-sync the item so the remaining rows re-base off the new simple total
+  // instead of leaving stale `tax` / `totalTax` values behind.
+  props.updateItems()
 }
 </script>

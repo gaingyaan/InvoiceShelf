@@ -161,18 +161,36 @@ export function calcItemTotal(subtotal: number, discountVal: number): number {
   return subtotal - discountVal
 }
 
-/** Calculate tax amount for a given total and tax config */
+/**
+ * Calculate tax amount for a given total and tax config.
+ *
+ * A compound tax is charged on the base plus every simple (non-compound) tax
+ * already applied, and is never backed out of a tax-inclusive total.
+ *
+ * @param total Base amount in cents (document subtotal after discount, or an item total after discount)
+ * @param percent Percentage rate, when the tax is percentage based
+ * @param fixedAmount Flat amount in cents, when the tax is fixed
+ * @param calculationType `'fixed'` or `'percentage'`
+ * @param taxIncluded Whether the base already includes the tax (back it out)
+ * @param compoundTax Whether the tax is charged on top of the simple taxes
+ * @param simpleTaxTotal Sum of the non-compound tax amounts in cents
+ */
 export function calcTaxAmount(
   total: number,
   percent: number | null,
   fixedAmount: number | null,
   calculationType: string | null,
   taxIncluded: boolean | null,
+  compoundTax = false,
+  simpleTaxTotal = 0,
 ): number {
   if (calculationType === 'fixed' && fixedAmount != null) {
     return fixedAmount
   }
   if (!total || !percent) return 0
+  if (compoundTax) {
+    return Math.round(((total + simpleTaxTotal) * percent) / 100)
+  }
   if (taxIncluded) {
     return Math.round(total - total / (1 + percent / 100))
   }
