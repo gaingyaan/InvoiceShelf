@@ -7,6 +7,10 @@
 
 use function Pest\Laravel\postJson;
 
+// Swaps the process's DB connection — excluded from default runs (phpunit.xml),
+// executed standalone as the last step of each verification pass.
+uses()->group('isolated');
+
 beforeEach(function () {
     Artisan::call('db:seed', ['--class' => 'DatabaseSeeder', '--force' => true]);
     $this->envBackup = file_get_contents(base_path('.env'));
