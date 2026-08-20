@@ -95,11 +95,25 @@ class UpdateController extends Controller
         return response()->json(Updater::cleanStaleFiles());
     }
 
+    /**
+     * Run the pending migrations, unless the schema guard refuses first.
+     *
+     * A refusal is the operator's problem to fix, not a crash: it comes back
+     * with the guard's explanation in the same shape the unzip step uses for
+     * its own failures.
+     */
     public function migrate(Request $request): JsonResponse
     {
         $this->authorizeUpdates();
 
-        Updater::migrateUpdate();
+        try {
+            Updater::migrateUpdate();
+        } catch (Exception $failure) {
+            return response()->json([
+                'success' => false,
+                'error' => $failure->getMessage(),
+            ], 500);
+        }
 
         return response()->json(['success' => true]);
     }

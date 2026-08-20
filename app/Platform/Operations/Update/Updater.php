@@ -2,6 +2,7 @@
 
 namespace App\Platform\Operations\Update;
 
+use App\Platform\Operations\Database\SchemaConsolidationGuard;
 use App\Platform\Operations\Events\UpdateFinished;
 use App\Platform\Operations\Models\Setting;
 use GuzzleHttp\Exception\RequestException;
@@ -203,9 +204,24 @@ class Updater
 
     /**
      * Bring the schema up to date with the freshly copied code.
+     *
+     * The base-schema consolidation refuses databases whose 2.x history is
+     * incomplete, or whose history and schema disagree. Asking it for that
+     * verdict first turns such a database into a refusal carrying the
+     * consolidation's own explanation, instead of an upgrade that copies the
+     * new release over the installation and only then stops on a failed
+     * migration.
+     *
+     * @throws \RuntimeException when the consolidation would refuse this database
      */
     public static function migrateUpdate()
     {
+        $verdict = SchemaConsolidationGuard::preflight();
+
+        if ($verdict?->isAbort()) {
+            $verdict->fail();
+        }
+
         Artisan::call('migrate --force');
 
         return true;
