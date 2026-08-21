@@ -34,7 +34,12 @@ class ReceivablesServiceProvider extends ServiceProvider
     {
         Gate::policy(Payment::class, PaymentPolicy::class);
         Gate::policy(PaymentMethod::class, PaymentMethodPolicy::class);
-        Gate::define('send payment', [PaymentPolicy::class, 'send']);
-        Gate::define('delete multiple payments', [PaymentPolicy::class, 'deleteMultiple']);
+        $abilities = [
+            'send payment' => 'send',
+            'delete multiple payments' => 'deleteMultiple',
+        ];
+        foreach ($abilities as $ability => $method) {
+            Gate::define($ability, [PaymentPolicy::class, $method]);
+        }
     }
 }
