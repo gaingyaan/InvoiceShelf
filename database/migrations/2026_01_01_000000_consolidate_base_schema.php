@@ -16,10 +16,11 @@ use Illuminate\Support\Facades\Schema;
  * in a single step and the v3-era migrations take it from there.
  *
  * What it does depends entirely on what it finds. A database that already ran
- * the replaced chain is left completely alone — its tables are the real ones,
- * and the 150 stale rows in the migration repository stay where they are. Only
- * an empty database is built. Anything in between is refused, loudly, before a
- * single write: see {@see SchemaConsolidationGuard}.
+ * the replaced chain keeps every table it has — those are the real ones — and
+ * loses only the repository rows naming the files this one replaces, which this
+ * file has just made meaningless. Only an empty database is built. Anything in
+ * between is refused, loudly, before a single write: see
+ * {@see SchemaConsolidationGuard}.
  *
  * Everything below is portable builder work — no vendor SQL, no schema dumps.
  * Two deliberate driver-specific behaviours are called out where they happen:
@@ -68,8 +69,11 @@ return new class extends Migration
         }
 
         if (! $verdict->isBuild()) {
-            // SKIP. The framework records this file when the body returns, and
-            // that record is the only thing about this database that changes.
+            // SKIP. The schema stands as it is; only the history it left
+            // behind changes. The framework records this file when the body
+            // returns, in place of the rows retired here.
+            $this->pruneStaleHistory();
+
             return;
         }
 
@@ -104,6 +108,33 @@ return new class extends Migration
             .'made no changes, so a rollback cannot know what to undo. Development environments should '
             .'rebuild the database from scratch instead of rolling this migration back.'
         );
+    }
+
+    /**
+     * Retire the repository rows this file has just made meaningless.
+     *
+     * An upgraded database records one row for each of the 150 files replaced
+     * here, plus the single name the 2.4.x line shipped and this codebase never
+     * did. None of them can ever run again and none of them still names a file,
+     * so left in place they only make `migrate:status` describe a tree that
+     * stopped existing — and the next release would inherit the same 151 rows
+     * to explain away.
+     *
+     * The delete is driven by an exhaustive list of names, never by a date
+     * range or a prefix. Module migrations share this table, and so will every
+     * migration a later release adds; a row that is not named is a row that is
+     * not touched.
+     *
+     * The write goes to the connection the migration is running on, which the
+     * migrator has made the default for the duration of this method — the same
+     * connection the guard just read its verdict from.
+     */
+    private function pruneStaleHistory(): void
+    {
+        Schema::getConnection()
+            ->table(SchemaConsolidationGuard::repositoryTable())
+            ->whereIn('migration', SchemaConsolidationGuard::staleRecordedMigrations())
+            ->delete();
     }
 
     /**

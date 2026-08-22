@@ -47,18 +47,44 @@ function recordHistory(array $names): void
 }
 
 /**
- * The names a real 2.4.x database carries beyond the replaced set.
+ * Names in the repository that belong to code this file knows nothing about.
  *
- * Module migrations share the repository table, and databases from the 2.4.x
- * line recorded one migration this codebase has never shipped. Both must be
- * ignored by the decision.
+ * Module migrations share the repository table with the application's own, and
+ * a database can hold them from any point in its life. The decision ignores
+ * them and the prune never claims them, whatever they are called.
  */
 function foreignHistory(): array
 {
     return [
         '2022_06_01_120000_create_payments_module_tables',
-        '2026_04_07_000001_increase_tax_percent_precision_to_three_decimals',
+        '2025_11_04_090000_create_bank_feed_module_tables',
     ];
+}
+
+/**
+ * The v3-era migrations, read off the tree they live in.
+ *
+ * These are the names an installation of a 3.0.0 alpha recorded beside the 150:
+ * the migrations this release still ships, which run after the consolidation
+ * and must survive it. Reading the directory rather than listing them keeps the
+ * fixture honest as the v3 line grows.
+ */
+function v3EraHistory(): array
+{
+    $names = array_map(
+        fn (string $file): string => basename($file, '.php'),
+        glob(base_path('database/migrations/*.php'))
+    );
+
+    return array_values(array_diff($names, [SchemaConsolidationGuard::CONSOLIDATION_MIGRATION]));
+}
+
+/**
+ * Every name the repository holds, on the throwaway database.
+ */
+function recordedHistory(): array
+{
+    return DB::connection('squash')->table('migrations')->pluck('migration')->all();
 }
 
 /**
@@ -298,7 +324,7 @@ it('inserts only the currencies that are missing at seed time', function () {
 
 // -- SKIP -------------------------------------------------------------------
 
-it('leaves a fully migrated 2.4.x database alone', function () {
+it('leaves the schema of a fully migrated 2.4.x database alone', function () {
     recordHistory([...SchemaConsolidationGuard::REPLACED_MIGRATIONS, ...foreignHistory()]);
     giveDatabaseASentinel();
     DB::connection('squash')->table('companies')->insert(['name' => 'Acme']);
@@ -309,10 +335,9 @@ it('leaves a fully migrated 2.4.x database alone', function () {
 
     $after = databaseFootprint();
 
-    // The only change is the consolidation's own row in the repository.
+    // Nothing outside the repository moved: same tables, same rows in them.
     expect(array_keys($after))->toBe(array_keys($before))
         ->and($after['companies'])->toEqual($before['companies'])
-        ->and(count($after['migrations']['rows']))->toBe(count($before['migrations']['rows']) + 1)
         ->and(DB::connection('squash')->table('migrations')
             ->where('migration', SchemaConsolidationGuard::CONSOLIDATION_MIGRATION)->exists())->toBeTrue();
 
@@ -320,6 +345,55 @@ it('leaves a fully migrated 2.4.x database alone', function () {
     // boundary tables appeared beside it.
     expect(Schema::connection('squash')->hasTable('invoices'))->toBeFalse()
         ->and($after['companies']['columns'])->toBe(['id', 'name']);
+});
+
+/**
+ * The history a 2.4.x database actually arrives with: the full replaced chain,
+ * the one name the 2.x line shipped past it, and whatever its modules recorded.
+ * Two of those three are this file's to retire.
+ */
+it('retires the replaced history of a 2.4.x database', function () {
+    recordHistory([
+        ...SchemaConsolidationGuard::REPLACED_MIGRATIONS,
+        SchemaConsolidationGuard::SUPERSEDED_MIGRATION,
+        ...foreignHistory(),
+    ]);
+    giveDatabaseASentinel();
+
+    runConsolidation();
+
+    $recorded = recordedHistory();
+
+    // Every replaced name is gone, and so is the 2.4.x-only one beside them.
+    expect(array_intersect(SchemaConsolidationGuard::REPLACED_MIGRATIONS, $recorded))->toBe([])
+        ->and($recorded)->not->toContain(SchemaConsolidationGuard::SUPERSEDED_MIGRATION);
+
+    // What is left is precisely what this file never claimed, plus itself.
+    expect($recorded)->toEqualCanonicalizing([
+        ...foreignHistory(),
+        SchemaConsolidationGuard::CONSOLIDATION_MIGRATION,
+    ]);
+});
+
+/**
+ * The other database that reaches SKIP: an installation of a 3.0.0 alpha, which
+ * ran the 150 as separate files and then the v3-era ones on top. Only the 150
+ * are stale — the v3-era migrations still ship, and a database that forgot them
+ * would run them a second time.
+ */
+it('keeps the v3-era history when an alpha database is consolidated', function () {
+    recordHistory([...SchemaConsolidationGuard::REPLACED_MIGRATIONS, ...v3EraHistory()]);
+    giveDatabaseASentinel();
+
+    runConsolidation();
+
+    $recorded = recordedHistory();
+
+    expect(array_intersect(SchemaConsolidationGuard::REPLACED_MIGRATIONS, $recorded))->toBe([])
+        ->and($recorded)->toEqualCanonicalizing([
+            ...v3EraHistory(),
+            SchemaConsolidationGuard::CONSOLIDATION_MIGRATION,
+        ]);
 });
 
 it('ignores recorded names that are not part of the replaced set', function () {
@@ -437,6 +511,31 @@ it('does nothing when migrate runs a second time', function () {
     expect(databaseFootprint())->toEqual($before);
 });
 
+/**
+ * The same question on the other side of the decision: once the history has
+ * been pruned, the database looks to the guard exactly like the inconsistency
+ * it refuses — schema, no replaced names. The preflight short-circuit is what
+ * stops that from mattering, and the recorded consolidation is what stops the
+ * migration from being offered again at all.
+ */
+it('does nothing when migrate runs a second time on a pruned history', function () {
+    recordHistory([
+        ...SchemaConsolidationGuard::REPLACED_MIGRATIONS,
+        SchemaConsolidationGuard::SUPERSEDED_MIGRATION,
+        ...foreignHistory(),
+    ]);
+    giveDatabaseASentinel();
+
+    runConsolidation();
+
+    $before = databaseFootprint();
+
+    runConsolidation();
+
+    expect(databaseFootprint())->toEqual($before)
+        ->and(SchemaConsolidationGuard::preflight('squash'))->toBeNull();
+});
+
 it('refuses to be rolled back', function () {
     runConsolidation();
 
@@ -500,4 +599,23 @@ it('embeds the replaced set exactly once, at full length', function () {
 
     expect(glob(base_path('database/migrations/*.php')))
         ->each(fn ($file) => expect(basename($file->value))->toStartWith('2026_'));
+});
+
+it('offers the prune exactly the replaced set plus the one 2.4.x-only name', function () {
+    $stale = SchemaConsolidationGuard::staleRecordedMigrations();
+
+    expect($stale)->toHaveCount(151)
+        ->and(array_unique($stale))->toHaveCount(151)
+        ->and($stale)->toContain(SchemaConsolidationGuard::SUPERSEDED_MIGRATION)
+        ->and(SchemaConsolidationGuard::REPLACED_MIGRATIONS)
+        ->not->toContain(SchemaConsolidationGuard::SUPERSEDED_MIGRATION)
+        ->and($stale)->not->toContain(SchemaConsolidationGuard::CONSOLIDATION_MIGRATION);
+
+    // The extra name is pruned precisely because no file here answers to it.
+    expect(file_exists(base_path(
+        'database/migrations/'.SchemaConsolidationGuard::SUPERSEDED_MIGRATION.'.php'
+    )))->toBeFalse();
+
+    // And nothing this release still ships is on the list.
+    expect(array_intersect($stale, v3EraHistory()))->toBe([]);
 });

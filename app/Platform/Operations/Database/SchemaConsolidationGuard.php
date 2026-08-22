@@ -29,7 +29,7 @@ final class SchemaConsolidationGuard
     public const BUILD = 'build';
 
     /**
-     * The 150 replaced migrations already ran: record this file and move on.
+     * The 150 replaced migrations already ran: keep the schema, drop the rows.
      */
     public const SKIP = 'skip';
 
@@ -59,6 +59,21 @@ final class SchemaConsolidationGuard
      * warn about, however the database got there.
      */
     public const CONSOLIDATION_MIGRATION = '2026_01_01_000000_consolidate_base_schema';
+
+    /**
+     * The one name a 2.4.x history carries that this codebase never shipped.
+     *
+     * The 2.x line widened the tax percent column after the point this
+     * consolidation reproduces, in a file the 3.x tree has no copy of. Every
+     * database upgraded from 2.4.0 or later therefore records a name whose
+     * migration cannot exist here, now or ever.
+     *
+     * It is deliberately not part of {@see self::REPLACED_MIGRATIONS}: the
+     * decision counts those against a floor of exactly 150, and a name this
+     * file does not reproduce has no business in that count. It is stale all
+     * the same, so the consolidation prunes it alongside them.
+     */
+    public const SUPERSEDED_MIGRATION = '2026_04_07_000001_increase_tax_percent_precision_to_three_decimals';
 
     /**
      * The migration names this version consolidates, byte for byte.
@@ -271,6 +286,36 @@ final class SchemaConsolidationGuard
     }
 
     /**
+     * Every recorded name a consolidated database has no further use for.
+     *
+     * The 150 files this version replaces, plus the one 2.4.x-only name above.
+     * A SKIP prunes exactly this list from the migration repository and
+     * nothing else: matching is by name, never by date or pattern, so module
+     * migrations — which share the repository table — and anything a future
+     * release records survive by construction rather than by luck.
+     *
+     * @return list<string>
+     */
+    public static function staleRecordedMigrations(): array
+    {
+        return [...self::REPLACED_MIGRATIONS, self::SUPERSEDED_MIGRATION];
+    }
+
+    /**
+     * The configured name of the framework's migration repository table.
+     */
+    public static function repositoryTable(): string
+    {
+        $configured = config('database.migrations');
+
+        if (is_array($configured)) {
+            return $configured['table'] ?? 'migrations';
+        }
+
+        return is_string($configured) && $configured !== '' ? $configured : 'migrations';
+    }
+
+    /**
      * The decision table itself, and the only place it is written down.
      *
      * @param  list<string>  $recordedMigrations  every name the framework has
@@ -364,19 +409,5 @@ final class SchemaConsolidationGuard
         }
 
         return DB::connection($connection)->table($table)->pluck('migration')->all();
-    }
-
-    /**
-     * The configured name of the framework's migration repository table.
-     */
-    private static function repositoryTable(): string
-    {
-        $configured = config('database.migrations');
-
-        if (is_array($configured)) {
-            return $configured['table'] ?? 'migrations';
-        }
-
-        return is_string($configured) && $configured !== '' ? $configured : 'migrations';
     }
 }
