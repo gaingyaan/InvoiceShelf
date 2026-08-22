@@ -7,6 +7,7 @@ use App\Adapters\Receivables\MoneyPaymentExchangeRateRecorder;
 use App\Adapters\Receivables\SalesInvoiceBalanceUpdater;
 use App\Adapters\Receivables\SalesPaymentNumberAssigner;
 use App\Domains\Receivables\Application\PaymentService;
+use App\Domains\Receivables\Console\RestoreLegacyPaymentLinks;
 use App\Domains\Receivables\Contracts\InvoiceBalanceUpdater;
 use App\Domains\Receivables\Contracts\PaymentEmailSender;
 use App\Domains\Receivables\Contracts\PaymentExchangeRateRecorder;
@@ -32,6 +33,10 @@ class ReceivablesServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        $this->commands([
+            RestoreLegacyPaymentLinks::class,
+        ]);
+
         Gate::policy(Payment::class, PaymentPolicy::class);
         Gate::policy(PaymentMethod::class, PaymentMethodPolicy::class);
         $abilities = [
