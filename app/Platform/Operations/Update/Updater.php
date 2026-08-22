@@ -152,6 +152,48 @@ class Updater
      * are never touched. Directories left empty by the sweep are removed in a
      * second walk, so a pruned subtree disappears entirely.
      */
+    /**
+     * The paths the cleanup sweep must never touch: the configured protected
+     * prefixes, plus the live database files of every SQLite connection whose
+     * file sits inside the installation. The database is user state, not
+     * shipped code, so it can never appear in a release manifest; without this
+     * a database kept outside `storage` (for example `database/database.sqlite`,
+     * which the installer accepts) would be swept as stale on every update.
+     * SQLite side files (`-wal`, `-shm`, `-journal`) ride along with their
+     * database.
+     */
+    public static function protectedPaths(): array
+    {
+        $keep = config('invoiceshelf.update_protected_paths', []);
+
+        foreach (config('database.connections', []) as $connection) {
+            if (($connection['driver'] ?? null) !== 'sqlite') {
+                continue;
+            }
+
+            $database = $connection['database'] ?? null;
+
+            if (! is_string($database) || $database === '' || $database === ':memory:') {
+                continue;
+            }
+
+            $root = rtrim(base_path(), DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR;
+            $absolute = str_starts_with($database, DIRECTORY_SEPARATOR) ? $database : $root.$database;
+
+            if (! str_starts_with($absolute, $root)) {
+                continue;
+            }
+
+            $relative = substr($absolute, strlen($root));
+
+            foreach (['', '-wal', '-shm', '-journal'] as $suffix) {
+                $keep[] = $relative.$suffix;
+            }
+        }
+
+        return array_values(array_unique($keep));
+    }
+
     public static function cleanStaleFiles(): array
     {
         $manifestPath = base_path('manifest.json');
@@ -167,7 +209,7 @@ class Updater
         }
 
         $shipped = array_flip($manifest);
-        $keep = config('invoiceshelf.update_protected_paths', []);
+        $keep = static::protectedPaths();
         $cleaned = 0;
 
         foreach (static::walkInstallation() as $entry) {
