@@ -7,25 +7,16 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Collapses 150 historical migrations into one.
+ * Replaces the 150 historical migrations with the 2.4.x boundary schema.
  *
- * Ten years of incremental schema changes used to run on every fresh install:
- * tables created, columns added, renamed and dropped again, data back-filled
- * for versions nobody runs any more. This file replaces all of it with the one
- * state that chain converged on, so a new database reaches the 2.4.x boundary
- * in a single step and the v3-era migrations take it from there.
+ * {@see SchemaConsolidationGuard} decides what happens: an empty database is
+ * built, a database that already ran the replaced chain is left as it is
+ * (only its stale history rows are pruned), and anything in between is
+ * refused before any write.
  *
- * What it does depends entirely on what it finds. A database that already ran
- * the replaced chain keeps every table it has — those are the real ones — and
- * loses only the repository rows naming the files this one replaces, which this
- * file has just made meaningless. Only an empty database is built. Anything in
- * between is refused, loudly, before a single write: see
- * {@see SchemaConsolidationGuard}.
- *
- * Everything below is portable builder work — no vendor SQL, no schema dumps.
- * Two deliberate driver-specific behaviours are called out where they happen:
- * the `after()` placements (a MySQL-only modifier) and the five legacy columns
- * that only SQLite databases carry.
+ * Portable schema-builder calls only. The two driver-specific spots are
+ * commented where they occur: the `after()` placements (MySQL-only) and the
+ * legacy columns only SQLite databases carry.
  */
 return new class extends Migration
 {
@@ -35,15 +26,9 @@ return new class extends Migration
     private const BOUNDARY_VERSION = '1.3.0';
 
     /**
-     * Columns SQLite databases kept that MySQL and PostgreSQL lost.
-     *
-     * Three of the replaced migrations dropped columns, and all three skipped
-     * the drop on SQLite because the SQLite of the day could not do it. A
-     * SQLite database built by the historical chain therefore still carries
-     * `users.company_id` and a `user_id` on four transaction tables, each with
-     * its foreign key intact. Reproducing them keeps a freshly built SQLite
-     * database identical to an upgraded one, which is the whole point of this
-     * file; the columns are unused either way.
+     * Unused columns only SQLite databases carry: three replaced migrations
+     * skipped their column drops on SQLite. Reproduced so a fresh SQLite
+     * database matches an upgraded one.
      *
      * @var array<string, string> table => the column it kept
      */
@@ -69,9 +54,8 @@ return new class extends Migration
         }
 
         if (! $verdict->isBuild()) {
-            // SKIP. The schema stands as it is; only the history it left
-            // behind changes. The framework records this file when the body
-            // returns, in place of the rows retired here.
+            // SKIP: schema untouched, stale history rows pruned. The
+            // framework records this file when the body returns.
             $this->pruneStaleHistory();
 
             return;
@@ -95,11 +79,8 @@ return new class extends Migration
     }
 
     /**
-     * Consolidations are one-way.
-     *
-     * On an upgraded database the forward run did nothing at all, so a reverse
-     * run has no way to tell what it would be undoing — and on a fresh one it
-     * would mean dropping every table in the product.
+     * Irreversible: SKIP ran nothing to undo, and on a fresh database a
+     * rollback would drop every table in the product.
      */
     public function down(): void
     {
@@ -111,23 +92,9 @@ return new class extends Migration
     }
 
     /**
-     * Retire the repository rows this file has just made meaningless.
-     *
-     * An upgraded database records one row for each of the 150 files replaced
-     * here, plus the single name the 2.4.x line shipped and this codebase never
-     * did. None of them can ever run again and none of them still names a file,
-     * so left in place they only make `migrate:status` describe a tree that
-     * stopped existing — and the next release would inherit the same 151 rows
-     * to explain away.
-     *
-     * The delete is driven by an exhaustive list of names, never by a date
-     * range or a prefix. Module migrations share this table, and so will every
-     * migration a later release adds; a row that is not named is a row that is
-     * not touched.
-     *
-     * The write goes to the connection the migration is running on, which the
-     * migrator has made the default for the duration of this method — the same
-     * connection the guard just read its verdict from.
+     * Delete the history rows for the 150 replaced files plus the one
+     * 2.4.x-only name. Explicit name list only: module rows and any other
+     * row survive. Writes on the connection this migration runs on.
      */
     private function pruneStaleHistory(): void
     {
@@ -277,12 +244,9 @@ return new class extends Migration
     }
 
     /**
-     * Users and companies, which reference each other in a loop.
-     *
-     * Users come first because `companies.owner_id` points at them. The other
-     * half of the loop only exists on SQLite, where a foreign key may name a
-     * table that does not exist yet — the constraint is resolved when rows are
-     * written, not when the table is declared.
+     * Users before companies (`companies.owner_id` points at users). The
+     * reverse reference exists only on SQLite, which resolves foreign keys at
+     * write time.
      */
     private function createAccountTables(): void
     {
@@ -834,11 +798,8 @@ return new class extends Migration
     }
 
     /**
-     * Bouncer's four tables.
-     *
-     * The explicit index on each foreign-key column is deliberate: MySQL
-     * reuses it for the constraint instead of creating a second, differently
-     * named one, which is what the boundary schema records.
+     * Bouncer's four tables. Each foreign-key column gets an explicit index
+     * so MySQL reuses it for the constraint, matching the boundary schema.
      */
     private function createAuthorizationTables(): void
     {
@@ -896,15 +857,9 @@ return new class extends Migration
     }
 
     /**
-     * Columns that MySQL keeps somewhere other than the end of the table.
-     *
-     * The replaced chain added these after the fact, and MySQL honours the
-     * `AFTER` clause while PostgreSQL and SQLite always append. Adding them in
-     * a second pass reproduces both layouts from one body of code: `after()`
-     * places them on MySQL and is ignored everywhere else, where they land in
-     * this method's own order. Column order carries no meaning to the
-     * application — it is reproduced so that a database built here and one
-     * upgraded from 2.x are physically the same.
+     * Columns added mid-table by the replaced chain. `after()` positions them
+     * on MySQL and is ignored elsewhere, so a built database matches an
+     * upgraded one on every driver. Column order has no meaning to the app.
      */
     private function placeRelocatedColumns(): void
     {
@@ -985,11 +940,8 @@ return new class extends Migration
     }
 
     /**
-     * The two disks every installation starts with.
-     *
-     * Both are local, and both take their paths from the running application
-     * rather than from anything baked into this file, so an installation moved
-     * to a different directory still describes itself correctly.
+     * The two local disks every installation starts with. Paths come from
+     * the running application, not from values baked into this file.
      */
     private function seedFileDisks(): void
     {
@@ -1026,11 +978,8 @@ return new class extends Migration
     }
 
     /**
-     * Three currencies the replaced chain added after its first release.
-     *
-     * Each is written only when its code is absent, so a database that already
-     * knows one of them — because a seeder or a module got there first — keeps
-     * exactly one row for it.
+     * Three currencies the replaced chain added later. Insert-if-absent, so
+     * pre-existing rows are kept.
      */
     private function seedCurrencies(): void
     {
@@ -1080,11 +1029,7 @@ return new class extends Migration
     }
 
     /**
-     * Stamp the version the replaced chain ended on.
-     *
-     * The v3-era migrations move it forward from here; what matters is that the
-     * row exists and reads as the boundary version, whether or not something
-     * wrote one first.
+     * Stamp the boundary version; the v3-era migrations move it forward.
      */
     private function seedVersion(): void
     {
