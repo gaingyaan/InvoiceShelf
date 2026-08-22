@@ -101,9 +101,12 @@ jobs:
               uses: ramsey/composer-install@4.0.0
 
             - name: Apply tests ${{ matrix.php-version }} (parallel)
-              run: php artisan test --parallel --exclude-group=modules --exclude-group=architecture
+              # CLI --exclude-group overrides the phpunit.xml exclusions, so the
+              # isolated group must be re-excluded here or it poisons a worker.
+              run: php artisan test --parallel --exclude-group=modules --exclude-group=architecture --exclude-group=isolated
 
-            - name: Apply module and architecture tests ${{ matrix.php-version }} (serial)
+            - name: Apply module, architecture and isolated tests ${{ matrix.php-version }} (serial)
               run: |
                   php artisan test --group=modules
                   php artisan test --group=architecture
+                  php artisan test --group=isolated
