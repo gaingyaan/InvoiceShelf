@@ -13,11 +13,21 @@ uses()->group('isolated');
 
 beforeEach(function () {
     Artisan::call('db:seed', ['--class' => 'DatabaseSeeder', '--force' => true]);
+    // CI has no .env; seed one the way an installer would so the
+    // env-writing paths under test have a real file to work against.
+    $this->envExisted = file_exists(base_path('.env'));
+    if (! $this->envExisted) {
+        copy(base_path('.env.example'), base_path('.env'));
+    }
     $this->envBackup = file_get_contents(base_path('.env'));
 });
 
 afterEach(function () {
-    file_put_contents(base_path('.env'), $this->envBackup);
+    if ($this->envExisted) {
+        file_put_contents(base_path('.env'), $this->envBackup);
+    } else {
+        @unlink(base_path('.env'));
+    }
 });
 
 it('refuses a database that already contains data, without touching the environment file', function () {
