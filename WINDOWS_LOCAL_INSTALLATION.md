@@ -83,7 +83,7 @@ php artisan storage:link
 php artisan serve --host=127.0.0.1 --port=8090
 ```
 
-Open `http://127.0.0.1:8090` and complete the first-run organization setup in the browser. Use India, INR, and an April to March financial year if those settings apply to the local business.
+Open `http://127.0.0.1:8090` and complete the first-run organization setup in the browser.
 
 To stop the server, press `Ctrl+C` in the PowerShell window that is running `php artisan serve`.
 
