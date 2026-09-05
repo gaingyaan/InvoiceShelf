@@ -4,6 +4,7 @@
 
 namespace App\Http\Controllers\V1\Admin\Backup;
 
+use App\Models\FileDisk;
 use App\Rules\Backup\PathToZip;
 use Illuminate\Http\Request;
 use Spatie\Backup\BackupDestination\Backup;
@@ -19,7 +20,18 @@ class DownloadBackupController extends ApiController
 
         $validated = $request->validate([
             'path' => ['required', new PathToZip],
+            'file_disk_id' => ['nullable', 'integer'],
         ]);
+
+        if (! empty($validated['file_disk_id'])) {
+            $fileDisk = FileDisk::find($validated['file_disk_id']);
+
+            if (! $fileDisk) {
+                return response('Backup disk not found', Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+
+            $fileDisk->setConfig();
+        }
 
         $backupDestination = BackupDestination::create(config('filesystems.default'), config('backup.backup.name'));
 

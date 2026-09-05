@@ -69,6 +69,7 @@
 
 <script setup>
 import { useBackupStore } from '@/scripts/admin/stores/backup'
+import http from '@/scripts/http'
 import { computed, ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useDiskStore } from '@/scripts/admin/stores/disk'
@@ -203,8 +204,7 @@ async function onCreateNewBackup() {
 
 async function onDownloadBckup(backup) {
   isFetchingInitialData.value = true
-  window
-    .axios({
+  http({
       method: 'GET',
       url: '/api/v1/download-backup',
       responseType: 'blob',

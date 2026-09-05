@@ -95,7 +95,18 @@ class BackupsController extends ApiController
 
         $validated = $request->validate([
             'path' => ['required', new PathToZip],
+            'file_disk_id' => ['nullable', 'integer'],
         ]);
+
+        if (! empty($validated['file_disk_id'])) {
+            $fileDisk = FileDisk::find($validated['file_disk_id']);
+
+            if (! $fileDisk) {
+                return response()->json(['error' => 'Backup disk not found'], 422);
+            }
+
+            $fileDisk->setConfig();
+        }
 
         $backupDestination = BackupDestination::create(config('filesystems.default'), config('backup.backup.name'));
 
