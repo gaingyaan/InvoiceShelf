@@ -93,13 +93,3 @@ Use **Settings > Backup** inside InvoiceShelf to create a database backup. The S
 
 Store backup ZIP files outside the project folder as an additional safety copy.
 
-## Updating From Upstream
-
-Do not update blindly. First inspect available updates and take a backup:
-
-```powershell
-git fetch upstream
-git log --oneline stable-2.4.2..upstream/2.x
-```
-
-Review and test updates locally before merging or deploying them.
