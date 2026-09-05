@@ -22,6 +22,7 @@ To get started with InvoiceShelf using Docker Compose, check out the [Installati
 ## Documentation
 
 - [Installation Steps](https://docs.invoiceshelf.com/installation.html)
+- [Windows Local Installation](WINDOWS_LOCAL_INSTALLATION.md)
 - [User Guide](https://docs.invoiceshelf.com/)
 - [Developer Guide](https://docs.invoiceshelf.com/developer-guide.html)
 - [API Documentation](https://api-docs.invoiceshelf.com)
