@@ -11,6 +11,7 @@
 
 - [Important](#important)
 - [1. System Prerequisites](#1-system-prerequisites)
+  - [SQLite Command-Line Tools (Required for Backups)](#sqlite-command-line-tools-required-for-backups)
   - [Required PHP Extensions](#required-php-extensions)
 - [2. Clone the Repository](#2-clone-the-correct-repository-and-branch)
 - [3. Environment Configuration](#3-create-and-configure-the-environment-file)
@@ -63,6 +64,37 @@ composer -V
 ```
 
 > If Composer is deliberately kept local to the project instead of installed globally, use `php composer.phar` anywhere this guide says `composer`.
+
+### SQLite Command-Line Tools (Required for Backups)
+
+InvoiceShelf's database-backup feature needs the separate `sqlite3.exe` command-line tool. The PHP `sqlite3` extension is not a replacement for it.
+
+Install SQLite's command-line tools:
+
+```powershell
+winget install --exact --id SQLite.SQLite --accept-source-agreements --accept-package-agreements
+```
+
+Add the installed tool's folder to your user `PATH` (safe to rerun — it won't add a duplicate entry):
+
+```powershell
+$sqliteDir = (Get-ChildItem "$env:LOCALAPPDATA\Microsoft\WinGet\Packages\SQLite.SQLite_*" -Filter sqlite3.exe -Recurse -File | Select-Object -First 1).DirectoryName
+
+if (-not $sqliteDir) { throw 'sqlite3.exe was not found after installation.' }
+
+$userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+if ($userPath -notlike "*$sqliteDir*") {
+  [Environment]::SetEnvironmentVariable('Path', "$($userPath.TrimEnd(';'));$sqliteDir", 'User')
+}
+```
+
+Close and reopen PowerShell, then verify the command is available:
+
+```powershell
+sqlite3 --version
+```
+
+> Restart InvoiceShelf after this setup if it is already running. This prerequisite is only needed for the database-backup feature; normal application use does not require it.
 
 ### Required PHP Extensions
 
@@ -121,7 +153,7 @@ cd InvoiceShelf
 copy .env.example .env
 ```
 
-Edit `.env` and set the following values. Replace the database path if the project is not located .
+Edit `.env` and set the following values. Replace the database path if the project is not located at `C:\{folder_name}\InvoiceShelf`.
 
 ```ini
 APP_ENV=local
@@ -130,7 +162,7 @@ APP_URL=http://127.0.0.1:8000
 APP_KEY=
 
 DB_CONNECTION=sqlite
-DB_DATABASE=C:/uoi/InvoiceShelf/database/database.sqlite
+DB_DATABASE=C:/{folder_name}/InvoiceShelf/database/database.sqlite
 ```
 
 > Do this **before** generating the application key. The example file may mark the app as production; using `APP_ENV=local` avoids a production confirmation prompt.
@@ -171,7 +203,7 @@ corepack pnpm run build
 ```powershell
 New-Item -Path "database\database.sqlite" -ItemType File
 php artisan key:generate
-php artisan migrate
+
 ```
 
 > If `database.sqlite` already exists, do not recreate it. If `key:generate` still says the application is in production, recheck `APP_ENV=local`; only use `php artisan key:generate --force` when that is intentional.
