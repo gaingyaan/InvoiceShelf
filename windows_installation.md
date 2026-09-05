@@ -66,7 +66,27 @@ composer -V
 
 ### Required PHP Extensions
 
-Create `php.ini` from `php.ini-development` in PHP's installation folder. Set `extension_dir` to that folder's `ext` directory, then enable these extensions:
+The `PHP.PHP.8.4` Winget package normally enables InvoiceShelf's required extensions already. Validate them first instead of editing `php.ini` manually:
+
+```powershell
+$required = 'bcmath','curl','exif','fileinfo','gd','intl','mbstring','openssl','pdo_sqlite','sqlite3','zip','ctype','dom','filter','iconv','json','session','tokenizer','xml'
+$loaded = php -m | ForEach-Object { $_.Trim() }
+$missing = $required | Where-Object { $_ -notin $loaded }
+
+if ($missing) {
+  throw "Missing PHP extensions: $($missing -join ', '). Configure php.ini, then rerun this check."
+}
+
+'All InvoiceShelf PHP extensions are available.'
+```
+
+If the command reports missing extensions, locate the loaded configuration file:
+
+```powershell
+php --ini
+```
+
+Only then create `php.ini` from `php.ini-development` in PHP's installation folder. Set `extension_dir` to that installation's actual `ext` directory, then enable the missing extensions:
 
 ```ini
 extension=bcmath
@@ -82,13 +102,7 @@ extension=sqlite3
 extension=zip
 ```
 
-The standard PHP extensions `ctype`, `dom`, `filter`, `iconv`, `json`, `session`, `tokenizer`, and `xml` should also appear in `php -m`. Verify the essential modules before continuing:
-
-```powershell
-php -m
-```
-
-> `sqlite3`, `pdo_sqlite`, `curl`, `exif`, `gd`, `intl`, `mbstring`, and `zip` must be listed. If PHP reports that it cannot load an extension from `C:\php\ext`, correct `extension_dir` in `php.ini` to the actual PHP `ext` path.
+> Do not assume the PHP folder is `C:\php`; use the path reported by `php --ini`. Rerun the validation command after changing `php.ini`.
 
 ---
 
@@ -107,7 +121,7 @@ cd InvoiceShelf
 copy .env.example .env
 ```
 
-Edit `.env` and set the following values. Replace the database path if the project is not located at `C:\uoi\InvoiceShelf`.
+Edit `.env` and set the following values. Replace the database path if the project is not located .
 
 ```ini
 APP_ENV=local
