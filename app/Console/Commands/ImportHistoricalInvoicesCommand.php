@@ -284,12 +284,11 @@ class ImportHistoricalInvoicesCommand extends Command
                         );
                     }
 
-                    // 8. Link Matching PDF Attachment if present
+                    // 8. Link Matching PDF Attachment if present (optional)
                     $baseName = pathinfo($mdFile->getFilename(), PATHINFO_FILENAME);
                     $possiblePdfPaths = [
                         $folderPath . DIRECTORY_SEPARATOR . $baseName . '.pdf',
                         $folderPath . DIRECTORY_SEPARATOR . str_replace(['/', '\\'], ['_', '_'], $data['invoice_number']) . '.pdf',
-                        $folderPath . DIRECTORY_SEPARATOR . 'sample-format.pdf',
                     ];
 
                     foreach ($possiblePdfPaths as $pdfPath) {
