@@ -44,8 +44,9 @@ class ImportHistoricalInvoicesCommand extends Command
         $rawPath = $this->option('path');
         $folderPath = base_path($rawPath);
 
-        if (!File::isDirectory($folderPath)) {
+        if (! File::isDirectory($folderPath)) {
             $this->error("Directory not found: {$folderPath}");
+
             return Command::FAILURE;
         }
 
@@ -60,16 +61,17 @@ class ImportHistoricalInvoicesCommand extends Command
         }, $mdFiles);
 
         $standalonePdfFiles = array_filter($files, function ($file) use ($mdBasenames) {
-            return strtolower($file->getExtension()) === 'pdf' && !in_array(pathinfo($file->getFilename(), PATHINFO_FILENAME), $mdBasenames);
+            return strtolower($file->getExtension()) === 'pdf' && ! in_array(pathinfo($file->getFilename(), PATHINFO_FILENAME), $mdBasenames);
         });
 
         $totalCount = count($mdFiles) + count($standalonePdfFiles);
         if ($totalCount === 0) {
             $this->warn("No .md or .pdf invoice files found in {$rawPath}");
+
             return Command::SUCCESS;
         }
 
-        $this->info("Found " . count($mdFiles) . " markdown file(s) and " . count($standalonePdfFiles) . " standalone PDF file(s) in {$rawPath}.");
+        $this->info('Found '.count($mdFiles).' markdown file(s) and '.count($standalonePdfFiles)." standalone PDF file(s) in {$rawPath}.");
 
         // Determine Company
         $companyOption = $this->option('company');
@@ -81,8 +83,9 @@ class ImportHistoricalInvoicesCommand extends Command
             $company = Company::first();
         }
 
-        if (!$company) {
-            $this->error("No company found in database. Please run database seeders first.");
+        if (! $company) {
+            $this->error('No company found in database. Please run database seeders first.');
+
             return Command::FAILURE;
         }
 
@@ -107,8 +110,8 @@ class ImportHistoricalInvoicesCommand extends Command
 
                 $baseName = pathinfo($mdFile->getFilename(), PATHINFO_FILENAME);
                 $possiblePdfPaths = [
-                    $folderPath . DIRECTORY_SEPARATOR . $baseName . '.pdf',
-                    $folderPath . DIRECTORY_SEPARATOR . str_replace(['/', '\\'], ['_', '_'], $data['invoice_number']) . '.pdf',
+                    $folderPath.DIRECTORY_SEPARATOR.$baseName.'.pdf',
+                    $folderPath.DIRECTORY_SEPARATOR.str_replace(['/', '\\'], ['_', '_'], $data['invoice_number']).'.pdf',
                 ];
 
                 $matchedPdf = null;
@@ -122,7 +125,7 @@ class ImportHistoricalInvoicesCommand extends Command
                 $this->saveInvoiceRecord($data, $company, $user, $matchedPdf);
                 $successCount++;
             } catch (\Exception $e) {
-                $errors[] = "MD File: " . $mdFile->getFilename() . " - Error: " . $e->getMessage();
+                $errors[] = 'MD File: '.$mdFile->getFilename().' - Error: '.$e->getMessage();
             }
 
             $bar->advance();
@@ -140,7 +143,7 @@ class ImportHistoricalInvoicesCommand extends Command
                 $this->saveInvoiceRecord($data, $company, $user, $pdfFile->getRealPath());
                 $successCount++;
             } catch (\Exception $e) {
-                $errors[] = "PDF File: " . $pdfFile->getFilename() . " - Error: " . $e->getMessage();
+                $errors[] = 'PDF File: '.$pdfFile->getFilename().' - Error: '.$e->getMessage();
             }
 
             $bar->advance();
@@ -151,10 +154,10 @@ class ImportHistoricalInvoicesCommand extends Command
 
         $this->info("Successfully processed {$successCount} of {$totalCount} historical invoice(s) into InvoiceShelf!");
 
-        if (!empty($errors)) {
-            $this->warn("Warnings / Errors:");
+        if (! empty($errors)) {
+            $this->warn('Warnings / Errors:');
             foreach ($errors as $error) {
-                $this->error(" - " . $error);
+                $this->error(' - '.$error);
             }
         }
 
@@ -167,12 +170,12 @@ class ImportHistoricalInvoicesCommand extends Command
     protected function extractFromPdf(string $pdfPath): array
     {
         $scriptPath = app_path('Console/Commands/extract_pdf_invoice.py');
-        $command = "python " . escapeshellarg($scriptPath) . " " . escapeshellarg($pdfPath);
+        $command = 'python '.escapeshellarg($scriptPath).' '.escapeshellarg($pdfPath);
         $output = shell_exec($command);
         $data = json_decode($output, true);
 
-        if (!$data || !is_array($data)) {
-            throw new \Exception("Failed to extract data from PDF: " . ($output ?: 'No output'));
+        if (! $data || ! is_array($data)) {
+            throw new \Exception('Failed to extract data from PDF: '.($output ?: 'No output'));
         }
 
         return $data;
@@ -202,7 +205,7 @@ class ImportHistoricalInvoicesCommand extends Command
             );
 
             // 3. Billing & Shipping Address
-            $country = Country::where('name', 'like', '%' . ($data['billing_country'] ?? 'India') . '%')->first();
+            $country = Country::where('name', 'like', '%'.($data['billing_country'] ?? 'India').'%')->first();
             Address::updateOrCreate(
                 [
                     'customer_id' => $customer->id,
@@ -219,8 +222,8 @@ class ImportHistoricalInvoicesCommand extends Command
                 ]
             );
 
-            if (!empty($data['shipping_address_1']) || !empty($data['shipping_city'])) {
-                $shipCountry = Country::where('name', 'like', '%' . ($data['shipping_country'] ?? 'India') . '%')->first();
+            if (! empty($data['shipping_address_1']) || ! empty($data['shipping_city'])) {
+                $shipCountry = Country::where('name', 'like', '%'.($data['shipping_country'] ?? 'India').'%')->first();
                 Address::updateOrCreate(
                     [
                         'customer_id' => $customer->id,
@@ -247,26 +250,36 @@ class ImportHistoricalInvoicesCommand extends Command
 
             // Build comprehensive notes preserving subject, place of supply, terms, and bank details
             $noteSections = [];
-            if (!empty($data['subject'])) {
-                $noteSections[] = "Subject: " . $data['subject'];
+            if (! empty($data['subject'])) {
+                $noteSections[] = 'Subject: '.$data['subject'];
             }
-            if (!empty($data['place_of_supply'])) {
-                $noteSections[] = "Place of Supply: " . $data['place_of_supply'];
+            if (! empty($data['place_of_supply'])) {
+                $noteSections[] = 'Place of Supply: '.$data['place_of_supply'];
             }
-            if (!empty($data['notes'])) {
+            if (! empty($data['notes'])) {
                 $noteSections[] = $data['notes'];
             }
-            if (!empty($data['bank_account_name']) || !empty($data['bank_account_number'])) {
-                $bankLines = ["Bank / Account Details:"];
-                if (!empty($data['bank_account_name'])) $bankLines[] = "• Account Name: " . $data['bank_account_name'];
-                if (!empty($data['bank_account_number'])) $bankLines[] = "• Account Number: " . $data['bank_account_number'];
-                if (!empty($data['bank_branch'])) $bankLines[] = "• Branch: " . $data['bank_branch'];
-                if (!empty($data['bank_ifsc'])) $bankLines[] = "• IFSC: " . $data['bank_ifsc'];
-                if (!empty($data['bank_swift'])) $bankLines[] = "• SWIFT: " . $data['bank_swift'];
+            if (! empty($data['bank_account_name']) || ! empty($data['bank_account_number'])) {
+                $bankLines = ['Bank / Account Details:'];
+                if (! empty($data['bank_account_name'])) {
+                    $bankLines[] = '• Account Name: '.$data['bank_account_name'];
+                }
+                if (! empty($data['bank_account_number'])) {
+                    $bankLines[] = '• Account Number: '.$data['bank_account_number'];
+                }
+                if (! empty($data['bank_branch'])) {
+                    $bankLines[] = '• Branch: '.$data['bank_branch'];
+                }
+                if (! empty($data['bank_ifsc'])) {
+                    $bankLines[] = '• IFSC: '.$data['bank_ifsc'];
+                }
+                if (! empty($data['bank_swift'])) {
+                    $bankLines[] = '• SWIFT: '.$data['bank_swift'];
+                }
                 $noteSections[] = implode("\n", $bankLines);
             }
-            if (!empty($data['terms_conditions'])) {
-                $noteSections[] = "Terms & Conditions:\n" . trim($data['terms_conditions']);
+            if (! empty($data['terms_conditions'])) {
+                $noteSections[] = "Terms & Conditions:\n".trim($data['terms_conditions']);
             }
             $compiledNotes = implode("\n\n", $noteSections);
 
@@ -278,7 +291,7 @@ class ImportHistoricalInvoicesCommand extends Command
                 ],
                 [
                     'invoice_date' => Carbon::parse($data['invoice_date'] ?? now()),
-                    'due_date' => !empty($data['due_date']) ? Carbon::parse($data['due_date']) : Carbon::parse($data['invoice_date'] ?? now())->addDays(15),
+                    'due_date' => ! empty($data['due_date']) ? Carbon::parse($data['due_date']) : Carbon::parse($data['invoice_date'] ?? now())->addDays(15),
                     'reference_number' => $data['po_number'] ?? null,
                     'status' => $isPaid ? Invoice::STATUS_PAID : Invoice::STATUS_SENT,
                     'paid_status' => $isPaid ? Invoice::STATUS_PAID : Invoice::STATUS_UNPAID,
@@ -326,8 +339,8 @@ class ImportHistoricalInvoicesCommand extends Command
                 $itemAmount = (int) round(($itemData['amount'] ?? ($qty * ($itemData['rate'] ?? 0))) * 100);
 
                 $description = $itemData['description'] ?? '';
-                if (!empty($itemData['hsn_sac']) && !str_contains($description, (string) $itemData['hsn_sac'])) {
-                    $description = trim($description . " (HSN/SAC: " . $itemData['hsn_sac'] . ")");
+                if (! empty($itemData['hsn_sac']) && ! str_contains($description, (string) $itemData['hsn_sac'])) {
+                    $description = trim($description.' (HSN/SAC: '.$itemData['hsn_sac'].')');
                 }
 
                 $invoice->items()->create([
@@ -358,7 +371,7 @@ class ImportHistoricalInvoicesCommand extends Command
                     ],
                     [
                         'payment_date' => Carbon::parse($data['invoice_date'] ?? now()),
-                        'payment_number' => 'PAY-' . str_replace(['/', '\\'], '-', $invoice->invoice_number),
+                        'payment_number' => 'PAY-'.str_replace(['/', '\\'], '-', $invoice->invoice_number),
                         'amount' => $total,
                         'base_amount' => $total,
                         'customer_id' => $customer->id,
@@ -432,6 +445,7 @@ class ImportHistoricalInvoicesCommand extends Command
 
                 if (str_starts_with($line, 'items:')) {
                     $inItems = true;
+
                     continue;
                 }
 
@@ -449,10 +463,11 @@ class ImportHistoricalInvoicesCommand extends Command
                         $k = trim($k);
                         $v = trim(trim($v), '"\'');
                         $currentItem[$k] = is_numeric($v) ? (float) $v : $v;
+
                         continue;
                     }
 
-                    if (!str_starts_with($rawLine, ' ') && !str_starts_with($rawLine, "\t") && !str_starts_with($line, '-')) {
+                    if (! str_starts_with($rawLine, ' ') && ! str_starts_with($rawLine, "\t") && ! str_starts_with($line, '-')) {
                         if ($currentItem) {
                             $data['items'][] = $currentItem;
                             $currentItem = null;
@@ -461,7 +476,7 @@ class ImportHistoricalInvoicesCommand extends Command
                     }
                 }
 
-                if (!$inItems && strpos($line, ':') !== false) {
+                if (! $inItems && strpos($line, ':') !== false) {
                     [$key, $val] = explode(':', $line, 2);
                     $key = trim($key);
                     $val = trim(trim($val), '"\'');
