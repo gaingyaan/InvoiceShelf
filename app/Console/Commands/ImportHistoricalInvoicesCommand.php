@@ -12,11 +12,11 @@ use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\PaymentMethod;
 use App\Models\User;
-use App\Support\PublicToken;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
 
 class ImportHistoricalInvoicesCommand extends Command
 {
@@ -208,7 +208,7 @@ class ImportHistoricalInvoicesCommand extends Command
                             'base_tax' => $taxTotal,
                             'base_due_amount' => $dueAmount,
                             'notes' => $compiledNotes,
-                            'unique_hash' => PublicToken::make(),
+                            'unique_hash' => Str::random(32),
                             'customer_id' => $customer->id,
                             'currency_id' => $currency ? $currency->id : 1,
                             'user_id' => $user ? $user->id : 1,
@@ -278,7 +278,7 @@ class ImportHistoricalInvoicesCommand extends Command
                                 'user_id' => $user ? $user->id : 1,
                                 'payment_method_id' => PaymentMethod::first()->id ?? 1,
                                 'notes' => 'Historical payment recorded via import',
-                                'unique_hash' => PublicToken::make(),
+                                'unique_hash' => Str::random(32),
                                 'exchange_rate' => 1.0,
                             ]
                         );

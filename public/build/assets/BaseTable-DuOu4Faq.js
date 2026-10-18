@@ -1,0 +1,1 @@
+import{t as e}from"./BaseTable-Dx9gR7dc.js";export{e as default};
