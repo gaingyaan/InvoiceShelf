@@ -37,20 +37,24 @@ To get started with InvoiceShelf using Docker Compose, check out the upstream [I
 - Before updating from the app settings, verify your server PHP version and required extensions.
 - The in-app updater checks requirements and blocks the update if they are not met.
 
-## Historical Invoices Import
+## Historical Invoices Import (PDF & Markdown)
 
-InvoiceShelf includes a built-in Artisan command to import historical invoices directly from Markdown (`.md`) files and automatically link existing original PDF documents.
+InvoiceShelf includes a built-in Artisan command supporting **two flexible approaches** to import historical invoices:
+
+1. **Standalone PDF Files (No `.md` required)**: Simply drop your `.pdf` invoice files into the folder. The system automatically reads and extracts the invoice number, dates, client name, addresses, line items, rates, taxes, and bank details directly from the PDF, and attaches the original document.
+2. **Markdown (`.md`) Files (With or without PDF)**: Place `.md` files containing YAML frontmatter for granular control over invoice records, with optional matching `.pdf` files attached automatically.
 
 ### Features
+- **Dual-Mode Import**: Process standalone PDFs, Markdown files, or a mix of both in a single run.
 - **Automated Customer & Address Setup**: Automatically creates customers with full **Billing** and **Shipping** addresses.
 - **Line Items & HSN/SAC Support**: Ingests line items, calculates minor currency units (cents), and records HSN/SAC codes in item descriptions.
 - **Complete Context Preservation**: Preserves Subject, Place of Supply, Company Bank/Remittance details, and legal Terms & Conditions in invoice notes.
 - **Payment Reconciliation**: Automatically logs payment records in the ledger for invoices marked with `PAID` status.
-- **Direct PDF Attachment**: Links matching PDF files (`<invoice-number>.pdf` or `<filename>.pdf`) directly to the invoice record via Spatie MediaLibrary.
+- **Direct PDF Attachment**: Automatically links matching or standalone PDF files directly to the invoice record via Spatie MediaLibrary.
 
 ### Usage
 
-1. Place your historical `.md` invoice files (and matching `.pdf` files) into:
+1. Place your historical files (`.pdf` only, or `.md` + `.pdf`) into:
    ```
    storage/import/invoices/
    ```
