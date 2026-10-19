@@ -48,21 +48,9 @@
         window.login_page_logo = "/storage/{{$login_page_logo}}"
 
         @endif
-        @if(isset($login_page_heading))
-
-        window.login_page_heading = "{{$login_page_heading}}"
-
-        @endif
-        @if(isset($login_page_description))
-
-        window.login_page_description = "{{$login_page_description}}"
-
-        @endif
-        @if(isset($copyright_text))
-
-        window.copyright_text = "{{$copyright_text}}"
-
-        @endif
+        window.login_page_heading = @js($login_page_heading ?? '')
+        window.login_page_description = @js($login_page_description ?? '')
+        window.copyright_text = @js($copyright_text ?? '')
 
         @if(config('app.env') === 'demo')
             window.demo_mode = true

@@ -6,10 +6,11 @@ use App\Facades\Hashids;
 use App\Models\EmailLog;
 use App\Models\Estimate;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 
-class SendEstimateMail extends Mailable
+class SendEstimateMail extends Mailable implements ShouldQueue
 {
     use Queueable;
     use SerializesModels;

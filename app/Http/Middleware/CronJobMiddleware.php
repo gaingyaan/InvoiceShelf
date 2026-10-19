@@ -15,7 +15,8 @@ class CronJobMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if ($request->header('x-authorization-token') && $request->header('x-authorization-token') == config('services.cron_job.auth_token')) {
+        $token = config('services.cron_job.auth_token');
+        if (! empty($token) && hash_equals($token, (string) $request->header('x-authorization-token'))) {
             return $next($request);
         }
 

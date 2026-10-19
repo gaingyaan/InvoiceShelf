@@ -291,7 +291,7 @@ class Customer extends Authenticatable implements HasMedia
 
     public function scopeWhereCustomer($query, $customer_id)
     {
-        $query->orWhere('customers.id', $customer_id);
+        $query->where('customers.id', $customer_id);
     }
 
     public function scopeApplyInvoiceFilters($query, array $filters)

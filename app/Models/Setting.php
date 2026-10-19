@@ -11,6 +11,23 @@ class Setting extends Model
 
     protected $fillable = ['option', 'value'];
 
+    protected static $settingsCache = [];
+
+    protected static function booted()
+    {
+        static::saved(function () {
+            static::flushCache();
+        });
+        static::deleted(function () {
+            static::flushCache();
+        });
+    }
+
+    public static function flushCache()
+    {
+        static::$settingsCache = [];
+    }
+
     public static function setSetting($key, $setting)
     {
         $old = self::whereOption($key)->first();
@@ -18,6 +35,7 @@ class Setting extends Model
         if ($old) {
             $old->value = $setting;
             $old->save();
+            static::flushCache();
 
             return;
         }
@@ -26,6 +44,7 @@ class Setting extends Model
         $set->option = $key;
         $set->value = $setting;
         $set->save();
+        static::flushCache();
     }
 
     public static function setSettings($settings)
@@ -41,13 +60,20 @@ class Setting extends Model
                 ]
             );
         }
+        static::flushCache();
     }
 
     public static function getSetting($key)
     {
+        if (isset(static::$settingsCache[$key])) {
+            return static::$settingsCache[$key];
+        }
+
         $setting = static::whereOption($key)->first();
 
         if ($setting) {
+            static::$settingsCache[$key] = $setting->value;
+
             return $setting->value;
         } else {
             return null;
@@ -56,9 +82,29 @@ class Setting extends Model
 
     public static function getSettings($settings)
     {
-        return static::whereIn('option', $settings)
-            ->get()->mapWithKeys(function ($item) {
-                return [$item['option'] => $item['value']];
-            });
+        $result = collect();
+        $missing = [];
+
+        foreach ($settings as $key) {
+            if (isset(static::$settingsCache[$key])) {
+                $result->put($key, static::$settingsCache[$key]);
+            } else {
+                $missing[] = $key;
+            }
+        }
+
+        if (! empty($missing)) {
+            $fetched = static::whereIn('option', $missing)
+                ->get()->mapWithKeys(function ($item) {
+                    return [$item['option'] => $item['value']];
+                });
+
+            foreach ($fetched as $key => $value) {
+                static::$settingsCache[$key] = $value;
+                $result->put($key, $value);
+            }
+        }
+
+        return $result;
     }
 }

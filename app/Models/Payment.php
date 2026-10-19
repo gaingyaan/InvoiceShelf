@@ -362,7 +362,7 @@ class Payment extends Model implements HasMedia
 
     public function scopeWherePayment($query, $payment_id)
     {
-        $query->orWhere('id', $payment_id);
+        $query->where('payments.id', $payment_id);
     }
 
     public function scopeWhereCompany($query)

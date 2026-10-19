@@ -17,6 +17,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
+use Symfony\Component\Process\Process;
 
 class ImportHistoricalInvoicesCommand extends Command
 {
@@ -41,6 +42,8 @@ class ImportHistoricalInvoicesCommand extends Command
      */
     public function handle(): int
     {
+        DB::disableQueryLog();
+
         $rawPath = $this->option('path');
         $folderPath = base_path($rawPath);
 
@@ -170,12 +173,20 @@ class ImportHistoricalInvoicesCommand extends Command
     protected function extractFromPdf(string $pdfPath): array
     {
         $scriptPath = app_path('Console/Commands/extract_pdf_invoice.py');
-        $command = 'python '.escapeshellarg($scriptPath).' '.escapeshellarg($pdfPath);
-        $output = shell_exec($command);
-        $data = json_decode($output, true);
+        $pythonBin = env('PYTHON_BINARY', 'python3');
+
+        $process = new Process([$pythonBin, $scriptPath, $pdfPath]);
+        $process->setTimeout(120);
+        $process->run();
+
+        if (! $process->isSuccessful()) {
+            throw new \Exception('Failed to extract data from PDF: '.$process->getErrorOutput());
+        }
+
+        $data = json_decode($process->getOutput(), true);
 
         if (! $data || ! is_array($data)) {
-            throw new \Exception('Failed to extract data from PDF: '.($output ?: 'No output'));
+            throw new \Exception('Failed to parse PDF extraction output: '.$process->getOutput());
         }
 
         return $data;

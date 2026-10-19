@@ -46,7 +46,6 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectUsersTo(AppServiceProvider::HOME);
 
         $middleware->preventRequestForgery(except: [
-            'login',
         ]);
 
         $middleware->append([

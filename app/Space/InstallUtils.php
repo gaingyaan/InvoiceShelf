@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\File;
 
 class InstallUtils
 {
+    private static $dbCreated = null;
+
     /**
      * Check if database is created
      *
@@ -15,7 +17,11 @@ class InstallUtils
      */
     public static function isDbCreated()
     {
-        return self::tableExists('users');
+        if (static::$dbCreated !== null) {
+            return static::$dbCreated;
+        }
+
+        return static::$dbCreated = self::tableExists('users');
     }
 
     /**

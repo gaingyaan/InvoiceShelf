@@ -28,13 +28,13 @@ class ProfileController extends Controller
         }
 
         if ($request->billing !== null) {
-            $customer->shippingAddress()->delete();
-            $customer->addresses()->create($request->getShippingAddress());
+            $customer->billingAddress()->delete();
+            $customer->addresses()->create($request->getBillingAddress());
         }
 
         if ($request->shipping !== null) {
-            $customer->billingAddress()->delete();
-            $customer->addresses()->create($request->getBillingAddress());
+            $customer->shippingAddress()->delete();
+            $customer->addresses()->create($request->getShippingAddress());
         }
 
         return new CustomerResource($customer);

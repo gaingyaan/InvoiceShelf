@@ -143,6 +143,7 @@ class MailEnvironmentRequest extends FormRequest
                     'mail_sendmail_path' => [
                         'nullable',
                         'string',
+                        'regex:/^\/usr\/(sbin|bin)\/sendmail(\s+-[a-zA-Z0-9]+)*$/',
                     ],
                     'from_name' => [
                         'required',

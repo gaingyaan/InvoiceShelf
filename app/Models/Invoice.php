@@ -299,7 +299,7 @@ class Invoice extends Model implements HasMedia
 
     public function scopeWhereInvoice($query, $invoice_id)
     {
-        $query->orWhere('id', $invoice_id);
+        $query->where('invoices.id', $invoice_id);
     }
 
     public function scopeWhereCompany($query)

@@ -18,7 +18,8 @@ class SearchUsersController extends Controller
     {
         $this->authorize('create', User::class);
 
-        $users = User::whereEmail($request->email)
+        $users = User::whereCompany()
+            ->whereEmail($request->email)
             ->latest()
             ->paginate(10);
 

@@ -156,10 +156,17 @@ class ModuleInstaller
         $zip = new ZipArchive;
 
         if ($zip->open($zip_file_path)) {
+            for ($i = 0; $i < $zip->numFiles; $i++) {
+                $entryName = $zip->getNameIndex($i);
+                $realPath = realpath($temp_extract_dir.DIRECTORY_SEPARATOR.$entryName);
+                if ($realPath !== false && ! str_starts_with($realPath, realpath($temp_extract_dir))) {
+                    $zip->close();
+                    throw new \Exception('Potentially malicious zip entry detected: '.$entryName);
+                }
+            }
             $zip->extractTo($temp_extract_dir);
+            $zip->close();
         }
-
-        $zip->close();
 
         // Delete zip file
         File::delete($zip_file_path);

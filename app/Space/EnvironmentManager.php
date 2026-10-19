@@ -55,6 +55,7 @@ class EnvironmentManager
         $env = explode($this->delimiter, $env);
 
         foreach ($data as $data_key => $data_value) {
+            $data_value = str_replace(["\r", "\n"], '', (string) $data_value);
             $updated = false;
 
             foreach ($env as $env_key => $env_value) {

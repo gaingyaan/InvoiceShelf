@@ -8,6 +8,7 @@ use App\Models\Setting;
 use App\Models\User;
 use App\Space\InstallUtils;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 use Silber\Bouncer\BouncerFacade;
 
 class UsersTableSeeder extends Seeder
@@ -17,11 +18,12 @@ class UsersTableSeeder extends Seeder
      */
     public function run(): void
     {
+        // WARNING: Change these credentials immediately after installation
         $user = User::create([
             'email' => 'admin@invoiceshelf.com',
             'name' => 'Jane Doe',
             'role' => 'super admin',
-            'password' => 'invoiceshelf@123',
+            'password' => Str::random(32),
         ]);
 
         $company = Company::create([

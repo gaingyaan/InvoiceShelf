@@ -6,10 +6,11 @@ use App\Facades\Hashids;
 use App\Models\EmailLog;
 use App\Models\Payment;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 
-class SendPaymentMail extends Mailable
+class SendPaymentMail extends Mailable implements ShouldQueue
 {
     use Queueable;
     use SerializesModels;

@@ -186,17 +186,21 @@ class Expense extends Model implements HasMedia
 
     public function scopeWhereExpense($query, $expense_id)
     {
-        $query->orWhere('id', $expense_id);
+        $query->where('expenses.id', $expense_id);
     }
 
     public function scopeWhereSearch($query, $search)
     {
-        foreach (explode(' ', $search) as $term) {
-            $query->whereHas('category', function ($query) use ($term) {
-                $query->where('name', 'LIKE', '%'.$term.'%');
-            })
-                ->orWhere('notes', 'LIKE', '%'.$term.'%');
-        }
+        $query->where(function ($q) use ($search) {
+            foreach (explode(' ', $search) as $term) {
+                $q->where(function ($query) use ($term) {
+                    $query->whereHas('category', function ($query) use ($term) {
+                        $query->where('name', 'LIKE', '%'.$term.'%');
+                    })
+                        ->orWhere('notes', 'LIKE', '%'.$term.'%');
+                });
+            }
+        });
     }
 
     public function scopeWhereOrder($query, $orderByField, $orderBy)

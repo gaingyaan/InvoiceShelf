@@ -9,6 +9,7 @@ use App\Models\Estimate;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class AcceptEstimateController extends Controller
 {
@@ -20,6 +21,10 @@ class AcceptEstimateController extends Controller
      */
     public function __invoke(Request $request, Company $company, $id)
     {
+        $request->validate([
+            'status' => ['required', Rule::in(['ACCEPTED', 'REJECTED'])],
+        ]);
+
         $estimate = $company->estimates()
             ->whereCustomer(Auth::guard('customer')->id())
             ->where('id', $id)
