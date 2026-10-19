@@ -24,6 +24,7 @@ class RecurringInvoiceController extends Controller
 
         $recurringInvoices = RecurringInvoice::whereCompany()
             ->applyFilters($request->all())
+            ->with('customer')
             ->paginateData($limit);
 
         return RecurringInvoiceResource::collection($recurringInvoices)

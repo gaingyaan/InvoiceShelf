@@ -66,6 +66,14 @@ class InvoicesController extends Controller
     {
         $this->authorize('view', $invoice);
 
+        $invoice->load([
+            'customer',
+            'fields.customField',
+            'items.fields.customField',
+            'items.taxes',
+            'taxes',
+        ]);
+
         return new InvoiceResource($invoice);
     }
 

@@ -34,6 +34,15 @@ test('testGetInvoices', function () {
     $response->assertOk();
 });
 
+test('get invoice includes the customer required by the detail view', function () {
+    $invoice = Invoice::factory()->create();
+
+    getJson('api/v1/invoices/'.$invoice->id)
+        ->assertOk()
+        ->assertJsonPath('data.id', $invoice->id)
+        ->assertJsonPath('data.customer.id', $invoice->customer_id);
+});
+
 test('create invoice', function () {
     $invoice = Invoice::factory()
         ->raw([

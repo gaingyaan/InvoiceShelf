@@ -25,9 +25,8 @@ class ItemsController extends Controller
         $limit = $request->has('limit') ? $request->limit : 10;
 
         $items = Item::whereCompany()
-            ->leftJoin('units', 'units.id', '=', 'items.unit_id')
             ->applyFilters($request->all())
-            ->select('items.*', 'units.name as unit_name')
+            ->with('unit')
             ->latest()
             ->paginateData($limit);
 

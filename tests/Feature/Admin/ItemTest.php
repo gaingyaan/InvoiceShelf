@@ -32,6 +32,15 @@ test('get items', function () {
     $response->assertOk();
 });
 
+test('get items includes the unit required by the list view', function () {
+    $item = Item::factory()->create();
+
+    getJson('api/v1/items?unit_id='.$item->unit_id)
+        ->assertOk()
+        ->assertJsonPath('data.0.id', $item->id)
+        ->assertJsonPath('data.0.unit.id', $item->unit_id);
+});
+
 test('create item', function () {
     $item = Item::factory()->raw([
         'taxes' => [

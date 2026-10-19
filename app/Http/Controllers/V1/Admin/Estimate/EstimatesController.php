@@ -19,9 +19,8 @@ class EstimatesController extends Controller
         $limit = $request->has('limit') ? $request->limit : 10;
 
         $estimates = Estimate::whereCompany()
-            ->join('customers', 'customers.id', '=', 'estimates.customer_id')
             ->applyFilters($request->all())
-            ->select('estimates.*', 'customers.name')
+            ->with('customer')
             ->latest()
             ->paginateData($limit);
 

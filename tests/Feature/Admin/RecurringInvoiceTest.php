@@ -34,6 +34,15 @@ test('get recurring invoices', function () {
         ->assertOk();
 });
 
+test('get recurring invoices includes the customer required by the list view', function () {
+    $recurringInvoice = RecurringInvoice::factory()->create();
+
+    getJson('api/v1/recurring-invoices?customer_id='.$recurringInvoice->customer_id)
+        ->assertOk()
+        ->assertJsonPath('data.0.id', $recurringInvoice->id)
+        ->assertJsonPath('data.0.customer.id', $recurringInvoice->customer_id);
+});
+
 test('store user using a form request', function () {
     $this->assertActionUsesFormRequest(
         RecurringInvoiceController::class,

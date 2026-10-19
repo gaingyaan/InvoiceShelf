@@ -38,6 +38,15 @@ test('get estimates', function () {
     $response->assertOk();
 });
 
+test('get estimates includes the customer required by the list view', function () {
+    $estimate = Estimate::factory()->create();
+
+    getJson('api/v1/estimates?customer_id='.$estimate->customer_id)
+        ->assertOk()
+        ->assertJsonPath('data.0.id', $estimate->id)
+        ->assertJsonPath('data.0.customer.id', $estimate->customer_id);
+});
+
 test('create estimate', function () {
     $estimate = Estimate::factory()->raw([
         'estimate_number' => 'EST-000006',

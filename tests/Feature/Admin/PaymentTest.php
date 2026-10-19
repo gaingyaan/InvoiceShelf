@@ -33,6 +33,16 @@ test('get payments', function () {
     $response->assertOk();
 });
 
+test('get payments includes the relationships required by the list view', function () {
+    $payment = Payment::factory()->create();
+
+    getJson('api/v1/payments?payment_number='.$payment->payment_number)
+        ->assertOk()
+        ->assertJsonPath('data.0.id', $payment->id)
+        ->assertJsonPath('data.0.customer.id', $payment->customer_id)
+        ->assertJsonPath('data.0.payment_method.id', $payment->payment_method_id);
+});
+
 test('get payment', function () {
     $payment = Payment::factory()->create();
 

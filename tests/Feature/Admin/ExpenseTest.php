@@ -31,6 +31,17 @@ test('get expenses', function () {
     getJson('api/v1/expenses?page=1')->assertOk();
 });
 
+test('get expenses includes the relationships required by the list view', function () {
+    $expense = Expense::factory()->create();
+
+    getJson('api/v1/expenses?customer_id='.$expense->customer_id)
+        ->assertOk()
+        ->assertJsonPath('data.0.id', $expense->id)
+        ->assertJsonPath('data.0.customer.id', $expense->customer_id)
+        ->assertJsonPath('data.0.expense_category.id', $expense->expense_category_id)
+        ->assertJsonPath('data.0.currency.id', $expense->currency_id);
+});
+
 test('create expense', function () {
     $expense = Expense::factory()->raw([
         'amount' => 150,
@@ -63,7 +74,11 @@ test('get expense data', function () {
         'expense_date' => '2019-02-05',
     ]);
 
-    getJson("api/v1/expenses/{$expense->id}")->assertOk();
+    getJson("api/v1/expenses/{$expense->id}")
+        ->assertOk()
+        ->assertJsonPath('data.customer.id', $expense->customer_id)
+        ->assertJsonPath('data.expense_category.id', $expense->expense_category_id)
+        ->assertJsonPath('data.currency.id', $expense->currency_id);
 
     $this->assertDatabaseHas('expenses', [
         'id' => $expense->id,
