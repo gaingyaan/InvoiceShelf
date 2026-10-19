@@ -40,17 +40,17 @@
     <script type="module">
         @if(isset($customer_logo))
 
-        window.customer_logo = "/storage/{{$customer_logo}}"
+        window.customer_logo = "/storage/{{$customer_logo}}";
 
         @endif
         @if(isset($login_page_logo))
 
-        window.login_page_logo = "/storage/{{$login_page_logo}}"
+        window.login_page_logo = "/storage/{{$login_page_logo}}";
 
         @endif
-        window.login_page_heading = @js($login_page_heading ?? '')
-        window.login_page_description = @js($login_page_description ?? '')
-        window.copyright_text = @js($copyright_text ?? '')
+        window.login_page_heading = @js($login_page_heading ?? '');
+        window.login_page_description = @js($login_page_description ?? '');
+        window.copyright_text = @js($copyright_text ?? '');
 
         @if(config('app.env') === 'demo')
             window.demo_mode = true
