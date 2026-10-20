@@ -116,4 +116,4 @@ jobs:
               run: pnpm build
 
             - name: Apply tests ${{ matrix.php-version }}
-              run: php artisan test
+              run: ./vendor/bin/pest --compact
