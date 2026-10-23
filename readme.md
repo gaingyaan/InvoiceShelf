@@ -6,13 +6,23 @@ InvoiceShelf is an open-source web & mobile app that helps you track expenses, p
 
 The Web Application is made using Laravel & VueJS while the Mobile Apps are built using React Native.
 
-> **This is a fork of [InvoiceShelf](https://github.com/InvoiceShelf/InvoiceShelf)**, tracking the `stable-2.4.2` branch. It exists to provide a native, non-Docker, local-SQLite installation path for Windows. All upstream credit belongs to the original InvoiceShelf project and contributors — see [Credits](#credits) below.
+> **This is a fork of [InvoiceShelf](https://github.com/InvoiceShelf/InvoiceShelf)**, tracking the `stable-2.4.2` branch. It provides an isolated Docker + MariaDB deployment and an optional native SQLite setup for local Windows use. All upstream credit belongs to the original InvoiceShelf project and contributors — see [Credits](#credits) below.
 
-To install this fork natively on Windows with a local SQLite database, see the guide below.
+## Local Deployment Options
+
+| Option | Recommended use | Database |
+| --- | --- | --- |
+| [Custom Docker deployment](custom/docker/README.md) | Recommended local deployment with persistent data | MariaDB |
+| [Native Windows installation](windows_installation.md) | Lightweight local development without Docker | SQLite |
+
+The custom Docker setup is isolated in `custom/docker/`. It requires an
+untracked environment file, preserves database and upload data in named Docker
+volumes, and does not modify the upstream Docker configuration.
 
 ## Documentation
 
-- [Windows Local Installation (this fork, SQLite, no Docker)](windows_installtion.md)
+- [Custom Docker Deployment (MariaDB)](custom/docker/README.md)
+- [Windows Local Installation (SQLite, no Docker)](windows_installation.md)
 - [User Guide](https://docs.invoiceshelf.com/)
 - [Developer Guide](https://docs.invoiceshelf.com/developer-guide.html)
 - [API Documentation](https://api-docs.invoiceshelf.com)
@@ -57,7 +67,7 @@ InvoiceShelf includes a built-in Artisan command supporting **two flexible appro
 ## Download
 
 - Upstream releases: [invoiceshelf.com](https://invoiceshelf.com)
-- This fork: clone directly from this repository's `stable-2.4.2` branch (see [Windows Local Installation](windows_installation.md))
+- This fork: clone directly from this repository's `stable-2.4.2` branch, then choose the [Custom Docker Deployment](custom/docker/README.md) or [Windows Local Installation](windows_installation.md) guide.
 
 ## Credits
 
