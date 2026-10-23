@@ -1,0 +1,44 @@
+# Custom local deployment for InvoiceShelf.
+# All runtime configuration is loaded from the adjacent, untracked .env file.
+
+services:
+  database:
+    image: mariadb:10
+    env_file:
+      - path: .env
+        required: true
+    volumes:
+      - custom_invoiceshelf_mysql:/var/lib/mysql
+    networks:
+      - custom_invoiceshelf
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin ping -h localhost -u$$MARIADB_USER -p$$MARIADB_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  webapp:
+    build:
+      context: ../..
+      dockerfile: docker/production/Dockerfile
+    env_file:
+      - path: .env
+        required: true
+    ports:
+      - "8090:8080"
+    volumes:
+      - custom_invoiceshelf_storage:/var/www/html/storage
+    networks:
+      - custom_invoiceshelf
+    restart: unless-stopped
+    depends_on:
+      database:
+        condition: service_healthy
+
+networks:
+  custom_invoiceshelf:
+
+volumes:
+  custom_invoiceshelf_mysql:
+  custom_invoiceshelf_storage:
