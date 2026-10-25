@@ -42,9 +42,23 @@ docker compose -f docker/production/docker-compose.mysql.yml cp "D:\billing\hist
 docker compose -f docker/production/docker-compose.mysql.yml exec webapp php artisan invoices:import-historical
 ```
 
-Use `--company=ID_OR_SLUG` when the installation contains more than one
-company. After the command finishes, open **Invoices** and verify the imported
-data and PDF attachments.
+After the command finishes, open **Invoices** and verify the imported data and
+PDF attachments.
+
+## Import into a different company
+
+When InvoiceShelf contains multiple companies, keep each company's files in a
+separate folder and identify the destination using its numeric ID or slug:
+
+```powershell
+docker compose -f docker/production/docker-compose.mysql.yml exec webapp mkdir -p storage/import/company-two
+docker compose -f docker/production/docker-compose.mysql.yml cp "D:\billing\company-two-invoices\." webapp:/var/www/html/storage/import/company-two/
+docker compose -f docker/production/docker-compose.mysql.yml exec webapp php artisan invoices:import-historical --path=storage/import/company-two --company=2
+```
+
+For a company slug, replace `--company=2` with something like
+`--company=company-two`. Run the command separately for each company so its
+invoices are imported into the correct account.
 
 > PDF-only extraction works with text-based PDFs. Scanned/image-only PDFs need
 > OCR and are not supported by this importer.
