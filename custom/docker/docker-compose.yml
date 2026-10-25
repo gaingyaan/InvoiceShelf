@@ -1,0 +1,68 @@
+services:
+  database:
+    image: ${MARIADB_IMAGE:?Set MARIADB_IMAGE in custom/docker/.env}
+    env_file:
+      - path: ${DOCKER_ENV_FILE:?Set DOCKER_ENV_FILE in custom/docker/.env}
+        required: true
+    environment:
+      MARIADB_DATABASE: ${DB_DATABASE:?Set DB_DATABASE in custom/docker/.env}
+      MARIADB_USER: ${DB_USERNAME:?Set DB_USERNAME in custom/docker/.env}
+      MARIADB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in custom/docker/.env}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?Set DB_ROOT_PASSWORD in custom/docker/.env}
+    expose:
+      - "3306"
+    volumes:
+      - database_data:/var/lib/mysql
+    networks:
+      - invoiceshelf
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  webapp:
+    build:
+      context: ../..
+      dockerfile: docker/production/Dockerfile
+    env_file:
+      - path: ${DOCKER_ENV_FILE:?Set DOCKER_ENV_FILE in custom/docker/.env}
+        required: true
+    environment:
+      APP_NAME: ${APP_NAME:?Set APP_NAME in custom/docker/.env}
+      APP_ENV: ${APP_ENV:?Set APP_ENV in custom/docker/.env}
+      APP_DEBUG: ${APP_DEBUG:?Set APP_DEBUG in custom/docker/.env}
+      APP_URL: ${APP_URL:?Set APP_URL in custom/docker/.env}
+      APP_TIMEZONE: ${APP_TIMEZONE:?Set APP_TIMEZONE in custom/docker/.env}
+      DB_CONNECTION: ${DB_CONNECTION:?Set DB_CONNECTION in custom/docker/.env}
+      DB_HOST: ${DB_HOST:?Set DB_HOST in custom/docker/.env}
+      DB_PORT: ${DB_PORT:?Set DB_PORT in custom/docker/.env}
+      DB_DATABASE: ${DB_DATABASE:?Set DB_DATABASE in custom/docker/.env}
+      DB_USERNAME: ${DB_USERNAME:?Set DB_USERNAME in custom/docker/.env}
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in custom/docker/.env}
+      CACHE_STORE: ${CACHE_STORE:?Set CACHE_STORE in custom/docker/.env}
+      SESSION_DRIVER: ${SESSION_DRIVER:?Set SESSION_DRIVER in custom/docker/.env}
+      SESSION_LIFETIME: ${SESSION_LIFETIME:?Set SESSION_LIFETIME in custom/docker/.env}
+      SESSION_DOMAIN: ${SESSION_DOMAIN:?Set SESSION_DOMAIN in custom/docker/.env}
+      SANCTUM_STATEFUL_DOMAINS: ${SANCTUM_STATEFUL_DOMAINS:?Set SANCTUM_STATEFUL_DOMAINS in custom/docker/.env}
+      PYTHON_BINARY: ${PYTHON_BINARY:?Set PYTHON_BINARY in custom/docker/.env}
+    volumes:
+      - app_storage:/var/www/html/storage/
+    ports:
+      - "${APP_PORT:?Set APP_PORT in custom/docker/.env}:8080"
+    networks:
+      - invoiceshelf
+    restart: unless-stopped
+    depends_on:
+      database:
+        condition: service_healthy
+
+networks:
+  invoiceshelf:
+    name: ${NETWORK_NAME:?Set NETWORK_NAME in custom/docker/.env}
+
+volumes:
+  database_data:
+    name: ${DB_VOLUME_NAME:?Set DB_VOLUME_NAME in custom/docker/.env}
+  app_storage:
+    name: ${STORAGE_VOLUME_NAME:?Set STORAGE_VOLUME_NAME in custom/docker/.env}

@@ -20,7 +20,7 @@ PDF-only import requires Python 3 and `pypdf` in the container. Install them
 once per container:
 
 ```powershell
-docker compose -f docker/production/docker-compose.mysql.yml exec --user root webapp sh -lc "apk add --no-cache python3 py3-pip && pip3 install --break-system-packages pypdf"
+docker compose --env-file custom/docker/.env -f custom/docker/docker-compose.yml exec --user root webapp sh -lc "apk add --no-cache python3 py3-pip && pip3 install --break-system-packages pypdf"
 ```
 
 Matching PDF/Markdown pairs do not need PDF extraction: invoice data comes from
@@ -32,14 +32,14 @@ Create the import directory and copy the folder contents. Replace the Windows
 path with the location of your files:
 
 ```powershell
-docker compose -f docker/production/docker-compose.mysql.yml exec webapp mkdir -p storage/import/invoices
-docker compose -f docker/production/docker-compose.mysql.yml cp "D:\billing\historical-invoices\." webapp:/var/www/html/storage/import/invoices/
+docker compose --env-file custom/docker/.env -f custom/docker/docker-compose.yml exec webapp mkdir -p storage/import/invoices
+docker compose --env-file custom/docker/.env -f custom/docker/docker-compose.yml cp "D:\billing\historical-invoices\." webapp:/var/www/html/storage/import/invoices/
 ```
 
 ## 3. Run the importer
 
 ```powershell
-docker compose -f docker/production/docker-compose.mysql.yml exec webapp php artisan invoices:import-historical
+docker compose --env-file custom/docker/.env -f custom/docker/docker-compose.yml exec webapp php artisan invoices:import-historical
 ```
 
 After the command finishes, open **Invoices** and verify the imported data and
@@ -51,9 +51,9 @@ When InvoiceShelf contains multiple companies, keep each company's files in a
 separate folder and identify the destination using its numeric ID or slug:
 
 ```powershell
-docker compose -f docker/production/docker-compose.mysql.yml exec webapp mkdir -p storage/import/company-two
-docker compose -f docker/production/docker-compose.mysql.yml cp "D:\billing\company-two-invoices\." webapp:/var/www/html/storage/import/company-two/
-docker compose -f docker/production/docker-compose.mysql.yml exec webapp php artisan invoices:import-historical --path=storage/import/company-two --company=2
+docker compose --env-file custom/docker/.env -f custom/docker/docker-compose.yml exec webapp mkdir -p storage/import/company-two
+docker compose --env-file custom/docker/.env -f custom/docker/docker-compose.yml cp "D:\billing\company-two-invoices\." webapp:/var/www/html/storage/import/company-two/
+docker compose --env-file custom/docker/.env -f custom/docker/docker-compose.yml exec webapp php artisan invoices:import-historical --path=storage/import/company-two --company=2
 ```
 
 For a company slug, replace `--company=2` with something like

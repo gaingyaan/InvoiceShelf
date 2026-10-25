@@ -18,6 +18,9 @@ major version.
 
 For a local contributor environment, see [the development environment guide](docker/development/README.md).
 
+For a local MariaDB deployment whose configuration is supplied through a
+required environment file, see the [custom Docker guide](custom/docker/README.md).
+
 ## Historical invoice import
 
 This fork adds an Artisan command that imports historical invoices from Markdown
