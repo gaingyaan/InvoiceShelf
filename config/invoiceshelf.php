@@ -56,6 +56,10 @@ return [
     */
     'containerized' => env('CONTAINERIZED', false),
 
+    'historical_import' => [
+        'python_binary' => env('PYTHON_BINARY', 'python3'),
+    ],
+
     /*
     * Paths protected from cleanup during updates.
     * The updater (Updater::cleanStaleFiles) will never delete files under these
