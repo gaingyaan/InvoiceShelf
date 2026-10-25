@@ -187,7 +187,7 @@ test('send estimate to customer', function () {
             'success' => true,
         ]);
 
-    Mail::assertSent(SendEstimateMail::class);
+    Mail::assertQueued(SendEstimateMail::class);
 });
 
 test('estimate mark as accepted', function () {

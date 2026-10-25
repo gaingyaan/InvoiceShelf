@@ -257,7 +257,7 @@ test('send invoice to customer', function () {
     $invoice2 = Invoice::find($invoices->id);
 
     $this->assertEquals($invoice2->status, Invoice::STATUS_SENT);
-    Mail::assertSent(SendInvoiceMail::class);
+    Mail::assertQueued(SendInvoiceMail::class);
 });
 
 test('invoice mark as paid', function () {

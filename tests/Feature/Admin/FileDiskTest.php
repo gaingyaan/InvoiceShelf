@@ -29,6 +29,27 @@ test('get file disks', function () {
     $response->assertOk();
 });
 
+test('get file disks decodes credentials and masks sensitive values', function () {
+    $disk = FileDisk::factory()->create([
+        'credentials' => [
+            'key' => 'access-key',
+            'secret' => 'secret-value',
+            'root' => 'invoices',
+        ],
+    ]);
+
+    getJson('/api/v1/disks?limit=all')
+        ->assertOk()
+        ->assertJsonFragment([
+            'id' => $disk->id,
+            'credentials' => [
+                'key' => '••••••••',
+                'secret' => '••••••••',
+                'root' => 'invoices',
+            ],
+        ]);
+});
+
 test('create file disk', function () {
     $disk = FileDisk::factory()->raw();
 

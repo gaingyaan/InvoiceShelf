@@ -156,7 +156,7 @@ class Updater
         );
 
         foreach ($iterator as $file) {
-            $relativePath = substr($file->getPathname(), strlen($basePath) + 1);
+            $relativePath = str_replace('\\', '/', substr($file->getPathname(), strlen($basePath) + 1));
 
             if (static::isProtectedPath($relativePath, $protectedPaths)) {
                 continue;
@@ -179,7 +179,7 @@ class Updater
                 continue;
             }
 
-            $relativePath = substr($item->getPathname(), strlen($basePath) + 1);
+            $relativePath = str_replace('\\', '/', substr($item->getPathname(), strlen($basePath) + 1));
 
             if (static::isProtectedPath($relativePath, $protectedPaths)) {
                 continue;

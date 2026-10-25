@@ -21,7 +21,14 @@ class FileDiskResource extends JsonResource
             'driver' => $this->driver,
             'set_as_default' => $this->set_as_default,
             'credentials' => $this->when($this->credentials, function () {
-                $creds = $this->credentials;
+                $creds = is_array($this->credentials)
+                    ? $this->credentials
+                    : json_decode($this->credentials, true);
+
+                if (! is_array($creds)) {
+                    return [];
+                }
+
                 $sensitiveKeys = ['secret', 'key', 'token', 'password'];
                 foreach ($creds as $k => $v) {
                     foreach ($sensitiveKeys as $sensitive) {
