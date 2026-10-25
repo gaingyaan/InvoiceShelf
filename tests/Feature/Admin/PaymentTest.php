@@ -151,7 +151,7 @@ test('send payment to customer', function () {
         'success' => true,
     ]);
 
-    Mail::assertSent(SendPaymentMail::class);
+    Mail::assertQueued(SendPaymentMail::class);
 });
 
 test('delete payment', function () {
