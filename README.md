@@ -42,6 +42,9 @@ python3 -m pip install pypdf
 
 Set `PYTHON_BINARY` when the Python executable has a different name or path.
 
+For a short Docker walkthrough, see the
+[historical invoice import guide](docs/historical-invoice-import.md).
+
 ## Contributing
 
 Contributions that support v2 security maintenance and documentation are welcome.
