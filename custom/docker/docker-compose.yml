@@ -25,6 +25,7 @@ services:
     build:
       context: ../..
       dockerfile: docker/production/Dockerfile
+    user: root
     env_file:
       - path: ${DOCKER_ENV_FILE:?Set DOCKER_ENV_FILE in custom/docker/.env}
         required: true

@@ -21,6 +21,10 @@ file is ignored by Git and must not be committed.
 docker compose --env-file custom/docker/.env -f custom/docker/docker-compose.yml up -d --build
 ```
 
+The custom web service starts its supervisor as root so the existing InvoiceShelf
+startup script can assign `storage` and `bootstrap/cache` to `www-data` with
+`775` permissions. PHP-FPM continues to handle web requests as `www-data`.
+
 Open `http://localhost:8090`. Use the values from `custom/docker/.env` when the
 installation wizard asks for the database settings. The database host is
 `database`, not `127.0.0.1`.
