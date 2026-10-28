@@ -1,4 +1,26 @@
 services:
+  permissions:
+    image: alpine:3.22
+    user: root
+    command:
+      - /bin/sh
+      - -c
+      - |
+        set -eu
+        mkdir -p \
+          /var/www/html/storage/app/public \
+          /var/www/html/storage/framework/cache/data \
+          /var/www/html/storage/framework/sessions \
+          /var/www/html/storage/framework/views \
+          /var/www/html/storage/logs \
+          /var/www/html/bootstrap/cache
+        chown -R 82:82 /var/www/html/storage /var/www/html/bootstrap/cache
+        chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+    volumes:
+      - app_storage:/var/www/html/storage/
+      - bootstrap_cache:/var/www/html/bootstrap/cache/
+    restart: "no"
+
   database:
     image: ${MARIADB_IMAGE:?Set MARIADB_IMAGE in custom/docker/.env}
     env_file:
@@ -25,7 +47,6 @@ services:
     build:
       context: ../..
       dockerfile: docker/production/Dockerfile
-    user: root
     env_file:
       - path: ${DOCKER_ENV_FILE:?Set DOCKER_ENV_FILE in custom/docker/.env}
         required: true
@@ -49,12 +70,15 @@ services:
       PYTHON_BINARY: ${PYTHON_BINARY:?Set PYTHON_BINARY in custom/docker/.env}
     volumes:
       - app_storage:/var/www/html/storage/
+      - bootstrap_cache:/var/www/html/bootstrap/cache/
     ports:
       - "${APP_PORT:?Set APP_PORT in custom/docker/.env}:8080"
     networks:
       - invoiceshelf
     restart: unless-stopped
     depends_on:
+      permissions:
+        condition: service_completed_successfully
       database:
         condition: service_healthy
 
@@ -67,3 +91,5 @@ volumes:
     name: ${DB_VOLUME_NAME:?Set DB_VOLUME_NAME in custom/docker/.env}
   app_storage:
     name: ${STORAGE_VOLUME_NAME:?Set STORAGE_VOLUME_NAME in custom/docker/.env}
+  bootstrap_cache:
+    name: ${BOOTSTRAP_CACHE_VOLUME_NAME:?Set BOOTSTRAP_CACHE_VOLUME_NAME in custom/docker/.env}
